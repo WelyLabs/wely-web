@@ -34,7 +34,7 @@
     </div>
 
     <!-- Event Details Section (Split View) -->
-    <div class="details-section flex flex-col p-8 opacity-0 translate-x-5 transition-all duration-300 overflow-hidden bg-white border border-border-default rounded-2xl"
+    <div class="details-section flex flex-col p-8 opacity-0 transition-all duration-300"
         [class.opacity-100]="selectedDate" [class.translate-x-0]="selectedDate" *ngIf="selectedDate">
         <div class="details-header flex justify-between items-center mb-4 border-b border-border-default pb-4">
             <h3 class="m-0 font-semibold text-primary">{{ selectedDate | date:'fullDate' }}</h3>
@@ -43,7 +43,7 @@
             </button>
         </div>
 
-        <div class="events-list flex-1 overflow-y-auto overflow-x-visible flex flex-col gap-4 px-0.5">
+        <div class="events-list flex-1 overflow-hidden flex flex-col gap-4 px-0.5">
             <div *ngIf="selectedEvents.length === 0" class="no-events text-center text-secondary mt-10">
                 <p>No events for this day.</p>
                 <button mat-stroked-button color="primary">Add Event</button>
