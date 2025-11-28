@@ -289,8 +289,8 @@ a:hover {
 
 /* Footer */
 #kc-locale {
-    margin-top: 24px;
-    text-align: center;
+    display: none !important;
+    /* Masque le sélecteur de langue car la langue est détectée automatiquement */
 }
 
 #kc-locale-dropdown {
