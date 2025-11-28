@@ -1,0 +1,66 @@
+<div class="friends-container fade-in">
+    <div class="header-section">
+        <div class="title-group">
+            <h1>Mes Amis</h1>
+            <span class="count-badge">{{ friends.length }} amis</span>
+        </div>
+
+        <div class="search-wrapper">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text" placeholder="Rechercher un ami..." [(ngModel)]="searchQuery"
+                (ngModelChange)="filterFriends()">
+        </div>
+    </div>
+
+    <div class="friends-grid" *ngIf="!isLoading">
+        <div class="friend-card glass-panel" *ngFor="let friend of filteredFriends">
+            <div class="card-header">
+                <div class="avatar">{{ getInitials(friend) }}</div>
+                <div class="status-dot"></div>
+            </div>
+
+            <div class="card-body">
+                <h3>{{ friend.firstName }} {{ friend.lastName }}</h3>
+                <span class="role">{{ friend.jobTitle }}</span>
+                <span class="location">
+                    <mat-icon>place</mat-icon>
+                    {{ friend.location }}
+                </span>
+            </div>
+
+            <div class="card-actions">
+                <button mat-stroked-button class="action-btn" (click)="contactFriend(friend)">
+                    <mat-icon>chat_bubble_outline</mat-icon>
+                    Message
+                </button>
+                <button mat-icon-button class="more-btn" [matMenuTriggerFor]="menu">
+                    <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                    <button mat-menu-item>
+                        <mat-icon>person</mat-icon>
+                        <span>Voir le profil</span>
+                    </button>
+                    <button mat-menu-item class="text-red-500" (click)="removeFriend(friend)">
+                        <mat-icon class="text-red-500">person_remove</mat-icon>
+                        <span>Retirer des amis</span>
+                    </button>
+                </mat-menu>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="filteredFriends.length === 0">
+            <div class="icon-wrapper">
+                <mat-icon>group_off</mat-icon>
+            </div>
+            <h3>Aucun ami trouvé</h3>
+            <p>Essayez de modifier votre recherche</p>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+        <div class="spinner"></div>
+    </div>
+</div>
