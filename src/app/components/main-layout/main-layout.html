@@ -12,13 +12,26 @@
       </a>
     </div>
 
-    <div class="user-profile">
+    <div class="user-profile" (mouseenter)="showUserMenu = true" (mouseleave)="showUserMenu = false">
       <div class="avatar">{{ userProfile?.firstName?.[0] || 'U' }}{{ userProfile?.lastName?.[0] || '' }}</div>
       <div class="info">
         <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>
-        <button mat-button class="logout-btn" (click)="logout()">
+        <span class="email">{{ userProfile?.email }}</span>
+      </div>
+
+      <!-- Dropdown Menu -->
+      <div class="user-menu" [class.show]="showUserMenu">
+        <button class="menu-item" routerLink="/profile">
+          <mat-icon>person</mat-icon>
+          <span>Mon Profil</span>
+        </button>
+        <button class="menu-item" routerLink="/friends">
+          <mat-icon>group</mat-icon>
+          <span>Mes Amis</span>
+        </button>
+        <button class="menu-item logout-item" (click)="logout()">
           <mat-icon>logout</mat-icon>
-          Logout
+          <span>Déconnexion</span>
         </button>
       </div>
     </div>

@@ -36,6 +36,7 @@ export class MainLayoutComponent implements OnInit {
   isMobile = false;
   isOpened = true;
   userProfile: KeycloakProfile | null = null;
+  showUserMenu = false;
 
   constructor(
     private breakpointObserver: BreakpointObserver,

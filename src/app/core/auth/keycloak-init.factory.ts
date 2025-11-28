@@ -1,4 +1,5 @@
 import { KeycloakService } from 'keycloak-angular';
+import { KEYCLOAK_CONFIG } from './keycloak.config';
 
 /**
  * Détecte la langue du navigateur et retourne le code de langue approprié pour Keycloak
@@ -22,9 +23,10 @@ export function initializeKeycloak(keycloak: KeycloakService) {
     return () =>
         keycloak.init({
             config: {
-                url: 'http://localhost:8080',
-                realm: 'calendar-app',
-                clientId: 'calendar-app-client'
+                url: KEYCLOAK_CONFIG.url,
+                realm: KEYCLOAK_CONFIG.realm,
+                clientId: KEYCLOAK_CONFIG.clientId
+
             },
             initOptions: {
                 onLoad: 'check-sso',
