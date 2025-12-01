@@ -9,6 +9,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
 import { KeycloakProfile } from 'keycloak-js';
+import { UserService } from '../../services/user.service';
+import { UnifiedUser } from '../../models/user.model';
 
 @Component({
   selector: 'app-main-layout',
@@ -35,16 +37,17 @@ export class MainLayoutComponent implements OnInit {
 
   isMobile = false;
   isOpened = true;
-  userProfile: KeycloakProfile | null = null;
+  userProfile: UnifiedUser | null = null;
   showUserMenu = false;
 
   constructor(
     private breakpointObserver: BreakpointObserver,
     private keycloak: KeycloakService,
+    private userService: UserService,
     private router: Router
   ) { }
 
-  async ngOnInit() {
+  ngOnInit() {
     this.breakpointObserver.observe([Breakpoints.Handset, Breakpoints.Tablet])
       .subscribe(result => {
         this.isMobile = result.matches;
@@ -58,11 +61,13 @@ export class MainLayoutComponent implements OnInit {
         }
       });
 
-    // Load user profile
-    const isLoggedIn = await this.keycloak.isLoggedIn();
-    if (isLoggedIn) {
-      this.userProfile = await this.keycloak.loadUserProfile();
-    }
+    // Load user profile using UserService to get unified data
+    this.userService.getMe().subscribe({
+      next: (user) => {
+        this.userProfile = user;
+      },
+      error: (err) => console.error('Error loading profile in layout:', err)
+    });
   }
 
   toggleSidenav() {

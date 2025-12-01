@@ -36,4 +36,13 @@ export class UserService {
             })
         );
     }
+
+    updateProfile(updates: { firstName: string; lastName: string; email: string }): Observable<any> {
+        // Use Keycloak Account REST API to update profile
+        const keycloakUrl = 'http://localhost:8080'; // Should match KEYCLOAK_CONFIG.url
+        const realm = 'calendar-app'; // Should match KEYCLOAK_CONFIG.realm
+        const accountApiUrl = `${keycloakUrl}/realms/${realm}/account`;
+
+        return this.http.post(accountApiUrl, updates);
+    }
 }

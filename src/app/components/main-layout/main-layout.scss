@@ -14,7 +14,7 @@
     border-radius: 16px;
     box-shadow: var(--shadow-md);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
+    overflow: visible; // Allow menu to show
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border-default);
@@ -22,7 +22,7 @@
     ::ng-deep .mat-drawer-inner-container {
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        overflow: visible; // Allow menu to show
     }
 
     .logo-container {

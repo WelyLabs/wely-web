@@ -1,0 +1,65 @@
+<div class="dialog-container">
+    <div class="dialog-header">
+        <h2 mat-dialog-title>Modifier le profil</h2>
+        <button mat-icon-button (click)="onCancel()" class="close-button">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <mat-dialog-content>
+        <form [formGroup]="profileForm" class="profile-form">
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Prénom</mat-label>
+                <mat-icon matPrefix>person</mat-icon>
+                <input matInput formControlName="firstName" placeholder="Votre prénom">
+                <mat-error *ngIf="profileForm.get('firstName')?.hasError('required')">
+                    Le prénom est requis
+                </mat-error>
+                <mat-error *ngIf="profileForm.get('firstName')?.hasError('minlength')">
+                    Minimum 2 caractères
+                </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nom</mat-label>
+                <mat-icon matPrefix>person</mat-icon>
+                <input matInput formControlName="lastName" placeholder="Votre nom">
+                <mat-error *ngIf="profileForm.get('lastName')?.hasError('required')">
+                    Le nom est requis
+                </mat-error>
+                <mat-error *ngIf="profileForm.get('lastName')?.hasError('minlength')">
+                    Minimum 2 caractères
+                </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email</mat-label>
+                <mat-icon matPrefix>email</mat-icon>
+                <input matInput formControlName="email" type="email" placeholder="votre@email.com">
+                <mat-error *ngIf="profileForm.get('email')?.hasError('required')">
+                    L'email est requis
+                </mat-error>
+                <mat-error *ngIf="profileForm.get('email')?.hasError('email')">
+                    Email invalide
+                </mat-error>
+            </mat-form-field>
+
+            <div class="error-message" *ngIf="errorMessage">
+                <mat-icon>error</mat-icon>
+                <span>{{ errorMessage }}</span>
+            </div>
+        </form>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+        <button mat-stroked-button (click)="onCancel()" [disabled]="isLoading">
+            Annuler
+        </button>
+        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="isLoading || profileForm.invalid"
+            class="save-button">
+            <mat-icon *ngIf="!isLoading">save</mat-icon>
+            <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
+            {{ isLoading ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+    </mat-dialog-actions>
+</div>

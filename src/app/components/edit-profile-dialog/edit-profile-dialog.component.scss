@@ -1,0 +1,227 @@
+.dialog-container {
+    min-width: 400px;
+    max-width: 500px;
+    animation: dialog-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden; // Prevent horizontal scroll
+
+    @media (max-width: 600px) {
+        min-width: 300px;
+    }
+}
+
+@keyframes dialog-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-top: 8px;
+
+    h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .close-button {
+        color: var(--text-secondary);
+        transition: all 0.2s ease;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        margin-right: 8px; // Push away from right edge
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+            transform: rotate(90deg);
+        }
+
+        mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+    }
+}
+
+mat-dialog-content {
+    padding: 0 24px !important;
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .full-width {
+        width: 100%;
+    }
+
+    mat-form-field {
+        margin-top: 8px; // Give space for floating label
+
+        ::ng-deep {
+
+            // Background
+            .mat-mdc-text-field-wrapper {
+                background: rgba(255, 255, 255, 0.8) !important;
+                backdrop-filter: blur(10px) !important;
+                overflow: visible !important; // Allow label to float outside
+            }
+
+            // REMOVE border radius from the container (this was causing the issue)
+            .mdc-text-field--outlined .mdc-notched-outline {
+                border-radius: 0 !important;
+            }
+
+            // Apply border radius ONLY to the corners
+            .mdc-notched-outline__leading {
+                border-top-left-radius: 12px !important;
+                border-bottom-left-radius: 12px !important;
+                width: 16px !important;
+                border-right: none !important; // Ensure no border on the right side of leading
+            }
+
+            .mdc-notched-outline__trailing {
+                border-top-right-radius: 12px !important;
+                border-bottom-right-radius: 12px !important;
+                border-left: none !important; // Ensure no border on the left side of trailing
+            }
+
+            // NOTCH STYLING
+            .mdc-notched-outline__notch {
+                border-left: none !important;
+                border-right: none !important;
+            }
+
+            // When notched (label is floating), FORCE top border to be transparent
+            .mdc-notched-outline--notched .mdc-notched-outline__notch {
+                border-top-color: transparent !important;
+                border-top-style: none !important;
+                border-top-width: 0 !important;
+            }
+
+            // BORDER COLORS
+            .mdc-notched-outline__leading,
+            .mdc-notched-outline__notch,
+            .mdc-notched-outline__trailing {
+                border-color: var(--border-default) !important;
+                border-width: 1px !important;
+            }
+
+            // FOCUS STATE
+            .mdc-text-field--outlined.mdc-text-field--focused {
+
+                .mdc-notched-outline__leading,
+                .mdc-notched-outline__notch,
+                .mdc-notched-outline__trailing {
+                    border-color: var(--primary-blue) !important;
+                    border-width: 2px !important;
+                }
+
+                // Ensure notch top remains transparent even on focus
+                .mdc-notched-outline--notched .mdc-notched-outline__notch {
+                    border-top-color: transparent !important;
+                }
+            }
+
+            // Icon spacing
+            .mat-mdc-form-field-icon-prefix>mat-icon {
+                margin-left: 12px !important;
+                margin-right: 12px !important;
+            }
+
+            // Input alignment
+            input.mat-mdc-input-element {
+                padding-left: 0 !important;
+            }
+        }
+
+        mat-icon {
+            color: var(--text-secondary);
+        }
+    }
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid #ef4444;
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 14px;
+
+    mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+    }
+}
+
+mat-dialog-actions {
+    padding: 16px 24px !important;
+    gap: 12px;
+
+    button {
+        border-radius: 12px;
+        padding: 10px 24px;
+        font-weight: 600;
+
+        &.save-button {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+
+            &:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            }
+
+            &:disabled {
+                opacity: 0.6;
+            }
+
+            mat-icon {
+                margin-right: 8px;
+            }
+
+            .spinner {
+                animation: spin 1s linear infinite;
+            }
+        }
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
