@@ -19,6 +19,12 @@
     flex-direction: column;
     border: 1px solid var(--border-default);
 
+    ::ng-deep .mat-drawer-inner-container {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
     .logo-container {
         padding: 24px 16px;
         border-bottom: 1px solid var(--border-default);
