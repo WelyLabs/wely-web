@@ -50,34 +50,65 @@
         margin-top: -60px;
         position: relative;
 
-        .avatar-wrapper {
+        .avatar-container {
             position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            cursor: pointer;
+            overflow: hidden; // Important for clipping overlay to circle
+            margin-right: 24px; // Add spacing from info
+            flex-shrink: 0; // Prevent shrinking
+
+            &:hover .avatar-overlay {
+                opacity: 1;
+            }
 
             .avatar {
-                width: 120px;
-                height: 120px;
-                border-radius: 50%;
-                background: white;
-                border: 4px solid white;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                width: 100%;
+                height: 100%;
+                background: var(--accent-gradient);
+                color: white;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 48px;
                 font-weight: 700;
-                color: #3b82f6;
-                background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+                // Removed border/shadow from here to avoid double borders with container if needed
+                // But keeping them if they were part of the design
+                border: 4px solid rgba(255, 255, 255, 0.2);
             }
 
-            .status-indicator {
+            .avatar-overlay {
                 position: absolute;
-                bottom: 8px;
-                right: 8px;
-                width: 20px;
-                height: 20px;
-                background: #10b981;
-                border: 3px solid white;
-                border-radius: 50%;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6); // Darker for better contrast
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                backdrop-filter: blur(2px);
+                z-index: 10; // Ensure on top
+
+                mat-icon {
+                    font-size: 32px;
+                    width: 32px;
+                    height: 32px;
+                    margin-bottom: 4px;
+                }
+
+                span {
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
             }
         }
 

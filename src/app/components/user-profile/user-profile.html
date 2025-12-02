@@ -3,9 +3,14 @@
     <div class="profile-header">
         <div class="banner"></div>
         <div class="header-content">
-            <div class="avatar-wrapper">
-                <div class="avatar">{{ getInitials() }}</div>
-                <div class="status-indicator"></div>
+            <div class="avatar-container" (click)="openAvatarDialog()">
+                <div class="avatar">
+                    {{ user.firstName?.[0] || 'U' }}{{ user.lastName?.[0] || '' }}
+                </div>
+                <div class="avatar-overlay">
+                    <mat-icon>photo_camera</mat-icon>
+                    <span>Modifier</span>
+                </div>
             </div>
 
             <div class="user-identity">

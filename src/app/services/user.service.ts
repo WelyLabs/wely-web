@@ -37,12 +37,26 @@ export class UserService {
         );
     }
 
-    updateProfile(updates: { firstName: string; lastName: string; email: string }): Observable<any> {
-        // Use Keycloak Account REST API to update profile
+    updateProfile(updates: { firstName: string; lastName: string; email: string }) {
         const keycloakUrl = 'http://localhost:8080'; // Should match KEYCLOAK_CONFIG.url
         const realm = 'calendar-app'; // Should match KEYCLOAK_CONFIG.realm
         const accountApiUrl = `${keycloakUrl}/realms/${realm}/account`;
 
         return this.http.post(accountApiUrl, updates);
+    }
+
+    uploadAvatar(file: File): Observable<any> {
+        // Mock implementation for now, or use a real endpoint if available
+        // const formData = new FormData();
+        // formData.append('avatar', file);
+        // return this.http.post(`${this.apiUrl}/users/me/avatar`, formData);
+
+        // Simulate delay and success
+        return new Observable(observer => {
+            setTimeout(() => {
+                observer.next({ success: true });
+                observer.complete();
+            }, 1000);
+        });
     }
 }

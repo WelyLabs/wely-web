@@ -9,6 +9,8 @@ import { UnifiedUser } from '../../models/user.model';
 import { UserService } from '../../services/user.service';
 import { EditProfileDialogComponent } from '../edit-profile-dialog/edit-profile-dialog.component';
 
+import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-upload-dialog.component';
+
 @Component({
     selector: 'app-user-profile',
     standalone: true,
@@ -33,10 +35,10 @@ export class UserProfileComponent implements OnInit {
     ) { }
 
     ngOnInit() {
-        this.loadUserProfile();
+        this.reloadUserProfile();
     }
 
-    loadUserProfile(): void {
+    reloadUserProfile(): void {
         this.isLoading = true;
         this.userService.getMe().subscribe({
             next: (user) => {
@@ -44,8 +46,26 @@ export class UserProfileComponent implements OnInit {
                 this.isLoading = false;
             },
             error: (err) => {
-                console.error('Failed to load user profile', err);
+                console.error('Error loading profile:', err);
                 this.isLoading = false;
+            }
+        });
+    }
+
+    openAvatarDialog(): void {
+        const dialogRef = this.dialog.open(AvatarUploadDialogComponent, {
+            width: '500px',
+            panelClass: 'edit-profile-dialog',
+            enterAnimationDuration: '300ms',
+            exitAnimationDuration: '150ms'
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+            if (result) {
+                // Result is the cropped image URL (SafeUrl)
+                // In a real app, we might want to reload the profile or update the avatar URL directly
+                // For now, let's just reload the profile to simulate the update
+                this.reloadUserProfile();
             }
         });
     }
