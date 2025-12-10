@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, from, map, switchMap, zip, BehaviorSubject, tap } from 'rxjs';
 import { KeycloakService } from 'keycloak-angular';
-import { UnifiedUser, BusinessUser } from '../models/user.model';
+import { UnifiedUser, BusinessUser, UserWithStatusDTO } from '../models/user.model';
 
 @Injectable({
     providedIn: 'root'
@@ -113,5 +113,9 @@ export class UserService {
                 }
             })
         );
+    }
+
+    searchUsers(): Observable<UserWithStatusDTO[]> {
+        return this.http.get<UserWithStatusDTO[]>(`${this.apiUrl}/users`);
     }
 }

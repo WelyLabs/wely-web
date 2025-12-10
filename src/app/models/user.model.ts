@@ -34,3 +34,13 @@ export interface UnifiedUser extends KeycloakUser, Omit<BusinessUser, 'id' | 'em
     originalJoinedDate: string; // Keep original string
     parsedJoinedDate: Date;     // Parsed Date object
 }
+
+export interface UserWithStatusDTO {
+    id: number;
+    profilePicUrl?: string;
+    joinedDate: string; // LocalDateTime from Java as ISO string
+    relationshipStatus: 'FRIENDS' | 'NOT_FRIENDS' | 'PENDING_SENT' | 'PENDING_RECEIVED';
+    // These will be added to backend later, mocked in frontend for now
+    firstName?: string;
+    lastName?: string;
+}

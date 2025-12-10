@@ -6,6 +6,7 @@ import { EventDetailsComponent } from './components/event-details/event-details'
 import { LandingPageComponent } from './components/landing-page/landing-page';
 import { UserProfileComponent } from './components/user-profile/user-profile';
 import { FriendsListComponent } from './components/friends-list/friends-list';
+import { UserSearchComponent } from './components/user-search/user-search';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -17,6 +18,7 @@ export const routes: Routes = [
         children: [
             { path: 'calendar', component: CalendarComponent },
             { path: 'feed', component: EventFeedComponent },
+            { path: 'users', component: UserSearchComponent },
             { path: 'event/:type/:id', component: EventDetailsComponent },
             { path: 'profile', component: UserProfileComponent },
             { path: 'friends', component: FriendsListComponent }

@@ -32,7 +32,8 @@ export class MainLayoutComponent implements OnInit {
 
   navItems = [
     { label: 'Calendar', icon: 'calendar_today', route: '/calendar' },
-    { label: 'Event Feed', icon: 'event_note', route: '/feed' }
+    { label: 'Event Feed', icon: 'event_note', route: '/feed' },
+    { label: 'Users', icon: 'people', route: '/users' }
   ];
 
   isMobile = false;

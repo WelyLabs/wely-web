@@ -1,0 +1,89 @@
+<div class="user-search-container">
+    <div class="header">
+        <h1 class="title">
+            <mat-icon>people</mat-icon>
+            Rechercher des utilisateurs
+        </h1>
+        <p class="subtitle">Trouvez et connectez-vous avec d'autres utilisateurs</p>
+    </div>
+
+    <div class="search-bar">
+        <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
+                placeholder="Rechercher par nom..." type="text">
+            <button *ngIf="searchQuery" matSuffix mat-icon-button (click)="searchQuery = ''; onSearchChange()"
+                aria-label="Clear">
+                <mat-icon>close</mat-icon>
+            </button>
+        </mat-form-field>
+    </div>
+
+    <div class="loading-state" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Chargement des utilisateurs...</p>
+    </div>
+
+    <div class="error-state" *ngIf="error && !isLoading">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ error }}</p>
+        <button mat-raised-button (click)="loadUsers()">Réessayer</button>
+    </div>
+
+    <div class="users-grid" *ngIf="!isLoading && !error">
+        <div class="empty-state" *ngIf="filteredUsers.length === 0">
+            <mat-icon>person_search</mat-icon>
+            <p>Aucun utilisateur trouvé</p>
+            <span class="hint">Essayez une autre recherche</span>
+        </div>
+
+        <div class="user-card" *ngFor="let user of filteredUsers">
+            <div class="card-content">
+                <div class="avatar-section">
+                    <div class="avatar">
+                        {{ getInitials(user) }}
+                    </div>
+                </div>
+
+                <div class="user-info">
+                    <h3 class="user-name">{{ user.firstName }} {{ user.lastName }}</h3>
+                    <div class="user-meta">
+                        <div class="meta-item">
+                            <mat-icon>calendar_today</mat-icon>
+                            <span>Membre depuis {{ formatJoinedDate(user.joinedDate) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unified action/status section -->
+                <div class="action-section">
+                    <!-- Add friend button for NOT_FRIENDS -->
+                    <button *ngIf="user.relationshipStatus === 'NOT_FRIENDS'" mat-raised-button class="add-friend-btn"
+                        (click)="onAddFriend(user)">
+                        <mat-icon>person_add</mat-icon>
+                        Ajouter
+                    </button>
+
+                    <!-- Friends status badge -->
+                    <div *ngIf="user.relationshipStatus === 'FRIENDS'" class="status-badge status-friends">
+                        <mat-icon>check_circle</mat-icon>
+                        <span>Amis</span>
+                    </div>
+
+                    <!-- Pending sent status badge -->
+                    <div *ngIf="user.relationshipStatus === 'PENDING_SENT'" class="status-badge status-pending_sent">
+                        <mat-icon>schedule</mat-icon>
+                        <span>En attente</span>
+                    </div>
+
+                    <!-- Accept friend request button for PENDING_RECEIVED -->
+                    <button *ngIf="user.relationshipStatus === 'PENDING_RECEIVED'" mat-raised-button
+                        class="accept-friend-btn" (click)="onAcceptFriend(user)">
+                        <mat-icon>check</mat-icon>
+                        Accepter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
