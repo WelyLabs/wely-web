@@ -41,44 +41,47 @@
             <div class="card-content">
                 <div class="avatar-section">
                     <div class="avatar">
-                        {{ getInitials(user) }}
+                        <img *ngIf="user.profilePicUrl" [src]="user.profilePicUrl" [alt]="user.userName">
+                        <span *ngIf="!user.profilePicUrl">{{ getInitials(user) }}</span>
                     </div>
                 </div>
 
                 <div class="user-info">
-                    <h3 class="user-name">{{ user.firstName }} {{ user.lastName }}</h3>
+                    <h3 class="user-name">{{ user.userName }}</h3>
+                    <!-- Joined date removed from DTO
                     <div class="user-meta">
                         <div class="meta-item">
                             <mat-icon>calendar_today</mat-icon>
                             <span>Membre depuis {{ formatJoinedDate(user.joinedDate) }}</span>
                         </div>
                     </div>
+                    -->
                 </div>
 
                 <!-- Unified action/status section -->
                 <div class="action-section">
-                    <!-- Add friend button for NOT_FRIENDS -->
-                    <button *ngIf="user.relationshipStatus === 'NOT_FRIENDS'" mat-raised-button class="add-friend-btn"
+                    <!-- Add friend button for NONE -->
+                    <button *ngIf="user.relationStatus === 'NONE'" mat-raised-button class="add-friend-btn"
                         (click)="onAddFriend(user)">
                         <mat-icon>person_add</mat-icon>
                         Ajouter
                     </button>
 
                     <!-- Friends status badge -->
-                    <div *ngIf="user.relationshipStatus === 'FRIENDS'" class="status-badge status-friends">
+                    <div *ngIf="user.relationStatus === 'FRIENDS'" class="status-badge status-friends">
                         <mat-icon>check_circle</mat-icon>
                         <span>Amis</span>
                     </div>
 
                     <!-- Pending sent status badge -->
-                    <div *ngIf="user.relationshipStatus === 'PENDING_SENT'" class="status-badge status-pending_sent">
+                    <div *ngIf="user.relationStatus === 'SENT_BY_ME'" class="status-badge status-pending_sent">
                         <mat-icon>schedule</mat-icon>
                         <span>En attente</span>
                     </div>
 
-                    <!-- Accept friend request button for PENDING_RECEIVED -->
-                    <button *ngIf="user.relationshipStatus === 'PENDING_RECEIVED'" mat-raised-button
-                        class="accept-friend-btn" (click)="onAcceptFriend(user)">
+                    <!-- Accept friend request button for SENT_BY_THEM -->
+                    <button *ngIf="user.relationStatus === 'SENT_BY_THEM'" mat-raised-button class="accept-friend-btn"
+                        (click)="onAcceptFriend(user)">
                         <mat-icon>check</mat-icon>
                         Accepter
                     </button>

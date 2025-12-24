@@ -59,7 +59,7 @@ export class UserService {
      */
     getMe(): Observable<UnifiedUser> {
         const keycloakProfile$ = from(this.keycloak.loadUserProfile());
-        const apiUser$ = this.http.get<BusinessUser>(`${this.apiUrl}/users/me`);
+        const apiUser$ = this.http.get<BusinessUser>(`${this.apiUrl}/user-service/profile`);
 
         return zip(keycloakProfile$, apiUser$).pipe(
             map(([profile, apiUser]) => {
@@ -93,7 +93,7 @@ export class UserService {
         console.log('📤 Uploading avatar file:', file.name, file.type, file.size);
 
         // Backend returns a plain string (the URL), not a JSON object
-        return this.http.post(`${this.apiUrl}/users/me/profilePicture`, formData, { responseType: 'text' }).pipe(
+        return this.http.post(`${this.apiUrl}/user-service/profile/picture`, formData, { responseType: 'text' }).pipe(
             map(url => {
                 console.log('✅ Upload successful, URL received:', url);
                 // Convert string response to expected object format
@@ -116,6 +116,6 @@ export class UserService {
     }
 
     searchUsers(): Observable<UserWithStatusDTO[]> {
-        return this.http.get<UserWithStatusDTO[]>(`${this.apiUrl}/users`);
+        return this.http.get<UserWithStatusDTO[]>(`${this.apiUrl}/social-service/users`);
     }
 }

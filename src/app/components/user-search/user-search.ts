@@ -29,24 +29,7 @@ export class UserSearchComponent implements OnInit {
     isLoading = false;
     error: string | null = null;
 
-    // Mock names for users until backend provides them
-    private mockNames = [
-        { firstName: 'Sophie', lastName: 'Martin' },
-        { firstName: 'Lucas', lastName: 'Bernard' },
-        { firstName: 'Emma', lastName: 'Dubois' },
-        { firstName: 'Thomas', lastName: 'Laurent' },
-        { firstName: 'Chloé', lastName: 'Simon' },
-        { firstName: 'Hugo', lastName: 'Michel' },
-        { firstName: 'Léa', lastName: 'Lefebvre' },
-        { firstName: 'Nathan', lastName: 'Moreau' },
-        { firstName: 'Camille', lastName: 'Girard' },
-        { firstName: 'Antoine', lastName: 'Roux' },
-        { firstName: 'Manon', lastName: 'Morel' },
-        { firstName: 'Alexandre', lastName: 'Fournier' },
-        { firstName: 'Sarah', lastName: 'Fontaine' },
-        { firstName: 'Maxime', lastName: 'Rousseau' },
-        { firstName: 'Julie', lastName: 'Vincent' }
-    ];
+    // Mock names removed as userName is provided
 
     constructor(private userService: UserService) { }
 
@@ -60,12 +43,7 @@ export class UserSearchComponent implements OnInit {
 
         this.userService.searchUsers().subscribe({
             next: (users) => {
-                // Assign mock names to users
-                this.users = users.map((user, index) => ({
-                    ...user,
-                    firstName: this.mockNames[index % this.mockNames.length].firstName,
-                    lastName: this.mockNames[index % this.mockNames.length].lastName
-                }));
+                this.users = users;
                 this.filteredUsers = this.users;
                 this.isLoading = false;
             },
@@ -86,17 +64,16 @@ export class UserSearchComponent implements OnInit {
         }
 
         this.filteredUsers = this.users.filter(user => {
-            const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-            return fullName.includes(query);
+            return user.userName.toLowerCase().includes(query);
         });
     }
 
     getInitials(user: UserWithStatusDTO): string {
-        const first = user.firstName?.[0] || '';
-        const last = user.lastName?.[0] || '';
-        return (first + last).toUpperCase() || 'U';
+        return user.userName.substring(0, 2).toUpperCase();
     }
 
+    // joinedDate removed from DTO
+    /*
     formatJoinedDate(dateString: string): string {
         const date = new Date(dateString);
         return date.toLocaleDateString('fr-FR', {
@@ -105,6 +82,7 @@ export class UserSearchComponent implements OnInit {
             day: 'numeric'
         });
     }
+    */
 
     shouldShowButton(status: string): boolean {
         return status === 'NOT_FRIENDS';
