@@ -1,5 +1,16 @@
 <div class="user-card">
     <div class="card-content">
+        <div class="options-trigger" *ngIf="user.relationStatus === 'FRIENDS'">
+            <button mat-icon-button [matMenuTriggerFor]="cardMenu" aria-label="More options">
+                <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #cardMenu="matMenu" xPosition="before" panelClass="glass-menu">
+                <button mat-menu-item (click)="onRemoveFriendClick()" class="destructive-item">
+                    <mat-icon>person_remove</mat-icon>
+                    <span>Supprimer l'ami</span>
+                </button>
+            </mat-menu>
+        </div>
         <div class="avatar-section">
             <div class="avatar">
                 <img *ngIf="user.profilePicUrl" [src]="user.profilePicUrl" [alt]="user.userName">

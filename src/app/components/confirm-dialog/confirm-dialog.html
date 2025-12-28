@@ -1,0 +1,22 @@
+<div class="dialog-container">
+    <div class="dialog-header">
+        <h2 mat-dialog-title>{{ data.title }}</h2>
+        <button mat-icon-button (click)="onCancel()" class="close-button">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <mat-dialog-content>
+        <p class="message">{{ data.message }}</p>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+        <button mat-stroked-button (click)="onCancel()" class="cancel-btn">
+            {{ data.cancelText || 'Annuler' }}
+        </button>
+        <button mat-flat-button [color]="data.isDestructive ? 'warn' : 'primary'" (click)="onConfirm()"
+            [class.destructive-btn]="data.isDestructive" class="confirm-btn">
+            {{ data.confirmText || 'Confirmer' }}
+        </button>
+    </mat-dialog-actions>
+</div>

@@ -27,20 +27,27 @@ export class SocialService {
      * Send a friend request using the user's tag (Name#Hashtag)
      */
     sendFriendRequest(userTag: string): Observable<any> {
-        return this.http.post(`${this.apiUrl}/friendships/request`, { userTag });
+        return this.http.post(`${this.apiUrl}/relationships/request`, { userTag });
     }
 
     /**
      * Accept an incoming friend request
      */
     acceptFriend(userId: number): Observable<any> {
-        return this.http.post(`${this.apiUrl}/friendships/accept/${userId}`, {});
+        return this.http.put(`${this.apiUrl}/relationships/accept/${userId}`, {});
     }
 
     /**
-     * Decline an incoming friend request
+     * Reject an incoming friend request
      */
-    declineFriend(userId: number): Observable<any> {
-        return this.http.post(`${this.apiUrl}/friendships/decline/${userId}`, {});
+    rejectFriend(userId: number): Observable<any> {
+        return this.http.put(`${this.apiUrl}/relationships/reject/${userId}`, {});
+    }
+
+    /**
+     * Remove a friend
+     */
+    removeFriend(userId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/relationships/${userId}`);
     }
 }

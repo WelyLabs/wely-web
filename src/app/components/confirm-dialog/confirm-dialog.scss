@@ -1,0 +1,87 @@
+.dialog-container {
+    padding: 8px;
+    animation: dialog-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 8px;
+        padding-top: 8px;
+
+        h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-button {
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent !important;
+
+            &:hover {
+                background: rgba(0, 0, 0, 0.05) !important;
+                color: var(--text-primary);
+                transform: rotate(90deg);
+            }
+
+            mat-icon {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+            }
+        }
+    }
+
+    .message {
+        margin: 16px 0;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        line-height: 1.5;
+        padding: 0 8px;
+    }
+
+    mat-dialog-actions {
+        padding: 16px 8px !important;
+        gap: 12px;
+
+        button {
+            border-radius: 12px;
+            height: 44px;
+            padding: 0 24px;
+            font-weight: 600;
+        }
+
+        .destructive-btn {
+            background: #ef4444;
+            color: white;
+
+            &:hover {
+                background: #dc2626;
+            }
+        }
+    }
+}
+
+@keyframes dialog-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}

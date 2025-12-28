@@ -14,6 +14,7 @@ import { SocialService } from '../../services/social.service';
 import { UserWithStatusDTO } from '../../models/user.model';
 import { UserCardComponent } from '../user-card/user-card';
 import { AddFriendDialogComponent } from '../add-friend-dialog/add-friend-dialog';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
 
 @Component({
     selector: 'app-user-search',
@@ -160,7 +161,7 @@ export class UserSearchComponent implements OnInit {
             next: () => {
                 this.loadUsers();
             },
-            error: (err) => {
+            error: (err: any) => {
                 console.error('Error accepting friend request:', err);
                 this.isLoading = false;
                 this.error = 'Impossible d\'accepter la demande';
@@ -170,14 +171,44 @@ export class UserSearchComponent implements OnInit {
 
     onDeclineFriend(user: UserWithStatusDTO) {
         this.isLoading = true;
-        this.socialService.declineFriend(user.userId).subscribe({
+        this.socialService.rejectFriend(user.userId).subscribe({
             next: () => {
                 this.loadUsers();
             },
-            error: (err) => {
+            error: (err: any) => {
                 console.error('Error declining friend request:', err);
                 this.isLoading = false;
                 this.error = 'Impossible de refuser la demande';
+            }
+        });
+    }
+
+    onRemoveFriend(user: UserWithStatusDTO) {
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+            width: '400px',
+            data: {
+                title: 'Supprimer l\'ami',
+                message: `Êtes-vous sûr de vouloir supprimer ${user.userName} de vos amis ?`,
+                confirmText: 'Supprimer',
+                cancelText: 'Annuler',
+                isDestructive: true
+            },
+            panelClass: 'confirm-dialog-panel'
+        });
+
+        dialogRef.afterClosed().subscribe(confirm => {
+            if (confirm) {
+                this.isLoading = true;
+                this.socialService.removeFriend(user.userId).subscribe({
+                    next: () => {
+                        this.loadUsers();
+                    },
+                    error: (err: any) => {
+                        console.error('Error removing friend:', err);
+                        this.isLoading = false;
+                        this.error = 'Impossible de supprimer l\'ami';
+                    }
+                });
             }
         });
     }

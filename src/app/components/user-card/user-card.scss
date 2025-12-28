@@ -24,6 +24,43 @@
         gap: 0.75rem; // Reduced gap
         height: 100%;
         box-sizing: border-box;
+        position: relative;
+
+        .options-trigger {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 2;
+
+            button {
+                width: 32px;
+                height: 32px;
+                padding: 0 !important;
+                min-width: 0 !important;
+                line-height: 1 !important;
+                color: var(--text-secondary);
+                transition: all 0.2s ease;
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+
+                &:hover {
+                    background: rgba(0, 0, 0, 0.05);
+                    color: var(--primary-blue);
+                }
+
+                mat-icon {
+                    font-size: 20px;
+                    width: 20px;
+                    height: 20px;
+                    margin: 0 !important;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            }
+        }
     }
 
     .avatar-section {
