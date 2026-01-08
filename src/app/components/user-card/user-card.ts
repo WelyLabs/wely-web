@@ -19,6 +19,7 @@ export class UserCardComponent {
     @Output() acceptFriend = new EventEmitter<UserWithStatusDTO>();
     @Output() declineFriend = new EventEmitter<UserWithStatusDTO>();
     @Output() removeFriend = new EventEmitter<UserWithStatusDTO>();
+    @Output() chat = new EventEmitter<UserWithStatusDTO>();
 
     getInitials(user: UserWithStatusDTO): string {
         return user.userName ? user.userName.substring(0, 2).toUpperCase() : 'U';
@@ -38,5 +39,9 @@ export class UserCardComponent {
 
     onRemoveFriendClick() {
         this.removeFriend.emit(this.user);
+    }
+
+    onChatClick() {
+        this.chat.emit(this.user);
     }
 }

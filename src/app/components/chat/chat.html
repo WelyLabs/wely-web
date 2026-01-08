@@ -1,0 +1,48 @@
+<div class="chat-container">
+    <div class="chat-header">
+        <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <h2>{{ conversation ? 'Conversation' : 'Chargement...' }}</h2>
+    </div>
+
+    <div class="chat-content">
+        <div class="loading-state" *ngIf="isLoading">
+            <div class="spinner"></div>
+            <p>Chargement de la conversation...</p>
+        </div>
+
+        <div class="error-state" *ngIf="error">
+            <mat-icon>error_outline</mat-icon>
+            <p>{{ error }}</p>
+            <button mat-raised-button color="primary"
+                (click)="friendId && loadConversation(friendId)">Réessayer</button>
+        </div>
+
+        <div class="messages-container" *ngIf="conversation && messages.length > 0">
+            <div *ngFor="let msg of messages" class="message-bubble"
+                [ngClass]="{'sent': msg.senderId === currentUserId, 'received': msg.senderId !== currentUserId}">
+                <div class="message-content">
+                    <p>{{ msg.content }}</p>
+                    <span class="message-time">{{ msg.timestamp | date:'shortTime' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-state" *ngIf="conversation && messages.length === 0">
+            <mat-icon>chat_bubble_outline</mat-icon>
+            <p>Aucun message pour le moment</p>
+            <p>Envoyez le premier message !</p>
+        </div>
+    </div>
+
+    <div class="chat-footer" *ngIf="conversation">
+        <mat-form-field appearance="outline" class="message-input" [subscriptSizing]="'dynamic'">
+            <input matInput [(ngModel)]="newMessage" placeholder="Écrivez votre message..."
+                (keyup.enter)="onSendMessage()" [disabled]="isSending">
+        </mat-form-field>
+        <button mat-mini-fab color="primary" (click)="onSendMessage()" [disabled]="!newMessage.trim() || isSending">
+            <mat-icon>send</mat-icon>
+        </button>
+    </div>
+</div>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,7 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
 import { UserWithStatusDTO } from '../../models/user.model';
@@ -49,7 +49,8 @@ export class UserSearchComponent implements OnInit {
         private socialService: SocialService,
         private route: ActivatedRoute,
         private breakpointObserver: BreakpointObserver,
-        private dialog: MatDialog
+        private dialog: MatDialog,
+        private router: Router
     ) { }
 
     ngOnInit() {
@@ -211,5 +212,10 @@ export class UserSearchComponent implements OnInit {
                 });
             }
         });
+    }
+
+    onChat(user: UserWithStatusDTO) {
+        console.log('Chat clicked for user:', user);
+        this.router.navigate(['/chat', user.userId]);
     }
 }

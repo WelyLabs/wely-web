@@ -1,4 +1,5 @@
 export const environment = {
     production: false,
-    apiUrl: 'http://localhost:8081/api/v1'
+    apiUrl: 'http://localhost:8081/api/v1',
+    rsocketUrl: 'ws://localhost:8084/rsocket'
 };

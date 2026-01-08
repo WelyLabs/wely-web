@@ -5,6 +5,10 @@
                 <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #cardMenu="matMenu" xPosition="before" panelClass="glass-menu">
+                <button mat-menu-item (click)="onChatClick()">
+                    <mat-icon>chat</mat-icon>
+                    <span>Chatter</span>
+                </button>
                 <button mat-menu-item (click)="onRemoveFriendClick()" class="destructive-item">
                     <mat-icon>person_remove</mat-icon>
                     <span>Supprimer l'ami</span>

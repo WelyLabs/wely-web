@@ -11,26 +11,32 @@ export class SessionInterceptor implements HttpInterceptor {
     intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         return next.handle(request).pipe(
             catchError((error: HttpErrorResponse) => {
-                // Si l'erreur est 401 (Non autorisé), cela signifie probablement que le token est expiré
-                if (error.status === 401) {
+                const isUnauthorized = error.status === 401;
+                const isInvalidGrant = error.status === 400 &&
+                    (error.error?.error === 'invalid_grant' ||
+                        error.error?.error_description?.includes('Token is not active'));
+
+                // Si l'erreur est 401 ou 400 avec invalid_grant
+                if (isUnauthorized || isInvalidGrant) {
+                    console.warn(`[SessionInterceptor] Session issue detected (${error.status}). Attempting recovery...`);
+
                     return of(this.keycloak.isLoggedIn()).pipe(
                         switchMap(isLoggedIn => {
-                            if (!isLoggedIn) {
-                                // Session expirée complètement, on renvoie vers le login
-                                from(this.keycloak.login());
+                            if (!isLoggedIn || isInvalidGrant) {
+                                console.error('[SessionInterceptor] User not logged in or invalid grant. Redirecting to login.');
+                                this.keycloak.login();
                                 return throwError(() => error);
                             } else {
                                 // On tente de rafraîchir le token
                                 return from(this.keycloak.updateToken(20)).pipe(
                                     switchMap(() => {
-                                        // On rejoue la requête originale
-                                        // Elle sera interceptée à nouveau par KeycloakBearerInterceptor
-                                        // qui y ajoutera le nouveau token.
+                                        console.log('[SessionInterceptor] Token refreshed successfully. Retrying request.');
                                         return next.handle(request);
                                     }),
-                                    catchError(() => {
+                                    catchError((refreshError) => {
+                                        console.error('[SessionInterceptor] Token refresh failed. Redirecting to login.', refreshError);
                                         this.keycloak.login();
-                                        return throwError(() => error);
+                                        return throwError(() => refreshError);
                                     })
                                 );
                             }

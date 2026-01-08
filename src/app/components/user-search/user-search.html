@@ -77,7 +77,8 @@
 
             <app-user-card *ngFor="let user of filteredUsers" [user]="user" [showFriendBadge]="!isFriendsMode"
                 (addFriend)="onAddFriend($event)" (acceptFriend)="onAcceptFriend($event)"
-                (declineFriend)="onDeclineFriend($event)" (removeFriend)="onRemoveFriend($event)">
+                (declineFriend)="onDeclineFriend($event)" (removeFriend)="onRemoveFriend($event)"
+                (chat)="onChat($event)">
             </app-user-card>
         </div>
     </ng-template>

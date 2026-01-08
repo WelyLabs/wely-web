@@ -5,6 +5,7 @@ import { EventFeedComponent } from './components/event-feed/event-feed';
 import { EventDetailsComponent } from './components/event-details/event-details';
 import { LandingPageComponent } from './components/landing-page/landing-page';
 import { UserProfileComponent } from './components/user-profile/user-profile';
+import { ChatComponent } from './components/chat/chat';
 
 import { UserSearchComponent } from './components/user-search/user-search';
 import { authGuard } from './core/guards/auth.guard';
@@ -21,7 +22,8 @@ export const routes: Routes = [
             { path: 'users', component: UserSearchComponent },
             { path: 'event/:type/:id', component: EventDetailsComponent },
             { path: 'profile', component: UserProfileComponent },
-            { path: 'friends', component: UserSearchComponent, data: { mode: 'friends' } }
+            { path: 'friends', component: UserSearchComponent, data: { mode: 'friends' } },
+            { path: 'chat/:friendId', component: ChatComponent }
         ]
     }
 ];
