@@ -1,26 +1,24 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
 import { Conversation, Message } from '../../models/chat.model';
+import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 
 @Component({
     selector: 'app-chat',
     standalone: true,
-    imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatInputModule, MatFormFieldModule],
+    imports: [CommonModule, MatButtonModule, MatIconModule, SharedChatComponent],
     templateUrl: './chat.html',
     styleUrl: './chat.scss'
 })
 export class ChatComponent implements OnInit {
     conversation: Conversation | null = null;
     messages: Message[] = [];
-    newMessage: string = '';
+    chatMessages: ChatMessage[] = []; // UI Model
     isLoading = true;
     isSending = false;
     error: string | null = null;
@@ -54,12 +52,12 @@ export class ChatComponent implements OnInit {
         this.chatService.getConversation(friendId).subscribe({
             next: (conv) => {
                 this.conversation = conv;
-                // Messages are now included in the conversation object
                 if (conv.messages) {
                     this.messages = conv.messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
                 } else {
                     this.messages = [];
                 }
+                this.updateChatMessages();
                 this.isLoading = false;
             },
             error: (err) => {
@@ -70,16 +68,32 @@ export class ChatComponent implements OnInit {
         });
     }
 
-    onSendMessage() {
-        if (!this.newMessage.trim() || !this.conversation) return;
+    private updateChatMessages() {
+        this.chatMessages = this.messages.map(msg => ({
+            id: msg.id,
+            text: msg.content,
+            time: msg.timestamp,
+            isMe: msg.senderId === this.currentUserId,
+            senderName: msg.senderId === this.currentUserId ? 'Moi' : 'Ami'
+        }));
+    }
+
+    onSendMessage(content: string) {
+        if (!content.trim() || !this.conversation) return;
 
         this.isSending = true;
-        this.chatService.sendMessage(this.conversation.id, this.newMessage).subscribe({
+        this.chatService.sendMessage(this.conversation.id, content).subscribe({
             next: (msg) => {
                 this.messages.push(msg);
-                this.newMessage = '';
+                // Optimistic push to UI
+                this.chatMessages.push({
+                    id: msg.id,
+                    text: msg.content,
+                    time: msg.timestamp,
+                    isMe: true, // We sent it
+                    senderName: 'Moi'
+                });
                 this.isSending = false;
-                // Scroll to bottom would go here
             },
             error: (err) => {
                 console.error('Error sending message:', err);

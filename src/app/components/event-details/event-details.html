@@ -66,23 +66,9 @@
             <!-- Chat Tab -->
             <mat-tab label="Chat">
                 <div class="chat-container">
-                    <div class="messages-list">
-                        <div *ngFor="let msg of chatMessages" class="message-bubble" [class.me]="msg.isMe">
-                            <div class="sender" *ngIf="!msg.isMe">{{ msg.sender }}</div>
-                            <div class="text">{{ msg.text }}</div>
-                            <div class="time">{{ msg.time | date:'shortTime' }}</div>
-                        </div>
-                    </div>
-
-                    <div class="chat-input">
-                        <mat-form-field appearance="outline" class="w-full">
-                            <input matInput placeholder="Type a message..." [(ngModel)]="newMessage"
-                                (keyup.enter)="sendMessage()">
-                            <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!newMessage.trim()">
-                                <mat-icon>send</mat-icon>
-                            </button>
-                        </mat-form-field>
-                    </div>
+                    <app-shared-chat [messages]="chatMessages" [placeholder]="'Type a message...'"
+                        (onSend)="onSendMessage($event)">
+                    </app-shared-chat>
                 </div>
             </mat-tab>
         </mat-tab-group>

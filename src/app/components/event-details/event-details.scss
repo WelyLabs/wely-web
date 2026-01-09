@@ -147,86 +147,8 @@
 }
 
 .chat-container {
-    display: flex;
-    flex-direction: column;
     height: 100%;
-    background: var(--bg-subtle);
-
-    .messages-list {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-
-        .message-bubble {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            position: relative;
-            animation: fadeIn 0.3s ease;
-
-            &.me {
-                align-self: flex-end;
-                background: var(--primary-blue);
-                color: white;
-                border-bottom-right-radius: 4px;
-
-                .sender {
-                    display: none;
-                }
-
-                .time {
-                    color: rgba(255, 255, 255, 0.7);
-                }
-            }
-
-            &:not(.me) {
-                align-self: flex-start;
-                background: white;
-                border: 1px solid var(--border-default);
-                border-bottom-left-radius: 4px;
-
-                .sender {
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: var(--primary-orange);
-                    margin-bottom: 4px;
-                }
-
-                .time {
-                    color: var(--text-secondary);
-                }
-            }
-
-            .text {
-                font-size: 14px;
-                line-height: 1.4;
-            }
-
-            .time {
-                font-size: 10px;
-                margin-top: 4px;
-                text-align: right;
-            }
-        }
-    }
-
-    .chat-input {
-        padding: 16px;
-        background: white;
-        border-top: 1px solid var(--border-default);
-
-        mat-form-field {
-            width: 100%;
-            margin-bottom: 0;
-
-            ::ng-deep .mat-mdc-text-field-wrapper {
-                background-color: white;
-            }
-        }
-    }
+    overflow: hidden;
 }
 
 @keyframes fadeIn {

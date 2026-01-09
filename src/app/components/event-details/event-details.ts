@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTabsModule } from '@angular/material/tabs';
 import { Event, FeedEvent } from '../../services/event.service';
 import { Subscription } from 'rxjs';
 
@@ -14,10 +15,7 @@ interface CalendarEvent {
   date: Date;
 }
 
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule } from '@angular/forms';
+import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 
 @Component({
   selector: 'app-event-details',
@@ -27,9 +25,7 @@ import { FormsModule } from '@angular/forms';
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
-    MatInputModule,
-    MatFormFieldModule,
-    FormsModule
+    SharedChatComponent
   ],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
@@ -102,22 +98,18 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   // Chat Logic
-  chatMessages: { sender: string, text: string, isMe: boolean, time: Date }[] = [
-    { sender: 'Alice', text: 'Hey! Are you going to this event?', isMe: false, time: new Date(Date.now() - 3600000) },
-    { sender: 'Me', text: 'Yes, I just subscribed!', isMe: true, time: new Date(Date.now() - 1800000) },
-    { sender: 'Bob', text: 'Awesome, see you there!', isMe: false, time: new Date(Date.now() - 900000) }
+  chatMessages: ChatMessage[] = [
+    { senderName: 'Alice', text: 'Hey! Are you going to this event?', isMe: false, time: new Date(Date.now() - 3600000) },
+    { senderName: 'Me', text: 'Yes, I just subscribed!', isMe: true, time: new Date(Date.now() - 1800000) },
+    { senderName: 'Bob', text: 'Awesome, see you there!', isMe: false, time: new Date(Date.now() - 900000) }
   ];
-  newMessage = '';
 
-  sendMessage() {
-    if (this.newMessage.trim()) {
-      this.chatMessages.push({
-        sender: 'Me',
-        text: this.newMessage,
-        isMe: true,
-        time: new Date()
-      });
-      this.newMessage = '';
-    }
+  onSendMessage(text: string) {
+    this.chatMessages.push({
+      senderName: 'Me',
+      text: text,
+      isMe: true,
+      time: new Date()
+    });
   }
 }

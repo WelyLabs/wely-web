@@ -1,11 +1,11 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, from, throwError } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
+import { switchMap, catchError, timeout } from 'rxjs/operators';
 import { RSocketClient, JsonSerializer, IdentitySerializer } from 'rsocket-core';
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { environment } from '../../environments/environment';
-import { Conversation, Message } from '../models/chat.model';
+import { Conversation, Message, MessageType } from '../models/chat.model';
 import { UserService } from './user.service';
 
 @Injectable({
@@ -84,21 +84,30 @@ export class ChatService implements OnDestroy {
                         metadata: String.fromCharCode(`chat.send.${conversationId}`.length) + `chat.send.${conversationId}`
                     };
 
-                    socket.requestResponse(payload).subscribe({
-                        onComplete: (payload: any) => {
-                            const message = payload.data as Message;
-                            observer.next(message);
-                            observer.complete();
-                        },
-                        onError: (error: any) => {
-                            console.error('RSocket sendMessage error:', error);
-                            observer.error(error);
-                        }
-                    });
+                    try {
+                        // Use fireAndForget as backend likely returns void
+                        socket.fireAndForget(payload);
+
+                        // Optimistic update
+                        const message: Message = {
+                            id: Date.now().toString(),
+                            senderId: currentUser.id,
+                            content: content,
+                            type: MessageType.TEXT,
+                            timestamp: new Date().toISOString(),
+                            reactions: {}
+                        };
+
+                        observer.next(message);
+                        observer.complete();
+                    } catch (e) {
+                        console.error('RSocket fireAndForget error:', e);
+                        observer.error(e);
+                    }
                 });
             }),
             catchError(error => {
-                console.error('Failed to send message (RSocket not connected?):', error);
+                console.error('Failed to send message:', error);
                 return throwError(() => new Error('Impossible d\'envoyer le message. Vérifiez votre connexion.'));
             })
         );

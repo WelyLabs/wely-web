@@ -1,0 +1,23 @@
+<div class="chat-container">
+    <div class="messages-list">
+        <div class="empty-state" *ngIf="!loading && messages.length === 0">
+            <p>No messages yet. Start the conversation!</p>
+        </div>
+
+        <div *ngFor="let msg of messages; trackBy: trackByMessage" class="message-bubble" [class.me]="msg.isMe">
+            <div class="sender" *ngIf="!msg.isMe">{{ msg.senderName }}</div>
+            <div class="text">{{ msg.text }}</div>
+            <div class="time">{{ msg.time | date:'shortTime' }}</div>
+        </div>
+    </div>
+
+    <div class="chat-input">
+        <mat-form-field appearance="outline" class="w-full" [subscriptSizing]="'dynamic'">
+            <input matInput [placeholder]="placeholder" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()"
+                [disabled]="loading">
+            <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!newMessage.trim() || loading">
+                <mat-icon>send</mat-icon>
+            </button>
+        </mat-form-field>
+    </div>
+</div>
