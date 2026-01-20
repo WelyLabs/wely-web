@@ -40,6 +40,13 @@ export class UserService {
     }
 
     /**
+     * Get the current access token synchronously
+     */
+    getAccessToken(): string {
+        return this.keycloak.getKeycloakInstance().token!;
+    }
+
+    /**
      * Update the current user in the BehaviorSubject
      * Use this after profile updates to propagate changes
      */

@@ -1,12 +1,13 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, from, throwError } from 'rxjs';
+import { Observable, from, throwError, Subject } from 'rxjs';
 import { switchMap, catchError, timeout } from 'rxjs/operators';
-import { RSocketClient, JsonSerializer, IdentitySerializer } from 'rsocket-core';
+import { RSocketClient, JsonSerializer, IdentitySerializer, encodeCompositeMetadata, encodeRoute, MESSAGE_RSOCKET_ROUTING, MESSAGE_RSOCKET_COMPOSITE_METADATA, BufferEncoders, encodeAndAddWellKnownAuthMetadata, MESSAGE_RSOCKET_AUTHENTICATION } from 'rsocket-core';
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { environment } from '../../environments/environment';
 import { Conversation, Message, MessageType } from '../models/chat.model';
 import { UserService } from './user.service';
+import { Buffer } from 'buffer';
 
 @Injectable({
     providedIn: 'root'
@@ -27,18 +28,21 @@ export class ChatService implements OnDestroy {
         return new Promise((resolve, reject) => {
             this.client = new RSocketClient({
                 serializers: {
-                    data: JsonSerializer,
+                    data: {
+                        serialize: (data: any) => Buffer.from(JSON.stringify(data)),
+                        deserialize: (data: Buffer) => JSON.parse(data.toString())
+                    },
                     metadata: IdentitySerializer
                 },
                 setup: {
                     keepAlive: 60000,
                     lifetime: 180000,
                     dataMimeType: 'application/json',
-                    metadataMimeType: 'message/x.rsocket.routing.v0',
+                    metadataMimeType: MESSAGE_RSOCKET_COMPOSITE_METADATA.string,
                 },
                 transport: new RSocketWebSocketClient({
                     url: environment.rsocketUrl
-                }),
+                }, BufferEncoders),
             });
 
             this.client.connect().subscribe({
@@ -53,6 +57,20 @@ export class ChatService implements OnDestroy {
                 onSubscribe: (cancel: any) => { /* no-op */ }
             });
         });
+    }
+
+    private getMetadata(route: string): any {
+        const token = this.userService.getAccessToken();
+
+        const tokenBuffer = Buffer.concat([
+            Buffer.from([0x81]),
+            Buffer.from(token)
+        ]);
+
+        return encodeCompositeMetadata([
+            [MESSAGE_RSOCKET_ROUTING, encodeRoute(route)],
+            [MESSAGE_RSOCKET_AUTHENTICATION, tokenBuffer]
+        ]);
     }
 
     /**
@@ -81,29 +99,30 @@ export class ChatService implements OnDestroy {
                             content: content,
                             senderId: currentUser.id
                         },
-                        metadata: String.fromCharCode(`chat.send.${conversationId}`.length) + `chat.send.${conversationId}`
+                        metadata: this.getMetadata("chat.send")
                     };
 
-                    try {
-                        // Use fireAndForget as backend likely returns void
-                        socket.fireAndForget(payload);
+                    // Use fireAndForget as backend likely returns void
+                    socket.requestResponse(payload).subscribe({
+                        onComplete: () => {
+                            console.log("✅ Frame envoyée et acquittée par le serveur");
+                        },
+                        onError: (e: any) => console.error("❌ Erreur envoi:", e)
+                    });
 
-                        // Optimistic update
-                        const message: Message = {
-                            id: Date.now().toString(),
-                            senderId: currentUser.id,
-                            content: content,
-                            type: MessageType.TEXT,
-                            timestamp: new Date().toISOString(),
-                            reactions: {}
-                        };
+                    // Optimistic update
+                    const message: Message = {
+                        id: Date.now().toString(),
+                        senderId: currentUser.id,
+                        content: content,
+                        type: MessageType.TEXT,
+                        timestamp: new Date().toISOString(),
+                        reactions: {}
+                    };
 
-                        observer.next(message);
-                        observer.complete();
-                    } catch (e) {
-                        console.error('RSocket fireAndForget error:', e);
-                        observer.error(e);
-                    }
+                    observer.next(message);
+                    observer.complete();
+
                 });
             }),
             catchError(error => {
@@ -111,6 +130,42 @@ export class ChatService implements OnDestroy {
                 return throwError(() => new Error('Impossible d\'envoyer le message. Vérifiez votre connexion.'));
             })
         );
+    }
+
+    private messagesSubject = new Subject<any>();
+    public messages$ = this.messagesSubject.asObservable();
+
+    initializeStream() {
+        from(this.connectionPromise).pipe(
+            switchMap(socket => {
+                return new Observable<any>(observer => {
+                    const route = 'chat.stream';
+                    const payload = {
+                        data: null,
+                        metadata: this.getMetadata(route)
+                    };
+
+                    console.log('🔌 Initialisation du flux global RSocket (simple routing):', route);
+
+                    socket.requestStream(payload).subscribe({
+                        onNext: (payload: any) => {
+                            const msg = payload.data;
+                            console.log('📥 Message global reçu:', msg);
+                            this.messagesSubject.next(msg);
+                        },
+                        onError: (error: any) => {
+                            console.error('❌ Erreur flux global:', error);
+                        },
+                        onComplete: () => {
+                            console.log('Flux global terminé');
+                        },
+                        onSubscribe: (subscription: any) => {
+                            subscription.request(2147483647);
+                        }
+                    });
+                });
+            })
+        ).subscribe();
     }
 
     ngOnDestroy() {
