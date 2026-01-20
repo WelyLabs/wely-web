@@ -4,6 +4,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { KeycloakService, KeycloakBearerInterceptor } from 'keycloak-angular';
 import { SessionInterceptor } from './core/interceptors/session.interceptor';
+import { UserService } from './services/user.service';
 
 import { routes } from './app.routes';
 import { initializeKeycloak } from './core/auth/keycloak-init.factory';
@@ -15,11 +16,12 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     provideHttpClient(withInterceptorsFromDi()),
     KeycloakService,
+    UserService,
     {
       provide: APP_INITIALIZER,
       useFactory: initializeKeycloak,
       multi: true,
-      deps: [KeycloakService]
+      deps: [KeycloakService, UserService]
     },
     {
       provide: HTTP_INTERCEPTORS,

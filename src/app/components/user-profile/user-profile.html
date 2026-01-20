@@ -128,9 +128,9 @@
                         <span class="label">Département</span>
                         <span class="value">{{ user.department }}</span>
                     </div>
-                    <div class="detail-item" *ngIf="user.parsedJoinedDate">
+                    <div class="detail-item" *ngIf="user.joinedDate">
                         <span class="label">Membre depuis</span>
-                        <span class="value">{{ user.parsedJoinedDate | date:'longDate' }}</span>
+                        <span class="value">{{ user.joinedDate | date:'longDate' }}</span>
                     </div>
                 </div>
             </div>

@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { UnifiedUser } from '../../models/user.model';
+import { User } from '../../models/user.model';
 import { UserService } from '../../services/user.service';
 import { EditProfileDialogComponent } from '../edit-profile-dialog/edit-profile-dialog.component';
 
@@ -26,7 +26,7 @@ import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-uplo
     styleUrl: './user-profile.scss'
 })
 export class UserProfileComponent implements OnInit {
-    user!: UnifiedUser;
+    user!: User;
     isLoading = true;
 
     constructor(

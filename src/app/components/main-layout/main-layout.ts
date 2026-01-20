@@ -10,7 +10,8 @@ import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
 import { KeycloakProfile } from 'keycloak-js';
 import { UserService } from '../../services/user.service';
-import { UnifiedUser } from '../../models/user.model';
+import { ChatService } from '../../services/chat.service';
+import { User } from '../../models/user.model';
 
 @Component({
   selector: 'app-main-layout',
@@ -38,7 +39,7 @@ export class MainLayoutComponent implements OnInit {
 
   isMobile = false;
   isOpened = true;
-  userProfile: UnifiedUser | null = null;
+  userProfile: User | null = null;
   showUserMenu = false;
   showMobileMenu = false;
   showCopySuccess = false;
@@ -47,6 +48,7 @@ export class MainLayoutComponent implements OnInit {
     private breakpointObserver: BreakpointObserver,
     private keycloak: KeycloakService,
     private userService: UserService,
+    private chatService: ChatService,
     private router: Router
   ) { }
 
@@ -72,10 +74,9 @@ export class MainLayoutComponent implements OnInit {
       error: (err) => console.error('Error loading profile in layout:', err)
     });
 
-    // Initial load of user data
-    this.userService.loadAndSetCurrentUser().subscribe({
-      error: (err) => console.error('Error loading initial profile:', err)
-    });
+    // User data is already preloaded by APP_INITIALIZER
+    // Initialize RSocket stream for real-time messages
+    this.chatService.initializeStream();
   }
 
   toggleSidenav() {

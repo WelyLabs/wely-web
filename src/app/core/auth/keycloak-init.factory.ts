@@ -1,5 +1,7 @@
 import { KeycloakService } from 'keycloak-angular';
 import { KEYCLOAK_CONFIG } from './keycloak.config';
+import { UserService } from '../../services/user.service';
+import { firstValueFrom } from 'rxjs';
 
 /**
  * Détecte la langue du navigateur et retourne le code de langue approprié pour Keycloak
@@ -19,14 +21,14 @@ function getBrowserLocale(): string {
     return supportedLanguages.includes(langCode) ? langCode : 'fr';
 }
 
-export function initializeKeycloak(keycloak: KeycloakService) {
-    return () =>
-        keycloak.init({
+export function initializeKeycloak(keycloak: KeycloakService, userService: UserService) {
+    return async () => {
+        // Initialize Keycloak
+        const authenticated = await keycloak.init({
             config: {
                 url: KEYCLOAK_CONFIG.url,
                 realm: KEYCLOAK_CONFIG.realm,
                 clientId: KEYCLOAK_CONFIG.clientId
-
             },
             initOptions: {
                 onLoad: 'check-sso',
@@ -39,4 +41,16 @@ export function initializeKeycloak(keycloak: KeycloakService) {
             bearerPrefix: 'Bearer',
             bearerExcludedUrls: ['/assets', '/clients/public']
         });
+
+        // If user is authenticated, preload user data
+        if (authenticated) {
+            console.log('✅ User authenticated, preloading user data...');
+            try {
+                await firstValueFrom(userService.loadAndSetCurrentUser());
+                console.log('✅ User data preloaded successfully');
+            } catch (error) {
+                console.error('❌ Failed to preload user data:', error);
+            }
+        }
+    };
 }

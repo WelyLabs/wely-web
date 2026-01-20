@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable, from, map, switchMap, zip, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { KeycloakService } from 'keycloak-angular';
-import { UnifiedUser, BusinessUser } from '../models/user.model';
+import { User } from '../models/user.model';
 
 @Injectable({
     providedIn: 'root'
@@ -12,7 +12,7 @@ export class UserService {
     private apiUrl = `${environment.apiUrl}/user-service`;
 
     // BehaviorSubject to hold the current user state
-    private currentUserSubject = new BehaviorSubject<UnifiedUser | null>(null);
+    private currentUserSubject = new BehaviorSubject<User | null>(null);
 
     // Observable that components can subscribe to
     public currentUser$ = this.currentUserSubject.asObservable();
@@ -26,7 +26,7 @@ export class UserService {
      * Load user data and update the BehaviorSubject
      * This will notify all subscribers automatically
      */
-    loadAndSetCurrentUser(): Observable<UnifiedUser> {
+    loadAndSetCurrentUser(): Observable<User> {
         return this.getMe().pipe(
             tap(user => this.currentUserSubject.next(user))
         );
@@ -35,7 +35,7 @@ export class UserService {
     /**
      * Get the current user value synchronously
      */
-    getCurrentUserValue(): UnifiedUser | null {
+    getCurrentUserValue(): User | null {
         return this.currentUserSubject.value;
     }
 
@@ -50,7 +50,7 @@ export class UserService {
      * Update the current user in the BehaviorSubject
      * Use this after profile updates to propagate changes
      */
-    updateCurrentUser(updates: Partial<UnifiedUser>): void {
+    updateCurrentUser(updates: Partial<User>): void {
         const currentUser = this.currentUserSubject.value;
         if (currentUser) {
             this.currentUserSubject.next({
@@ -61,37 +61,14 @@ export class UserService {
     }
 
     /**
-     * Fetch user data from Keycloak and API
-     * This is the base method, prefer using loadAndSetCurrentUser() in components
+     * Fetch user data from API
      */
-    getMe(): Observable<UnifiedUser> {
-        const keycloakProfile$ = from(this.keycloak.loadUserProfile());
-        const apiUser$ = this.http.get<BusinessUser>(`${this.apiUrl}/profile`);
-
-        return zip(keycloakProfile$, apiUser$).pipe(
-            map(([profile, apiUser]) => {
-                return {
-                    ...apiUser,
-                    id: profile.id,
-                    username: profile.username,
-                    email: profile.email,
-                    firstName: profile.firstName,
-                    lastName: profile.lastName,
-                    hashtag: apiUser.hashtag,
-                    roles: this.keycloak.getUserRoles(),
-                    originalJoinedDate: apiUser.joinedDate,
-                    parsedJoinedDate: new Date(apiUser.joinedDate)
-                } as UnifiedUser;
-            })
-        );
+    getMe(): Observable<User> {
+        return this.http.get<User>(`${this.apiUrl}/profile`);
     }
 
     updateProfile(updates: { username: string; firstName: string; lastName: string; email: string }) {
-        const keycloakUrl = 'http://localhost:8080'; // Should match KEYCLOAK_CONFIG.url
-        const realm = 'calendar-app'; // Should match KEYCLOAK_CONFIG.realm
-        const accountApiUrl = `${keycloakUrl}/realms/${realm}/account`;
-
-        return this.http.post(accountApiUrl, updates);
+        return this.http.put(`${this.apiUrl}/profile`, updates);
     }
 
     uploadAvatar(file: File): Observable<{ profilePicUrl: string }> {
@@ -102,15 +79,13 @@ export class UserService {
 
         // Backend returns a plain string (the URL), not a JSON object
         return this.http.post(`${this.apiUrl}/profile/picture`, formData, { responseType: 'text' }).pipe(
-            map(url => {
+            tap(url => {
                 console.log('✅ Upload successful, URL received:', url);
-                // Convert string response to expected object format
-                return { profilePicUrl: url };
             }),
-            tap(response => {
+            tap(url => {
                 // Update the current user with the new avatar URL
-                this.updateCurrentUser({ profilePicUrl: response.profilePicUrl });
-                console.log('✅ User updated with new avatar URL:', response.profilePicUrl);
+                this.updateCurrentUser({ profilePicUrl: url });
+                console.log('✅ User updated with new avatar URL:', url);
             }),
             tap({
                 error: (error) => {
@@ -119,7 +94,9 @@ export class UserService {
                     console.error('Error message:', error.message);
                     console.error('Error body:', error.error);
                 }
-            })
-        );
+            }),
+            // Transform string to object
+            tap(() => { }), // placeholder to maintain chain
+        ) as unknown as Observable<{ profilePicUrl: string }>;
     }
 }

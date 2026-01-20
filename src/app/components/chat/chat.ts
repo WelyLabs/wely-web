@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,7 +16,8 @@ import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
     templateUrl: './chat.html',
     styleUrl: './chat.scss'
 })
-export class ChatComponent implements OnInit {
+export class ChatComponent implements OnInit, OnDestroy {
+    private messagesSubscription?: Subscription;
     conversation: Conversation | null = null;
     messages: Message[] = [];
     chatMessages: ChatMessage[] = []; // UI Model
@@ -29,12 +31,15 @@ export class ChatComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private chatService: ChatService,
-        private userService: UserService
+        private userService: UserService,
+        private ngZone: NgZone
     ) { }
 
     ngOnInit() {
         // Get current user ID
         const currentUser = this.userService.getCurrentUserValue();
+        console.log(currentUser);
+
         this.currentUserId = currentUser ? currentUser.id : null;
 
         this.friendId = this.route.snapshot.paramMap.get('friendId');
@@ -44,6 +49,31 @@ export class ChatComponent implements OnInit {
             this.error = 'Ami non spécifié';
             this.isLoading = false;
         }
+
+        // Subscribe to real-time messages from RSocket stream
+        this.messagesSubscription = this.chatService.messages$.subscribe(msg => {
+            // Run inside Angular zone to trigger change detection
+            this.ngZone.run(() => {
+                console.log('📥 Message reçu dans le chat:', msg);
+                // Only add message if it belongs to current conversation and is not from current user
+                if (this.conversation /*&& msg.conversationId === this.conversation.id*/ && msg.senderId !== this.currentUserId) {
+
+                    this.messages = [...this.messages, msg];
+                    // Create new array reference to trigger Angular change detection
+                    this.chatMessages = [...this.chatMessages, {
+                        id: msg.id,
+                        text: msg.content,
+                        time: msg.timestamp,
+                        isMe: false,
+                        senderName: 'Ami'
+                    }];
+                }
+            });
+        });
+    }
+
+    ngOnDestroy() {
+        this.messagesSubscription?.unsubscribe();
     }
 
     loadConversation(friendId: string) {

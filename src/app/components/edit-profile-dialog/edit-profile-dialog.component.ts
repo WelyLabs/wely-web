@@ -7,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { UserService } from '../../services/user.service';
-import { UnifiedUser } from '../../models/user.model';
+import { User } from '../../models/user.model';
 
 @Component({
     selector: 'app-edit-profile-dialog',
@@ -33,7 +33,7 @@ export class EditProfileDialogComponent {
         private fb: FormBuilder,
         private userService: UserService,
         private dialogRef: MatDialogRef<EditProfileDialogComponent>,
-        @Inject(MAT_DIALOG_DATA) public data: UnifiedUser
+        @Inject(MAT_DIALOG_DATA) public data: User
     ) {
         this.profileForm = this.fb.group({
             username: [data.username, [
