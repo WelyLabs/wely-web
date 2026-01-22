@@ -97,7 +97,7 @@ export class MainLayoutComponent implements OnInit {
 
   copyUserTag() {
     if (!this.userProfile) return;
-    const tag = `${this.userProfile.username}#${this.userProfile.hashtag}`;
+    const tag = `${this.userProfile.userName}#${this.userProfile.hashtag}`;
     navigator.clipboard.writeText(tag).then(() => {
       this.showCopySuccess = true;
       setTimeout(() => this.showCopySuccess = false, 2000);

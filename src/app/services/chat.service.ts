@@ -84,11 +84,12 @@ export class ChatService implements OnDestroy {
     /**
      * Send a message via RSocket
      */
-    sendMessage(conversationId: string, content: string): Observable<Message> {
+    sendMessage(conversationId: string, content: string, receiverId: string): Observable<Message> {
         return from(this.connectionPromise).pipe(
             switchMap(socket => {
                 return new Observable<Message>(observer => {
                     const currentUser = this.userService.getCurrentUserValue();
+
                     if (!currentUser) {
                         observer.error('User not authenticated');
                         return;
@@ -96,8 +97,9 @@ export class ChatService implements OnDestroy {
 
                     const payload = {
                         data: {
-                            content: content,
-                            senderId: currentUser.id
+                            receiverId: receiverId,
+                            conversationId: conversationId,
+                            content: content
                         },
                         metadata: this.getMetadata("chat.send")
                     };

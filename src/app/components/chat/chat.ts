@@ -38,7 +38,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     ngOnInit() {
         // Get current user ID
         const currentUser = this.userService.getCurrentUserValue();
-        console.log(currentUser);
 
         this.currentUserId = currentUser ? currentUser.id : null;
 
@@ -65,7 +64,7 @@ export class ChatComponent implements OnInit, OnDestroy {
                         text: msg.content,
                         time: msg.timestamp,
                         isMe: false,
-                        senderName: 'Ami'
+                        senderName: msg.senderUsername
                     }];
                 }
             });
@@ -112,7 +111,7 @@ export class ChatComponent implements OnInit, OnDestroy {
         if (!content.trim() || !this.conversation) return;
 
         this.isSending = true;
-        this.chatService.sendMessage(this.conversation.id, content).subscribe({
+        this.chatService.sendMessage(this.conversation.id, content, this.friendId!).subscribe({
             next: (msg) => {
                 this.messages.push(msg);
                 // Optimistic push to UI

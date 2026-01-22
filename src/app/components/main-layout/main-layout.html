@@ -22,7 +22,7 @@
       <div class="info">
         <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>
         <div class="tag-container">
-          <span class="email">{{ userProfile?.username }}#{{ userProfile?.hashtag }}</span>
+          <span class="email">{{ userProfile?.userName }}#{{ userProfile?.hashtag }}</span>
           <button class="copy-btn" (click)="copyUserTag(); $event.stopPropagation()"
             [title]="showCopySuccess ? 'Copié !' : 'Copier l\'identifiant'">
             <mat-icon>{{ showCopySuccess ? 'done' : 'content_copy' }}</mat-icon>
@@ -82,7 +82,7 @@
           <div class="user-details">
             <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>
             <div class="tag-container">
-              <span class="email">{{ userProfile?.username }}#{{ userProfile?.hashtag }}</span>
+              <span class="email">{{ userProfile?.userName }}#{{ userProfile?.hashtag }}</span>
               <button class="copy-btn" (click)="copyUserTag(); $event.stopPropagation()">
                 <mat-icon>{{ showCopySuccess ? 'done' : 'content_copy' }}</mat-icon>
               </button>

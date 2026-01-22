@@ -97,7 +97,7 @@ export class UserProfileComponent implements OnInit {
             if (result) {
                 // Update the user in the service - this will automatically propagate to all components
                 this.userService.updateCurrentUser({
-                    username: result.username,
+                    userName: result.userName,
                     firstName: result.firstName,
                     lastName: result.lastName,
                     email: result.email

@@ -36,7 +36,7 @@ export class EditProfileDialogComponent {
         @Inject(MAT_DIALOG_DATA) public data: User
     ) {
         this.profileForm = this.fb.group({
-            username: [data.username, [
+            userName: [data.userName, [
                 Validators.required,
                 Validators.minLength(3),
                 Validators.pattern(/^[a-zA-Z0-9_-]+$/) // Alphanumeric, underscore, hyphen only
