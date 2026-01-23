@@ -54,8 +54,9 @@ export class ChatComponent implements OnInit, OnDestroy {
             // Run inside Angular zone to trigger change detection
             this.ngZone.run(() => {
                 console.log('📥 Message reçu dans le chat:', msg);
+
                 // Only add message if it belongs to current conversation and is not from current user
-                if (this.conversation /*&& msg.conversationId === this.conversation.id*/ && msg.senderId !== this.currentUserId) {
+                if (this.conversation && msg.conversationId === this.conversation.id && msg.senderId !== this.currentUserId) {
 
                     this.messages = [...this.messages, msg];
                     // Create new array reference to trigger Angular change detection
@@ -80,6 +81,8 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.error = null;
         this.chatService.getConversation(friendId).subscribe({
             next: (conv) => {
+                console.log(conv);
+
                 this.conversation = conv;
                 if (conv.messages) {
                     this.messages = conv.messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -119,7 +122,7 @@ export class ChatComponent implements OnInit, OnDestroy {
                     id: msg.id,
                     text: msg.content,
                     time: msg.timestamp,
-                    isMe: true, // We sent it
+                    isMe: true,
                     senderName: 'Moi'
                 });
                 this.isSending = false;

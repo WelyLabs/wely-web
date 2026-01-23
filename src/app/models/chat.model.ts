@@ -13,6 +13,8 @@ export enum MessageType {
 export interface Message {
     id: string;
     senderId: string;
+    receiverId: string;
+    conversationId: string;
     content: string;
     type: MessageType;
     timestamp: string; // LocalDateTime from backend -> ISO string in frontend

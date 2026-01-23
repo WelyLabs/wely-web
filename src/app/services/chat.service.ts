@@ -116,6 +116,8 @@ export class ChatService implements OnDestroy {
                     const message: Message = {
                         id: Date.now().toString(),
                         senderId: currentUser.id,
+                        receiverId: receiverId,
+                        conversationId: conversationId,
                         content: content,
                         type: MessageType.TEXT,
                         timestamp: new Date().toISOString(),
