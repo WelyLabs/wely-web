@@ -65,7 +65,7 @@ export class ChatComponent implements OnInit, OnDestroy {
                         text: msg.content,
                         time: msg.timestamp,
                         isMe: false,
-                        senderName: msg.senderUsername
+                        senderName: msg.senderName
                     }];
                 }
             });
@@ -106,7 +106,7 @@ export class ChatComponent implements OnInit, OnDestroy {
             text: msg.content,
             time: msg.timestamp,
             isMe: msg.senderId === this.currentUserId,
-            senderName: msg.senderId === this.currentUserId ? 'Moi' : 'Ami'
+            senderName: msg.senderName
         }));
     }
 
@@ -123,7 +123,7 @@ export class ChatComponent implements OnInit, OnDestroy {
                     text: msg.content,
                     time: msg.timestamp,
                     isMe: true,
-                    senderName: 'Moi'
+                    senderName: msg.senderName
                 });
                 this.isSending = false;
             },

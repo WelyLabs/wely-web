@@ -13,6 +13,7 @@ export enum MessageType {
 export interface Message {
     id: string;
     senderId: string;
+    senderName: string;
     receiverId: string;
     conversationId: string;
     content: string;
