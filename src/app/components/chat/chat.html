@@ -16,7 +16,7 @@
             <mat-icon>error_outline</mat-icon>
             <p>{{ error }}</p>
             <button mat-raised-button color="primary"
-                (click)="friendId && loadConversation(friendId)">Réessayer</button>
+                (click)="convId && loadConversationById(convId)">Réessayer</button>
         </div>
 
         <app-shared-chat *ngIf="!isLoading && !error" [messages]="chatMessages" [loading]="isSending"

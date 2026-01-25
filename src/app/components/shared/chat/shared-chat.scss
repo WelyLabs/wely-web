@@ -21,6 +21,38 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+        position: relative;
+        border-radius: inherit; // Follow container's rounding
+
+        /* Specific scrollbar styling to prevent clipping at rounded corners */
+        &::-webkit-scrollbar {
+            width: 16px; // Slightly wider to accommodate larger gutter
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* Inset the scrollbar from top and bottom to avoid corners */
+        &::-webkit-scrollbar-button:vertical:start:decrement,
+        &::-webkit-scrollbar-button:vertical:end:increment {
+            display: block;
+            height: 8px;
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: var(--accent-gradient);
+            border-radius: 20px;
+            border: 6px solid transparent; // Large gutter to push thumb away from edges
+            background-clip: padding-box;
+            transition: all 0.3s ease;
+
+            &:hover {
+                background: linear-gradient(135deg, var(--dark-blue) 0%, var(--dark-orange) 100%);
+                background-clip: padding-box;
+            }
+        }
 
         .empty-state {
             display: flex;
@@ -133,6 +165,35 @@
         border-top-color: #3b82f6;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
+    }
+}
+
+.history-end-marker {
+    display: flex;
+    justify-content: center;
+    padding: 32px 0;
+    opacity: 0.8;
+    animation: loaderEntrance 0.6s ease;
+
+    .marker-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: #94a3b8;
+
+        mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            color: #cbd5e1;
+        }
+
+        span {
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
     }
 }
 

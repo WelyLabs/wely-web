@@ -25,8 +25,7 @@ export const routes: Routes = [
             { path: 'profile', component: UserProfileComponent },
             { path: 'friends', component: UserSearchComponent, data: { mode: 'friends' } },
             { path: 'conversations', component: ConversationsListComponent },
-            { path: 'chat/:friendId', component: ChatComponent },
-            { path: 'chat/c/:convId', component: ChatComponent }
+            { path: 'chat/:convId', component: ChatComponent }
         ]
     }
 ];

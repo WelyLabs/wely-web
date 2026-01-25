@@ -52,8 +52,8 @@ export class ConversationsListComponent implements OnInit {
     }
 
     openConversation(summary: ConversationSummary) {
-        // Navigate using the conversation-specific route
-        this.router.navigate(['/chat', 'c', summary.id]);
+        // Navigate using the unified conversation route
+        this.router.navigate(['/chat', summary.id]);
     }
 
     getLastMessageContent(conv: ConversationSummary): string {

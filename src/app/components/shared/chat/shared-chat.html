@@ -7,6 +7,13 @@
             <span>Chargement des anciens messages...</span>
         </div>
 
+        <div class="history-end-marker" *ngIf="!hasMore && messages.length > 0">
+            <div class="marker-content">
+                <mat-icon>chat_bubble_outline</mat-icon>
+                <span>C'est ici que tout a commencé !</span>
+            </div>
+        </div>
+
         <div class="empty-state" *ngIf="!loading && messages.length === 0">
             <p>No messages yet. Start the conversation!</p>
         </div>

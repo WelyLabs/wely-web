@@ -84,11 +84,11 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
     // Subscribe to incoming messages for global notifications
     this.chatSubscription = this.chatService.messages$.subscribe((msg: Message) => {
-      // Check if we are currently in the conversation with the sender
-      const isViewingCurrentConversation = this.router.url.includes(`/chat/${msg.senderId}`);
+      // Check if we are currently in the conversation with the sender or in the conversation ID route
+      const isViewingByConversationId = this.router.url.includes(`/chat/${msg.conversationId}`);
 
       // Only show notification if message is from someone else AND we're not already in that chat
-      if (msg.senderId !== this.userProfile?.id && !isViewingCurrentConversation) {
+      if (msg.senderId !== this.userProfile?.id && !isViewingByConversationId) {
         this.notificationService.showChatNotification(msg);
       }
     });

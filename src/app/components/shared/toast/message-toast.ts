@@ -20,7 +20,7 @@ export class MessageToastComponent {
     constructor(@Inject(MAT_SNACK_BAR_DATA) public data: Message) { }
 
     navigateToConversation(): void {
-        this.router.navigate(['/chat', this.data.senderId]);
+        this.router.navigate(['/chat', this.data.conversationId]);
         this.dismiss();
     }
 

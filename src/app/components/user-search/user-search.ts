@@ -11,7 +11,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
+import { ChatService } from '../../services/chat.service';
 import { UserWithStatusDTO } from '../../models/user.model';
+import { Conversation } from '../../models/chat.model';
 import { UserCardComponent } from '../user-card/user-card';
 import { AddFriendDialogComponent } from '../add-friend-dialog/add-friend-dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
@@ -47,6 +49,7 @@ export class UserSearchComponent implements OnInit {
     constructor(
         private userService: UserService,
         private socialService: SocialService,
+        private chatService: ChatService,
         private route: ActivatedRoute,
         private breakpointObserver: BreakpointObserver,
         private dialog: MatDialog,
@@ -215,7 +218,16 @@ export class UserSearchComponent implements OnInit {
     }
 
     onChat(user: UserWithStatusDTO) {
-        console.log('Chat clicked for user:', user);
-        this.router.navigate(['/chat', user.userId]);
+        this.isLoading = true;
+        this.chatService.getConversation(user.userId.toString()).subscribe({
+            next: (conv: Conversation) => {
+                this.router.navigate(['/chat', conv.id]);
+            },
+            error: (err: any) => {
+                console.error('Error getting conversation:', err);
+                this.isLoading = false;
+                this.error = 'Impossible d\'ouvrir la discussion';
+            }
+        });
     }
 }

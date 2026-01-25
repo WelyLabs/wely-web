@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -26,6 +27,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     isSending = false;
     error: string | null = null;
     friendId: string | null = null;
+    convId: string | null = null;
     currentUserId: string | null = null;
     isHistoryLoading = false;
     hasMoreHistory = false;
@@ -36,7 +38,8 @@ export class ChatComponent implements OnInit, OnDestroy {
         private router: Router,
         private chatService: ChatService,
         private userService: UserService,
-        private ngZone: NgZone
+        private ngZone: NgZone,
+        private location: Location
     ) { }
 
     ngOnInit() {
@@ -44,13 +47,10 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.currentUserId = currentUser ? currentUser.id : null;
 
         this.routeSubscription = this.route.paramMap.subscribe(params => {
-            this.friendId = params.get('friendId');
-            const convId = params.get('convId');
+            this.convId = params.get('convId');
 
-            if (convId) {
-                this.loadConversationById(convId);
-            } else if (this.friendId) {
-                this.loadConversation(this.friendId);
+            if (this.convId) {
+                this.loadConversationById(this.convId);
             } else {
                 this.error = 'Discussion non spécifiée';
                 this.isLoading = false;
@@ -78,19 +78,6 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.routeSubscription?.unsubscribe();
     }
 
-    loadConversation(friendId: string) {
-        this.isLoading = true;
-        this.error = null;
-        this.chatService.getConversation(friendId).subscribe({
-            next: (conv) => this.handleConversationResponse(conv),
-            error: (err) => {
-                console.error('Error loading conversation:', err);
-                this.error = 'Impossible de charger la conversation';
-                this.isLoading = false;
-            }
-        });
-    }
-
     loadConversationById(convId: string) {
         this.isLoading = true;
         this.error = null;
@@ -108,6 +95,13 @@ export class ChatComponent implements OnInit, OnDestroy {
     private handleConversationResponse(conv: Conversation) {
         console.log('📦 Conversation loaded:', conv);
         this.conversation = conv;
+
+        // CRITICAL FIX: If friendId is missing (e.g. loaded by convId), find it in participants
+        if (!this.friendId && conv.participantIds) {
+            this.friendId = conv.participantIds.find(id => id !== this.currentUserId) || null;
+            console.log('🎯 Detected friendId from participants:', this.friendId);
+        }
+
         this.hasMoreHistory = conv.bucketIndex > 0;
         console.log('🚩 hasMoreHistory set to:', this.hasMoreHistory, 'Bucket:', conv.bucketIndex);
 
@@ -177,7 +171,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
 
     onSendMessage(content: string) {
-        if (!content.trim() || !this.conversation) return;
+        if (!content.trim() || !this.conversation || !this.friendId) return;
 
         this.isSending = true;
         this.chatService.sendMessage(this.conversation.id, content, this.friendId!).subscribe({
@@ -201,6 +195,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
 
     goBack() {
-        this.router.navigate(['/friends']);
+        this.location.back();
     }
 }
