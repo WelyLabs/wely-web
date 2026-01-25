@@ -1,21 +1,30 @@
 <div class="chat-container">
     <div class="messages-list" #scrollContainer>
+        <div #topSentinel style="height: 1px; width: 100%;"></div>
+
+        <div class="history-loader" *ngIf="historyLoading">
+            <div class="mini-spinner"></div>
+            <span>Chargement des anciens messages...</span>
+        </div>
+
         <div class="empty-state" *ngIf="!loading && messages.length === 0">
             <p>No messages yet. Start the conversation!</p>
         </div>
 
-        <div *ngFor="let msg of messages; trackBy: trackByMessage" class="message-bubble" [class.me]="msg.isMe">
+        <div *ngFor="let msg of messages; let index = index; trackBy: trackByMessage" class="message-bubble"
+            [class.me]="msg.isMe">
             <div class="sender" *ngIf="!msg.isMe">{{ msg.senderName }}</div>
             <div class="text">{{ msg.text }}</div>
             <div class="time">{{ msg.time | date:'shortTime' }}</div>
         </div>
     </div>
 
-    <div class="chat-input">
-        <mat-form-field appearance="outline" class="w-full" [subscriptSizing]="'dynamic'">
-            <input matInput [placeholder]="placeholder" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()"
+    <div class="chat-input" *ngIf="!loading || messages.length > 0">
+        <mat-form-field appearance="outline">
+            <input matInput [(ngModel)]="newMessage" [placeholder]="placeholder" (keyup.enter)="sendMessage()"
                 [disabled]="loading">
-            <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!newMessage.trim() || loading">
+            <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!newMessage.trim() || loading"
+                color="primary">
                 <mat-icon>send</mat-icon>
             </button>
         </mat-form-field>

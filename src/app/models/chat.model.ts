@@ -28,6 +28,12 @@ export interface Conversation {
     type: ConversationType;
     updatedAt: string; // ISO DateTime
     lastMessage?: Message;
-    isFull: boolean;
+    messages: Message[];
+    bucketIndex: number;
+}
+
+export interface MessageBucket {
+    conversationId: string;
+    bucketIndex: number;
     messages: Message[];
 }

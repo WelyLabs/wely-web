@@ -27,6 +27,9 @@ export class ChatComponent implements OnInit, OnDestroy {
     error: string | null = null;
     friendId: string | null = null;
     currentUserId: string | null = null;
+    isHistoryLoading = false;
+    hasMoreHistory = false;
+    placeholder = 'Écrivez votre message...';
 
     constructor(
         private route: ActivatedRoute,
@@ -37,11 +40,9 @@ export class ChatComponent implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit() {
-        // Get current user ID
         const currentUser = this.userService.getCurrentUserValue();
         this.currentUserId = currentUser ? currentUser.id : null;
 
-        // Subscribe to route parameter changes to update conversation without reloading component
         this.routeSubscription = this.route.paramMap.subscribe(params => {
             this.friendId = params.get('friendId');
             if (this.friendId) {
@@ -52,17 +53,10 @@ export class ChatComponent implements OnInit, OnDestroy {
             }
         });
 
-        // Subscribe to real-time messages from RSocket stream
         this.messagesSubscription = this.chatService.messages$.subscribe(msg => {
-            // Run inside Angular zone to trigger change detection
             this.ngZone.run(() => {
-                console.log('📥 Message reçu dans le chat:', msg);
-
-                // Only add message if it belongs to current conversation and is not from current user
                 if (this.conversation && msg.conversationId === this.conversation.id && msg.senderId !== this.currentUserId) {
-
                     this.messages = [...this.messages, msg];
-                    // Create new array reference to trigger Angular change detection
                     this.chatMessages = [...this.chatMessages, {
                         id: msg.id,
                         text: msg.content,
@@ -85,9 +79,9 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.error = null;
         this.chatService.getConversation(friendId).subscribe({
             next: (conv) => {
-                console.log(conv);
-
                 this.conversation = conv;
+                this.hasMoreHistory = conv.bucketIndex > 0;
+
                 if (conv.messages) {
                     this.messages = conv.messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
                 } else {
@@ -114,6 +108,52 @@ export class ChatComponent implements OnInit, OnDestroy {
         }));
     }
 
+    onLoadMoreMessages() {
+        if (this.isHistoryLoading || !this.conversation || this.conversation.bucketIndex <= 0) return;
+
+        this.isHistoryLoading = true;
+        const nextBucketIndex = this.conversation.bucketIndex - 1;
+
+        this.chatService.getMessages(this.conversation.id, nextBucketIndex).subscribe({
+            next: (bucket) => {
+                this.ngZone.run(() => {
+                    if (this.conversation) {
+                        this.conversation.bucketIndex = bucket.bucketIndex;
+                        const newMessages = bucket.messages.sort((a, b) =>
+                            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+                        const newChatMessages: ChatMessage[] = newMessages.map(msg => ({
+                            id: msg.id,
+                            text: msg.content,
+                            time: msg.timestamp,
+                            isMe: msg.senderId === this.currentUserId,
+                            senderName: msg.senderName
+                        }));
+
+                        this.isHistoryLoading = false;
+
+                        // Give browser a moment to settle before prepending the whole batch
+                        setTimeout(() => {
+                            this.ngZone.run(() => {
+                                if (this.conversation) {
+                                    this.hasMoreHistory = bucket.bucketIndex > 0;
+                                    this.messages = [...newMessages, ...this.messages];
+                                    this.chatMessages = [...newChatMessages, ...this.chatMessages];
+                                }
+                            });
+                        }, 50);
+                    } else {
+                        this.isHistoryLoading = false;
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Error loading more messages:', err);
+                this.isHistoryLoading = false;
+            }
+        });
+    }
+
     onSendMessage(content: string) {
         if (!content.trim() || !this.conversation) return;
 
@@ -121,7 +161,6 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.chatService.sendMessage(this.conversation.id, content, this.friendId!).subscribe({
             next: (msg) => {
                 this.messages.push(msg);
-                // Optimistic push to UI
                 this.chatMessages.push({
                     id: msg.id,
                     text: msg.content,

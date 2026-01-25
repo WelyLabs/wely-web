@@ -20,7 +20,8 @@
         </div>
 
         <app-shared-chat *ngIf="!isLoading && !error" [messages]="chatMessages" [loading]="isSending"
-            placeholder="Écrivez votre message..." (onSend)="onSendMessage($event)" style="height: 100%; width: 100%;">
+            [historyLoading]="isHistoryLoading" [hasMore]="hasMoreHistory" [placeholder]="placeholder"
+            (onSend)="onSendMessage($event)" (onLoadMore)="onLoadMoreMessages()" style="height: 100%; width: 100%;">
         </app-shared-chat>
     </div>
 </div>
