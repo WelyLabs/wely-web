@@ -37,3 +37,12 @@ export interface MessageBucket {
     bucketIndex: number;
     messages: Message[];
 }
+
+export interface ConversationSummary {
+    id: string;
+    type: ConversationType;
+    title: string;
+    updatedAt: string;
+    lastMessage?: Message;
+    lastBucketIndex: number;
+}

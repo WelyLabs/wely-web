@@ -45,10 +45,14 @@ export class ChatComponent implements OnInit, OnDestroy {
 
         this.routeSubscription = this.route.paramMap.subscribe(params => {
             this.friendId = params.get('friendId');
-            if (this.friendId) {
+            const convId = params.get('convId');
+
+            if (convId) {
+                this.loadConversationById(convId);
+            } else if (this.friendId) {
                 this.loadConversation(this.friendId);
             } else {
-                this.error = 'Ami non spécifié';
+                this.error = 'Discussion non spécifiée';
                 this.isLoading = false;
             }
         });
@@ -78,24 +82,42 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.isLoading = true;
         this.error = null;
         this.chatService.getConversation(friendId).subscribe({
-            next: (conv) => {
-                this.conversation = conv;
-                this.hasMoreHistory = conv.bucketIndex > 0;
-
-                if (conv.messages) {
-                    this.messages = conv.messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-                } else {
-                    this.messages = [];
-                }
-                this.updateChatMessages();
-                this.isLoading = false;
-            },
+            next: (conv) => this.handleConversationResponse(conv),
             error: (err) => {
                 console.error('Error loading conversation:', err);
                 this.error = 'Impossible de charger la conversation';
                 this.isLoading = false;
             }
         });
+    }
+
+    loadConversationById(convId: string) {
+        this.isLoading = true;
+        this.error = null;
+
+        this.chatService.getConversationById(convId).subscribe({
+            next: (conv) => this.handleConversationResponse(conv),
+            error: (err) => {
+                console.error('Error loading conversation by ID:', err);
+                this.error = 'Discussion introuvable';
+                this.isLoading = false;
+            }
+        });
+    }
+
+    private handleConversationResponse(conv: Conversation) {
+        console.log('📦 Conversation loaded:', conv);
+        this.conversation = conv;
+        this.hasMoreHistory = conv.bucketIndex > 0;
+        console.log('🚩 hasMoreHistory set to:', this.hasMoreHistory, 'Bucket:', conv.bucketIndex);
+
+        if (conv.messages) {
+            this.messages = conv.messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        } else {
+            this.messages = [];
+        }
+        this.updateChatMessages();
+        this.isLoading = false;
     }
 
     private updateChatMessages() {

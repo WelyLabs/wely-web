@@ -5,7 +5,7 @@ import { switchMap, catchError, timeout } from 'rxjs/operators';
 import { RSocketClient, JsonSerializer, IdentitySerializer, encodeCompositeMetadata, encodeRoute, MESSAGE_RSOCKET_ROUTING, MESSAGE_RSOCKET_COMPOSITE_METADATA, BufferEncoders, encodeAndAddWellKnownAuthMetadata, MESSAGE_RSOCKET_AUTHENTICATION } from 'rsocket-core';
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { environment } from '../../environments/environment';
-import { Conversation, Message, MessageType, MessageBucket } from '../models/chat.model';
+import { Conversation, Message, MessageType, MessageBucket, ConversationSummary } from '../models/chat.model';
 import { UserService } from './user.service';
 import { Buffer } from 'buffer';
 
@@ -82,11 +82,25 @@ export class ChatService implements OnDestroy {
     }
 
     /**
+     * Get all active conversations for the current user
+     */
+    getAllConversations(): Observable<ConversationSummary[]> {
+        return this.http.get<ConversationSummary[]>(`${this.apiUrl}/conversations/all`);
+    }
+
+    /**
+     * Get a conversation by its unique ID (HTTP)
+     */
+    getConversationById(conversationId: string): Observable<Conversation> {
+        return this.http.get<Conversation>(`${this.apiUrl}/conversations/${conversationId}`);
+    }
+
+    /**
      * Get a bucket of messages for a conversation (HTTP)
      */
     getMessages(conversationId: string, bucketIndex: number): Observable<MessageBucket> {
         let params = new HttpParams().set('bucketIndex', bucketIndex.toString());
-        return this.http.get<MessageBucket>(`${this.apiUrl}/conversations/${conversationId}`, { params });
+        return this.http.get<MessageBucket>(`${this.apiUrl}/conversations/${conversationId}/loadMessages`, { params });
     }
 
     /**

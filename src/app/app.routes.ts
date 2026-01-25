@@ -6,6 +6,7 @@ import { EventDetailsComponent } from './components/event-details/event-details'
 import { LandingPageComponent } from './components/landing-page/landing-page';
 import { UserProfileComponent } from './components/user-profile/user-profile';
 import { ChatComponent } from './components/chat/chat';
+import { ConversationsListComponent } from './components/conversations-list/conversations-list';
 
 import { UserSearchComponent } from './components/user-search/user-search';
 import { authGuard } from './core/guards/auth.guard';
@@ -23,7 +24,9 @@ export const routes: Routes = [
             { path: 'event/:type/:id', component: EventDetailsComponent },
             { path: 'profile', component: UserProfileComponent },
             { path: 'friends', component: UserSearchComponent, data: { mode: 'friends' } },
-            { path: 'chat/:friendId', component: ChatComponent }
+            { path: 'conversations', component: ConversationsListComponent },
+            { path: 'chat/:friendId', component: ChatComponent },
+            { path: 'chat/c/:convId', component: ChatComponent }
         ]
     }
 ];
