@@ -1,3 +1,9 @@
+:host {
+    display: block;
+    height: 100%;
+    overflow: hidden;
+}
+
 .calendar-container {
     display: flex;
     gap: 24px;

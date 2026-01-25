@@ -1,35 +1,43 @@
-.chat-container {
+:host {
+    display: block;
     height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem;
-    max-width: 800px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.chat-container {
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0;
+    max-width: 700px;
     margin: 0 auto;
+    overflow: hidden;
 
     .chat-header {
+        flex-shrink: 0; // Don't allow header to shrink
         display: flex;
         align-items: center;
         gap: 1rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem; // Reduced from 2rem
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.1);
 
         h2 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.25rem; // Reduced slightly
             font-weight: 600;
         }
     }
 
     .chat-content-wrapper {
         flex: 1;
-        background: rgba(255, 255, 255, 0.03); // Keep glass for loading/error states? Or make it solid like SharedChat default? 
-        // SharedChat has var(--bg-subtle, #f8f9fa). If I make this transparent, it will show page bg.
-        // If I make it solid #f8f9fa, it matches SharedChat.
+        min-height: 0; // CRITICAL for nested flex scrolling
         background: #f8f9fa;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
@@ -37,9 +45,6 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         flex-direction: column;
-        justify-content: center; // For loading/error
-        align-items: center; // For loading/error
-        min-height: 400px;
         overflow: hidden;
 
         // When shared chat is present, we might want to unset center alignment?
@@ -53,12 +58,12 @@
 
     .loading-state,
     .error-state {
+        flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         gap: 1rem;
-        color: rgba(255, 255, 255, 0.6);
-        // If background is light now (#f8f9fa), text should be dark
         color: var(--text-secondary, #6b7280);
 
         mat-icon {

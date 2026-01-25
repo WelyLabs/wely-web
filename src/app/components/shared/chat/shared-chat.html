@@ -1,5 +1,5 @@
 <div class="chat-container">
-    <div class="messages-list">
+    <div class="messages-list" #scrollContainer>
         <div class="empty-state" *ngIf="!loading && messages.length === 0">
             <p>No messages yet. Start the conversation!</p>
         </div>

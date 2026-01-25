@@ -1,13 +1,23 @@
-.chat-container {
-    display: flex;
-    flex-direction: column;
+:host {
+    display: block;
     height: 100%;
-    background: var(--bg-subtle, #f8f9fa);
-    border-radius: inherit;
-    /* Inherit border radius from parent if possible */
+}
+
+.chat-container {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100%;
+
+    @media (max-width: 768px) {
+        max-height: 100%;
+        background: transparent;
+        border-radius: inherit;
+        overflow: hidden;
+    }
 
     .messages-list {
         flex: 1;
+        min-height: 0;
         padding: 20px;
         overflow-y: auto;
         display: flex;
@@ -79,9 +89,14 @@
     }
 
     .chat-input {
+        flex-shrink: 0;
         padding: 16px;
         background: white;
         border-top: 1px solid var(--border-default, #e5e7eb);
+
+        @media (max-width: 768px) {
+            padding-bottom: 32px; // Increased separation from menu bar
+        }
 
         mat-form-field {
             width: 100%;

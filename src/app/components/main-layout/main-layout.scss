@@ -1,5 +1,5 @@
 .sidenav-container {
-    height: 100vh;
+    height: 100dvh;
     background: var(--bg-canvas);
 }
 
@@ -300,31 +300,36 @@
 
 .content-area {
     background: var(--bg-canvas);
-    padding: 12px 36px 24px 36px;
+    padding: 12px 24px 8px 24px;
     height: 100vh;
+    max-height: 100vh;
     overflow: hidden;
     position: relative;
+    display: flex !important;
+    flex-direction: column !important;
 
     @media (max-width: 768px) {
-        padding: 12px 12px 80px 12px; // Added bottom padding for nav bar
+        padding: 0 !important; // Content will manage its own side padding
+        height: 100dvh;
+        max-height: 100dvh;
+        overflow: hidden;
     }
 }
 
 // Mobile Bottom Navigation
 .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: rgba(255, 255, 255, 0.9);
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: 12px; // Slightly increased gap between chat input and menu
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-default);
     display: flex;
     justify-content: space-around;
     align-items: center;
     z-index: 1000;
-    padding-bottom: env(safe-area-inset-bottom); // For iPhone X+
+    // Padding provides the height and handles safe area insets for modern phones
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
 
     .nav-item {
         display: flex;
@@ -334,9 +339,8 @@
         text-decoration: none;
         color: var(--text-secondary);
         font-size: 10px;
-        gap: 4px;
+        gap: 2px; // Tighter gap
         flex: 1;
-        height: 100%;
         transition: all 0.2s ease;
 
         mat-icon {
@@ -558,15 +562,13 @@
 }
 
 .page-container {
-    height: 100%;
-    overflow: auto;
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     background: transparent;
     border: none;
     box-shadow: none;
-
-    @media (max-width: 768px) {
-        height: 100%;
-    }
 }
