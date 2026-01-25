@@ -1,0 +1,17 @@
+<div class="message-toast-container" (click)="navigateToConversation()">
+    <div class="toast-icon">
+        <mat-icon>chat_bubble_outline</mat-icon>
+    </div>
+    <div class="toast-content">
+        <div class="sender-info">
+            <span class="sender-name">{{ data.senderName }}</span>
+            <span class="time">{{ data.timestamp | date:'HH:mm' }}</span>
+        </div>
+        <div class="message-preview">
+            {{ data.content }}
+        </div>
+    </div>
+    <button mat-icon-button class="close-btn" (click)="dismiss(); $event.stopPropagation()">
+        <mat-icon>close</mat-icon>
+    </button>
+</div>

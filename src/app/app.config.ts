@@ -1,7 +1,9 @@
+import { importProvidersFrom } from '@angular/core';
 import { ApplicationConfig, APP_INITIALIZER, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { KeycloakService, KeycloakBearerInterceptor } from 'keycloak-angular';
 import { SessionInterceptor } from './core/interceptors/session.interceptor';
 import { UserService } from './services/user.service';
@@ -15,6 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimationsAsync(),
     provideHttpClient(withInterceptorsFromDi()),
+    importProvidersFrom(MatSnackBarModule),
     KeycloakService,
     UserService,
     {

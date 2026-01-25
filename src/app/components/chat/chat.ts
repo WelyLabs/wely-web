@@ -18,6 +18,7 @@ import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 })
 export class ChatComponent implements OnInit, OnDestroy {
     private messagesSubscription?: Subscription;
+    private routeSubscription?: Subscription;
     conversation: Conversation | null = null;
     messages: Message[] = [];
     chatMessages: ChatMessage[] = []; // UI Model
@@ -38,16 +39,18 @@ export class ChatComponent implements OnInit, OnDestroy {
     ngOnInit() {
         // Get current user ID
         const currentUser = this.userService.getCurrentUserValue();
-
         this.currentUserId = currentUser ? currentUser.id : null;
 
-        this.friendId = this.route.snapshot.paramMap.get('friendId');
-        if (this.friendId) {
-            this.loadConversation(this.friendId);
-        } else {
-            this.error = 'Ami non spécifié';
-            this.isLoading = false;
-        }
+        // Subscribe to route parameter changes to update conversation without reloading component
+        this.routeSubscription = this.route.paramMap.subscribe(params => {
+            this.friendId = params.get('friendId');
+            if (this.friendId) {
+                this.loadConversation(this.friendId);
+            } else {
+                this.error = 'Ami non spécifié';
+                this.isLoading = false;
+            }
+        });
 
         // Subscribe to real-time messages from RSocket stream
         this.messagesSubscription = this.chatService.messages$.subscribe(msg => {
@@ -74,6 +77,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 
     ngOnDestroy() {
         this.messagesSubscription?.unsubscribe();
+        this.routeSubscription?.unsubscribe();
     }
 
     loadConversation(friendId: string) {

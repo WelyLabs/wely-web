@@ -242,3 +242,14 @@ body {
   display: inline-block;
   margin-right: 8px;
 }
+
+/* Global SnackBar Overrides for Chat Notifications */
+.cdk-overlay-container .chat-notification-panel {
+  &.mat-mdc-snack-bar-container {
+    .mdc-snackbar__surface {
+      background-color: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+  }
+}

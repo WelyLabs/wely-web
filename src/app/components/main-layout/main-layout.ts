@@ -1,4 +1,4 @@
-import { Component, ViewChild, OnInit } from '@angular/core';
+import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
@@ -8,10 +8,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
-import { KeycloakProfile } from 'keycloak-js';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
+import { NotificationService } from '../../services/notification.service';
+import { Message } from '../../models/chat.model';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-main-layout',
@@ -28,7 +30,7 @@ import { User } from '../../models/user.model';
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss'
 })
-export class MainLayoutComponent implements OnInit {
+export class MainLayoutComponent implements OnInit, OnDestroy {
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
   navItems = [
@@ -43,12 +45,14 @@ export class MainLayoutComponent implements OnInit {
   showUserMenu = false;
   showMobileMenu = false;
   showCopySuccess = false;
+  private chatSubscription?: Subscription;
 
   constructor(
     private breakpointObserver: BreakpointObserver,
     private keycloak: KeycloakService,
     private userService: UserService,
     private chatService: ChatService,
+    private notificationService: NotificationService,
     private router: Router
   ) { }
 
@@ -71,12 +75,23 @@ export class MainLayoutComponent implements OnInit {
       next: (user) => {
         this.userProfile = user;
       },
-      error: (err) => console.error('Error loading profile in layout:', err)
+      error: (err: any) => console.error('Error loading profile in layout:', err)
     });
 
     // User data is already preloaded by APP_INITIALIZER
     // Initialize RSocket stream for real-time messages
     this.chatService.initializeStream();
+
+    // Subscribe to incoming messages for global notifications
+    this.chatSubscription = this.chatService.messages$.subscribe((msg: Message) => {
+      // Check if we are currently in the conversation with the sender
+      const isViewingCurrentConversation = this.router.url.includes(`/chat/${msg.senderId}`);
+
+      // Only show notification if message is from someone else AND we're not already in that chat
+      if (msg.senderId !== this.userProfile?.id && !isViewingCurrentConversation) {
+        this.notificationService.showChatNotification(msg);
+      }
+    });
   }
 
   toggleSidenav() {
@@ -102,5 +117,9 @@ export class MainLayoutComponent implements OnInit {
       this.showCopySuccess = true;
       setTimeout(() => this.showCopySuccess = false, 2000);
     });
+  }
+
+  ngOnDestroy() {
+    this.chatSubscription?.unsubscribe();
   }
 }
