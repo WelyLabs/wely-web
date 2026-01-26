@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
+import { NavigationService } from '../../services/navigation.service';
 import { Conversation, Message } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 
@@ -39,7 +40,7 @@ export class ChatComponent implements OnInit, OnDestroy {
         private chatService: ChatService,
         private userService: UserService,
         private ngZone: NgZone,
-        private location: Location
+        private navigationService: NavigationService
     ) { }
 
     ngOnInit() {
@@ -195,6 +196,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
 
     goBack() {
-        this.location.back();
+        this.navigationService.back();
     }
 }

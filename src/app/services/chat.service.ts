@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, from, throwError, Subject } from 'rxjs';
-import { switchMap, catchError, timeout } from 'rxjs/operators';
+import { Observable, from, throwError, Subject, BehaviorSubject, of, timer } from 'rxjs';
+import { switchMap, catchError, retry, tap, delayWhen, takeUntil, filter } from 'rxjs/operators';
 import { RSocketClient, JsonSerializer, IdentitySerializer, encodeCompositeMetadata, encodeRoute, MESSAGE_RSOCKET_ROUTING, MESSAGE_RSOCKET_COMPOSITE_METADATA, BufferEncoders, encodeAndAddWellKnownAuthMetadata, MESSAGE_RSOCKET_AUTHENTICATION } from 'rsocket-core';
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { environment } from '../../environments/environment';
@@ -15,47 +15,71 @@ import { Buffer } from 'buffer';
 export class ChatService implements OnDestroy {
     private apiUrl = `${environment.apiUrl}/chat-service`;
     private client: any | undefined;
-    private connectionPromise: Promise<any>;
+    private socketSubject = new BehaviorSubject<any>(null);
+    private destroy$ = new Subject<void>();
+    private messagesSubject = new Subject<any>();
+    public messages$ = this.messagesSubject.asObservable();
 
     constructor(
         private http: HttpClient,
         private userService: UserService
     ) {
-        this.connectionPromise = this.connect();
+        this.connect();
     }
 
-    private connect(): Promise<any> {
-        return new Promise((resolve, reject) => {
-            this.client = new RSocketClient({
-                serializers: {
-                    data: {
-                        serialize: (data: any) => Buffer.from(JSON.stringify(data)),
-                        deserialize: (data: Buffer) => JSON.parse(data.toString())
-                    },
-                    metadata: IdentitySerializer
-                },
-                setup: {
-                    keepAlive: 60000,
-                    lifetime: 180000,
-                    dataMimeType: 'application/json',
-                    metadataMimeType: MESSAGE_RSOCKET_COMPOSITE_METADATA.string,
-                },
-                transport: new RSocketWebSocketClient({
-                    url: environment.rsocketUrl
-                }, BufferEncoders),
-            });
+    private connect(): void {
+        console.log('🔌 Tentative de connexion RSocket...');
 
-            this.client.connect().subscribe({
-                onComplete: (socket: any) => {
-                    console.log('✅ RSocket connected');
-                    resolve(socket);
+        this.client = new RSocketClient({
+            serializers: {
+                data: {
+                    serialize: (data: any) => Buffer.from(JSON.stringify(data)),
+                    deserialize: (data: Buffer) => JSON.parse(data.toString())
                 },
-                onError: (error: any) => {
-                    console.error('❌ RSocket connection error:', error);
-                    reject(error);
-                },
-                onSubscribe: (cancel: any) => { /* no-op */ }
-            });
+                metadata: IdentitySerializer
+            },
+            setup: {
+                keepAlive: 30000,
+                lifetime: 90000,
+                dataMimeType: 'application/json',
+                metadataMimeType: MESSAGE_RSOCKET_COMPOSITE_METADATA.string,
+            },
+            transport: new RSocketWebSocketClient({
+                url: environment.rsocketUrl
+            }, BufferEncoders),
+        });
+
+        this.client.connect().subscribe({
+            onComplete: (socket: any) => {
+                console.log('✅ RSocket connecté');
+                this.socketSubject.next(socket);
+
+                // Listen for connection close
+                socket.connectionStatus().subscribe((status: any) => {
+                    console.log('📡 RSocket Status:', status);
+                    if (status.kind === 'CLOSED' || status.kind === 'ERROR') {
+                        this.handleDisconnect();
+                    }
+                });
+            },
+            onError: (error: any) => {
+                console.error('❌ RSocket connection error:', error);
+                this.handleDisconnect();
+            },
+            onSubscribe: (cancel: any) => { /* no-op */ }
+        });
+    }
+
+    private isReconnecting = false;
+    private handleDisconnect() {
+        if (this.isReconnecting) return;
+        this.isReconnecting = true;
+        this.socketSubject.next(null);
+
+        console.log('🔄 Reconnexion RSocket dans 5 secondes...');
+        timer(5000).pipe(takeUntil(this.destroy$)).subscribe(() => {
+            this.isReconnecting = false;
+            this.connect();
         });
     }
 
@@ -107,7 +131,8 @@ export class ChatService implements OnDestroy {
      * Send a message via RSocket
      */
     sendMessage(conversationId: string, content: string, receiverId: string): Observable<Message> {
-        return from(this.connectionPromise).pipe(
+        return this.socketSubject.pipe(
+            filter(socket => !!socket),
             switchMap(socket => {
                 return new Observable<Message>(observer => {
                     const currentUser = this.userService.getCurrentUserValue();
@@ -126,12 +151,14 @@ export class ChatService implements OnDestroy {
                         metadata: this.getMetadata("chat.send")
                     };
 
-                    // Use fireAndForget as backend likely returns void
                     socket.requestResponse(payload).subscribe({
                         onComplete: () => {
                             console.log("✅ Frame envoyée et acquittée par le serveur");
                         },
-                        onError: (e: any) => console.error("❌ Erreur envoi:", e)
+                        onError: (e: any) => {
+                            console.error("❌ Erreur envoi:", e);
+                            observer.error(e);
+                        }
                     });
 
                     // Optimistic update
@@ -149,7 +176,6 @@ export class ChatService implements OnDestroy {
 
                     observer.next(message);
                     observer.complete();
-
                 });
             }),
             catchError(error => {
@@ -159,11 +185,13 @@ export class ChatService implements OnDestroy {
         );
     }
 
-    private messagesSubject = new Subject<any>();
-    public messages$ = this.messagesSubject.asObservable();
-
+    private isStreamStarted = false;
     initializeStream() {
-        from(this.connectionPromise).pipe(
+        if (this.isStreamStarted) return;
+        this.isStreamStarted = true;
+
+        this.socketSubject.pipe(
+            filter(socket => !!socket),
             switchMap(socket => {
                 return new Observable<any>(observer => {
                     const route = 'chat.stream';
@@ -172,9 +200,9 @@ export class ChatService implements OnDestroy {
                         metadata: this.getMetadata(route)
                     };
 
-                    console.log('🔌 Initialisation du flux global RSocket (simple routing):', route);
+                    console.log('🔌 Initialisation du flux global RSocket:', route);
 
-                    socket.requestStream(payload).subscribe({
+                    const subscription = socket.requestStream(payload).subscribe({
                         onNext: (payload: any) => {
                             const msg = payload.data;
                             console.log('📥 Message global reçu:', msg);
@@ -182,20 +210,33 @@ export class ChatService implements OnDestroy {
                         },
                         onError: (error: any) => {
                             console.error('❌ Erreur flux global:', error);
+                            observer.error(error);
                         },
                         onComplete: () => {
                             console.log('Flux global terminé');
+                            observer.complete();
                         },
-                        onSubscribe: (subscription: any) => {
-                            subscription.request(2147483647);
+                        onSubscribe: (sub: any) => {
+                            sub.request(2147483647);
                         }
                     });
+
+                    return () => subscription.cancel();
                 });
-            })
+            }),
+            retry({
+                delay: (error) => {
+                    console.log('🔄 Tentative de reprise du flux dans 2s...');
+                    return timer(2000);
+                }
+            }),
+            takeUntil(this.destroy$)
         ).subscribe();
     }
 
     ngOnDestroy() {
+        this.destroy$.next();
+        this.destroy$.complete();
         if (this.client) {
             this.client.close();
         }
