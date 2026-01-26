@@ -11,14 +11,14 @@
             <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Nom d'utilisateur</mat-label>
                 <mat-icon matPrefix>alternate_email</mat-icon>
-                <input matInput formControlName="username" placeholder="votre_username">
-                <mat-error *ngIf="profileForm.get('username')?.hasError('required')">
+                <input matInput formControlName="userName" placeholder="votre_username">
+                <mat-error *ngIf="profileForm.get('userName')?.hasError('required')">
                     Le nom d'utilisateur est requis
                 </mat-error>
-                <mat-error *ngIf="profileForm.get('username')?.hasError('minlength')">
+                <mat-error *ngIf="profileForm.get('userName')?.hasError('minlength')">
                     Minimum 3 caractères
                 </mat-error>
-                <mat-error *ngIf="profileForm.get('username')?.hasError('pattern')">
+                <mat-error *ngIf="profileForm.get('userName')?.hasError('pattern')">
                     Lettres, chiffres, tirets et underscores uniquement
                 </mat-error>
             </mat-form-field>

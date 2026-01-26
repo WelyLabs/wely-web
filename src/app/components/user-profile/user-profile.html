@@ -51,7 +51,7 @@
                 <div class="avatar" [class.has-image]="user.profilePicUrl">
                     <img *ngIf="user.profilePicUrl" [src]="user.profilePicUrl" alt="Avatar" class="avatar-image">
                     <span *ngIf="!user.profilePicUrl" class="avatar-initials">
-                        {{ user.firstName?.[0] || 'U' }}{{ user.lastName?.[0] || '' }}
+                        {{ user.firstName[0] || 'U' }}{{ user.lastName[0] || '' }}
                     </span>
                 </div>
                 <div class="avatar-overlay">
@@ -94,15 +94,15 @@
             <!-- Stats Cards -->
             <div class="stats-row" *ngIf="user.stats">
                 <div class="stat-card">
-                    <div class="stat-value">{{ user.stats?.projectsCompleted || 0 }}</div>
+                    <div class="stat-value">{{ user.stats.projectsCompleted || 0 }}</div>
                     <div class="stat-label">Projets</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{{ user.stats?.hoursLogged || 0 }}h</div>
+                    <div class="stat-value">{{ user.stats.hoursLogged || 0 }}h</div>
                     <div class="stat-label">Heures</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{{ user.stats?.efficiency || 0 }}%</div>
+                    <div class="stat-value">{{ user.stats.efficiency || 0 }}%</div>
                     <div class="stat-label">Efficacité</div>
                 </div>
             </div>
