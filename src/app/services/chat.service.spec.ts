@@ -79,6 +79,9 @@ describe('ChatService', () => {
     const apiUrl = `${environment.apiUrl}/chat-service`;
 
     beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+
         userServiceMock = {
             getAccessToken: vi.fn().mockReturnValue('mock-token'),
             getCurrentUserValue: vi.fn().mockReturnValue({ id: 'user1', userName: 'test' }),
@@ -98,6 +101,8 @@ describe('ChatService', () => {
 
     afterEach(() => {
         if (httpMock) httpMock.verify();
+        vi.runOnlyPendingTimers();
+        vi.useRealTimers();
         vi.restoreAllMocks();
     });
 
@@ -180,21 +185,23 @@ describe('ChatService', () => {
 
     it('should initialize stream and receive messages', async () => {
         const mockMsg = { id: 'm1', content: 'test' };
+        const promise = firstValueFrom(service.messages$);
+
         service['socketSubject'].next({
             requestStream: () => ({
                 subscribe: (c: any) => {
-                    setTimeout(() => c.onNext({ data: mockMsg }), 0);
+                    c.onNext({ data: mockMsg });
                     return { cancel: () => { } };
                 }
             })
         });
         service.initializeStream();
-        const msg = await firstValueFrom(service.messages$);
+
+        const msg = await promise;
         expect(msg).toEqual(mockMsg);
     });
 
     it('should handle stream error and retry', async () => {
-        vi.useFakeTimers();
         let calls = 0;
         service['socketSubject'].next({
             requestStream: () => ({
@@ -211,7 +218,6 @@ describe('ChatService', () => {
         await vi.advanceTimersByTimeAsync(2500);
         const msg = await promise;
         expect(msg.id).toBe('m-retry');
-        vi.useRealTimers();
     });
 
     it('should request messages on stream subscribe', () => {
@@ -228,18 +234,43 @@ describe('ChatService', () => {
         expect(mockSub.request).toHaveBeenCalled();
     });
 
+    it('should handle handleDisconnect on connectionStatus CLOSED', async () => {
+        const spy = vi.spyOn(service as any, 'connect');
+        const statusSubject = new Subject();
+        (mocks.mockSocket.connectionStatus as any).mockReturnValue(statusSubject.asObservable());
+
+        service['connect']();
+        statusSubject.next({ kind: 'CLOSED' });
+
+        await vi.advanceTimersByTimeAsync(6000);
+        expect(spy).toHaveBeenCalled();
+    });
+
+    it('should handle handleDisconnect on connect error', async () => {
+        const spy = vi.spyOn(service as any, 'connect');
+        (mocks.mockClient.connect as any).mockReturnValue({
+            subscribe: (callbacks: any) => {
+                callbacks.onError('Connection failed');
+                return { unsubscribe: () => { } };
+            }
+        });
+
+        service['connect']();
+
+        await vi.advanceTimersByTimeAsync(6000);
+        expect(spy).toHaveBeenCalled();
+    });
+
     it('should close client on destroy', () => {
         const spy = vi.spyOn(service['client'], 'close');
         service.ngOnDestroy();
         expect(spy).toHaveBeenCalled();
     });
 
-    it('should handle reconnection on handleDisconnect', () => {
-        vi.useFakeTimers();
+    it('should handle reconnection on handleDisconnect', async () => {
         const spy = vi.spyOn(service as any, 'connect');
         service['handleDisconnect']();
-        vi.advanceTimersByTime(6000);
+        await vi.advanceTimersByTimeAsync(6000);
         expect(spy).toHaveBeenCalled();
-        vi.useRealTimers();
     });
 });

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { UserProfileComponent } from './user-profile';
 import { UserService } from '../../services/user.service';
 import { MatDialog } from '@angular/material/dialog';
-import { of, BehaviorSubject } from 'rxjs';
+import { of, BehaviorSubject, throwError, Subject } from 'rxjs';
 import { User } from '../../models/user.model';
 import { MOCK_USER } from '../../models/user.mock';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -72,5 +72,26 @@ describe('UserProfileComponent', () => {
 
         expect(dialogMock.open).toHaveBeenCalled();
         expect(userServiceMock.updateCurrentUser).toHaveBeenCalledWith(editResult);
+    });
+    it('should handle profile loading error', () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        userServiceMock.loadAndSetCurrentUser.mockReturnValue(throwError(() => new Error('API Error')));
+
+        component.reloadUserProfile();
+
+        expect(component.isLoading).toBe(false);
+        expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    it('should handle subscription error', () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        const errorSubject = new Subject();
+        userServiceMock.currentUser$ = errorSubject.asObservable();
+
+        component.ngOnInit();
+        errorSubject.error('sub error');
+
+        expect(component.isLoading).toBe(false);
+        expect(consoleSpy).toHaveBeenCalled();
     });
 });

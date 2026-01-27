@@ -71,4 +71,66 @@ describe('SessionInterceptor', () => {
             }
         });
     });
+
+    it('should handle 400 invalid_grant and redirect to login', async () => {
+        const req = new HttpRequest('GET', '/test');
+        const errorResponse = new HttpErrorResponse({
+            status: 400,
+            error: { error: 'invalid_grant' }
+        });
+
+        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
+        keycloakMock.isLoggedIn.mockReturnValue(true); // Should still redirect because of invalid_grant
+
+        interceptor.intercept(req, nextMock).subscribe({
+            error: () => {
+                expect(keycloakMock.login).toHaveBeenCalled();
+            }
+        });
+    });
+
+    it('should handle 400 with Token is not active description', async () => {
+        const req = new HttpRequest('GET', '/test');
+        const errorResponse = new HttpErrorResponse({
+            status: 400,
+            error: { error_description: 'Token is not active' }
+        });
+
+        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
+        keycloakMock.isLoggedIn.mockReturnValue(false);
+
+        interceptor.intercept(req, nextMock).subscribe({
+            error: () => {
+                expect(keycloakMock.login).toHaveBeenCalled();
+            }
+        });
+    });
+
+    it('should handle token refresh failure and redirect to login', async () => {
+        const req = new HttpRequest('GET', '/test');
+        const errorResponse = new HttpErrorResponse({ status: 401 });
+
+        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
+        keycloakMock.isLoggedIn.mockReturnValue(true);
+        keycloakMock.updateToken.mockRejectedValue(new Error('Refresh failed'));
+
+        interceptor.intercept(req, nextMock).subscribe({
+            error: () => {
+                expect(keycloakMock.login).toHaveBeenCalled();
+            }
+        });
+    });
+
+    it('should rethrow non-auth errors', async () => {
+        const req = new HttpRequest('GET', '/test');
+        const errorResponse = new HttpErrorResponse({ status: 500 });
+        nextMock.handle.mockReturnValue(throwError(() => errorResponse));
+
+        interceptor.intercept(req, nextMock).subscribe({
+            error: (err) => {
+                expect(err.status).toBe(500);
+                expect(keycloakMock.login).not.toHaveBeenCalled();
+            }
+        });
+    });
 });

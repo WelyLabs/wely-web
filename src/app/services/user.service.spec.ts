@@ -93,4 +93,24 @@ describe('UserService', () => {
 
         expect(service.getCurrentUserValue()?.profilePicUrl).toBe(mockUrl);
     });
+    it('should handle upload avatar failure', () => {
+        const mockFile = new File([''], 'avatar.png', { type: 'image/png' });
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
+        service.uploadAvatar(mockFile).subscribe({
+            error: (err) => {
+                expect(err).toBeDefined();
+            }
+        });
+
+        const req = httpMock.expectOne(`${apiUrl}/profile/picture`);
+        req.error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+        expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    it('should NOT update current user locally if NO user is currently loaded', () => {
+        (service as any).currentUserSubject.next(null);
+        service.updateCurrentUser({ profilePicUrl: 'new.jpg' });
+        expect(service.getCurrentUserValue()).toBeNull();
+    });
 });

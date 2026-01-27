@@ -52,6 +52,26 @@ describe('AddFriendDialogComponent', () => {
         expect(component.errorMessage).toContain('Utilisateur non trouvé');
     });
 
+    it('should show error message on 409', () => {
+        socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 409 })));
+        component.userTag = 'Conflict';
+        component.onAdd();
+        expect(component.errorMessage).toContain('déjà en cours');
+    });
+
+    it('should show generic error message on other errors', () => {
+        socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 500 })));
+        component.userTag = 'Error';
+        component.onAdd();
+        expect(component.errorMessage).toContain('erreur est survenue');
+    });
+
+    it('should NOT call socialService if userTag is empty', () => {
+        component.userTag = '';
+        component.onAdd();
+        expect(socialServiceMock.sendFriendRequest).not.toHaveBeenCalled();
+    });
+
     it('should call close(false) on cancel', () => {
         component.onCancel();
         expect(dialogRefMock.close).toHaveBeenCalledWith(false);

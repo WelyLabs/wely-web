@@ -67,9 +67,40 @@ describe('CalendarComponent', () => {
         expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'calendar', event.id], expect.any(Object));
     });
 
+    it('should change month when prevMonth is called', () => {
+        const initialMonth = component.currentDate.getMonth();
+        component.prevMonth();
+        expect(component.currentDate.getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
+    });
+
+    it('should filter out unsubscribed events', () => {
+        const mixedEvents = [
+            { id: 1, title: 'Subbed', subscribed: true, date: new Date() },
+            { id: 2, title: 'Unsubbed', subscribed: false, date: new Date() }
+        ];
+        eventServiceMock.events$ = of(mixedEvents);
+        component.ngOnInit();
+        expect(component.events.some(e => e.title === 'Subbed')).toBe(true);
+        expect(component.events.some(e => e.title === 'Unsubbed')).toBe(false);
+    });
+
+    it('should select a date without events', () => {
+        const aDate = new Date(2020, 0, 1);
+        const day: any = { date: aDate, isToday: false };
+        component.selectDate(day);
+        expect(component.selectedDate).toEqual(aDate);
+        expect(component.selectedEvents.length).toBe(0);
+    });
+
     it('should close details', () => {
         component.selectedDate = new Date();
         component.closeDetails();
         expect(component.selectedDate).toBeNull();
+    });
+
+    it('should unsubscribe on destroy', () => {
+        const spy = vi.spyOn(component['subscription']!, 'unsubscribe');
+        component.ngOnDestroy();
+        expect(spy).toHaveBeenCalled();
     });
 });
