@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AvatarUploadDialogComponent } from './avatar-upload-dialog.component';
 import { MatDialogRef } from '@angular/material/dialog';
 import { UserService } from '../../services/user.service';
-import { DomSanitizer } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -22,16 +21,12 @@ describe('AvatarUploadDialogComponent', () => {
         userServiceMock = {
             uploadAvatar: vi.fn().mockReturnValue(of({ profilePicUrl: 'new-url' }))
         };
-        sanitizerMock = {
-            bypassSecurityTrustUrl: vi.fn((url) => `safe-${url}`)
-        };
 
         await TestBed.configureTestingModule({
             imports: [AvatarUploadDialogComponent, NoopAnimationsModule, ImageCropperComponent],
             providers: [
                 { provide: MatDialogRef, useValue: dialogRefMock },
-                { provide: UserService, useValue: userServiceMock },
-                { provide: DomSanitizer, useValue: sanitizerMock }
+                { provide: UserService, useValue: userServiceMock }
             ]
         }).compileComponents();
 
@@ -45,21 +40,20 @@ describe('AvatarUploadDialogComponent', () => {
     });
 
     it('should handle image cropping', () => {
-        const mockEvent: any = { objectUrl: 'blob:123', blob: new Blob() };
+        const mockEvent: any = { base64: 'data:image/png;base64,...', blob: new Blob() };
         component.imageCropped(mockEvent);
-        expect(sanitizerMock.bypassSecurityTrustUrl).toHaveBeenCalledWith('blob:123');
-        expect(component.croppedImage).toBe('safe-blob:123');
+        expect(component.croppedImage).toBe('data:image/png;base64,...');
         expect(component.blob).toEqual(mockEvent.blob);
     });
 
     it('should upload avatar and close on save', () => {
         component.blob = new Blob(['test'], { type: 'image/png' });
-        component.croppedImage = 'safe-url';
+        component.croppedImage = 'data:image/png;base64,...';
 
         component.save();
 
         expect(userServiceMock.uploadAvatar).toHaveBeenCalled();
-        expect(dialogRefMock.close).toHaveBeenCalledWith('safe-url');
+        expect(dialogRefMock.close).toHaveBeenCalledWith('data:image/png;base64,...');
         expect(component.isLoading).toBe(false);
     });
 

@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
 import { ImageCropperComponent, ImageCroppedEvent, LoadedImage } from 'ngx-image-cropper';
 import { UserService } from '../../services/user.service';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 import { FormsModule } from '@angular/forms';
 
@@ -15,7 +14,7 @@ import { FormsModule } from '@angular/forms';
     standalone: true,
     imports: [
         CommonModule,
-        FormsModule, // Added FormsModule
+        FormsModule,
         MatDialogModule,
         MatButtonModule,
         MatIconModule,
@@ -27,7 +26,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class AvatarUploadDialogComponent {
     imageChangedEvent: any = '';
-    croppedImage: SafeUrl = '';
+    croppedImage: string = '';
     blob: Blob | null = null;
     scale = 1;
     isDragging = false;
@@ -35,8 +34,7 @@ export class AvatarUploadDialogComponent {
 
     constructor(
         public dialogRef: MatDialogRef<AvatarUploadDialogComponent>,
-        private userService: UserService,
-        private sanitizer: DomSanitizer
+        private userService: UserService
     ) { }
 
     fileChangeEvent(event: any): void {
@@ -44,12 +42,8 @@ export class AvatarUploadDialogComponent {
     }
 
     imageCropped(event: ImageCroppedEvent) {
-        if (event.objectUrl) {
-            // Security: Only bypass sanitization for blob URLs generated locally by the cropper
-            // from a user-selected file. This protects against potential XSS if a malicious URL was injected.
-            if (event.objectUrl.startsWith('blob:')) {
-                this.croppedImage = this.sanitizer.bypassSecurityTrustUrl(event.objectUrl);
-            }
+        if (event.base64) {
+            this.croppedImage = event.base64;
             this.blob = event.blob || null;
         }
     }
