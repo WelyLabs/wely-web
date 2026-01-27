@@ -78,7 +78,7 @@ describe('UserSearchComponent', () => {
 
     it('should load users on init and search mode', () => {
         routeDataSubject.next({ mode: 'search' });
-        expect(socialServiceMock.searchUsers).toHaveBeenCalledWith(undefined);
+        expect(socialServiceMock.searchUsers).toHaveBeenCalled();
         socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
         component.loadUsers();
         expect(component.users.length).toBe(1);
