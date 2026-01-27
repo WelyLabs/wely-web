@@ -12,7 +12,7 @@ describe('App', () => {
   beforeEach(async () => {
     keycloakMock = {
       keycloakEvents$: of({}),
-      isLoggedIn: vi.fn().mockResolvedValue(true),
+      isLoggedIn: vi.fn().mockReturnValue(true),
       updateToken: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue(true)
     };
@@ -59,22 +59,22 @@ describe('App', () => {
     expect(keycloakMock.login).toHaveBeenCalled();
   });
 
-  it('should load user profile if logged in', async () => {
+  it('should load user profile if logged in', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
-    keycloakMock.isLoggedIn.mockResolvedValue(true);
+    keycloakMock.isLoggedIn.mockReturnValue(true);
 
-    await app.ngOnInit();
+    app.ngOnInit();
 
     expect(userServiceMock.loadAndSetCurrentUser).toHaveBeenCalled();
   });
 
-  it('should not load user profile if not logged in', async () => {
+  it('should not load user profile if not logged in', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
-    keycloakMock.isLoggedIn.mockResolvedValue(false);
+    keycloakMock.isLoggedIn.mockReturnValue(false);
 
-    await app.ngOnInit();
+    app.ngOnInit();
 
     expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
   });

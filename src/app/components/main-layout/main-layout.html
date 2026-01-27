@@ -14,8 +14,10 @@
 
     <div class="user-profile" (mouseenter)="showUserMenu = true" (mouseleave)="showUserMenu = false">
       <div class="avatar" [class.has-image]="userProfile?.profilePicUrl">
-        <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl" alt="Avatar" class="avatar-image">
-        <span *ngIf="!userProfile?.profilePicUrl">{{ userProfile?.firstName?.[0] || 'U' }}{{ userProfile?.lastName?.[0]
+        <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
+          [alt]="'Photo de profil de ' + userProfile?.firstName" class="avatar-image">
+        <span *ngIf="!userProfile?.profilePicUrl" aria-hidden="true">{{ userProfile?.firstName?.[0] || 'U' }}{{
+          userProfile?.lastName?.[0]
           ||
           '' }}</span>
       </div>
@@ -24,7 +26,8 @@
         <div class="tag-container">
           <span class="email">{{ userProfile?.userName }}#{{ userProfile?.hashtag }}</span>
           <button class="copy-btn" (click)="copyUserTag(); $event.stopPropagation()"
-            [title]="showCopySuccess ? 'Copié !' : 'Copier l\'identifiant'">
+            [title]="showCopySuccess ? 'Copié !' : 'Copier l\'identifiant'"
+            aria-label="Copier l'identifiant utilisateur">
             <mat-icon>{{ showCopySuccess ? 'done' : 'content_copy' }}</mat-icon>
           </button>
         </div>
@@ -65,10 +68,12 @@
       </a>
 
       <!-- Mobile Profile Button -->
-      <button class="nav-item profile-btn" (click)="toggleMobileMenu()" [class.active]="showMobileMenu">
+      <button class="nav-item profile-btn" (click)="toggleMobileMenu()" [class.active]="showMobileMenu"
+        aria-label="Menu profil">
         <div class="nav-avatar">
-          <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl" alt="P">
-          <span *ngIf="!userProfile?.profilePicUrl">{{ userProfile?.firstName?.[0] || 'U' }}</span>
+          <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
+            [alt]="'Photo de profil de ' + userProfile?.firstName">
+          <span *ngIf="!userProfile?.profilePicUrl" aria-hidden="true">{{ userProfile?.firstName?.[0] || 'U' }}</span>
         </div>
         <span class="label">Moi</span>
       </button>
@@ -79,9 +84,11 @@
       <div class="mobile-menu-content" (click)="$event.stopPropagation()">
         <div class="mobile-user-header">
           <div class="avatar-large">
-            <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl" alt="Avatar">
-            <span *ngIf="!userProfile?.profilePicUrl">{{ userProfile?.firstName?.[0] }}{{ userProfile?.lastName?.[0]
-              }}</span>
+            <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
+              [alt]="'Photo de profil de ' + userProfile?.firstName">
+            <span *ngIf="!userProfile?.profilePicUrl" aria-hidden="true">
+              {{ userProfile?.firstName?.[0] }}{{ userProfile?.lastName?.[0] }}
+            </span>
           </div>
           <div class="user-details">
             <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>

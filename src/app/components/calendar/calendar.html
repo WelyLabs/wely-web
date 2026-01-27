@@ -4,11 +4,11 @@
     <div class="calendar-section">
         <div class="header flex justify-between items-center mb-8 pb-5 border-b-2 border-transparent"
             style="border-image: var(--accent-gradient) 1;">
-            <button mat-icon-button (click)="prevMonth()">
+            <button mat-icon-button (click)="prevMonth()" aria-label="Mois précédent">
                 <mat-icon>chevron_left</mat-icon>
             </button>
             <h2 class="m-0 font-bold text-3xl gradient-text">{{ currentDate | date:'MMMM yyyy' }}</h2>
-            <button mat-icon-button (click)="nextMonth()">
+            <button mat-icon-button (click)="nextMonth()" aria-label="Mois suivant">
                 <mat-icon>chevron_right</mat-icon>
             </button>
         </div>
@@ -38,7 +38,7 @@
         [class.opacity-100]="selectedDate" [class.translate-x-0]="selectedDate" *ngIf="selectedDate">
         <div class="details-header flex justify-between items-center mb-4 border-b border-border-default pb-4">
             <h3 class="m-0 font-semibold text-primary">{{ selectedDate | date:'fullDate' }}</h3>
-            <button mat-icon-button (click)="closeDetails()">
+            <button mat-icon-button (click)="closeDetails()" aria-label="Fermer les détails">
                 <mat-icon>close</mat-icon>
             </button>
         </div>

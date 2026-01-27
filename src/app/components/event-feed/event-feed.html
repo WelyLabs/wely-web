@@ -8,7 +8,8 @@
         <div *ngFor="let event of events"
             class="event-card flex flex-col overflow-hidden transition-all duration-200 bg-white border border-border-default rounded-md shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-border-subtle">
             <div class="card-image h-45 bg-cover bg-center relative border-b border-border-default"
-                [style.background-image]="'url(' + event.image + ')'">
+                [style.background-image]="'url(' + event.image + ')'" [attr.aria-label]="'Image pour ' + event.title"
+                role="img">
                 <div
                     class="date-badge absolute top-4 right-4 flex flex-col items-center p-2 px-3 bg-white border border-border-default rounded-md text-primary font-semibold leading-tight shadow-sm">
                     <span class="month text-xs uppercase text-secondary">{{ event.date | date:'MMM' }}</span>
@@ -33,7 +34,7 @@
                         <mat-icon>{{ event.subscribed ? 'check' : 'add' }}</mat-icon>
                         {{ event.subscribed ? 'Subscribed' : 'Subscribe' }}
                     </button>
-                    <button mat-icon-button>
+                    <button mat-icon-button aria-label="Partager l'événement">
                         <mat-icon>share</mat-icon>
                     </button>
                 </div>
