@@ -220,6 +220,20 @@ describe('ChatService', () => {
         expect(msg.id).toBe('m-retry');
     });
 
+    it('should handle stream completion', () => {
+        const consoleSpy = vi.spyOn(console, 'log');
+        service['socketSubject'].next({
+            requestStream: () => ({
+                subscribe: (c: any) => {
+                    c.onComplete();
+                    return { cancel: () => { } };
+                }
+            })
+        });
+        service.initializeStream();
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Flux global terminé'));
+    });
+
     it('should request messages on stream subscribe', () => {
         const mockSub = { request: vi.fn() };
         service['socketSubject'].next({

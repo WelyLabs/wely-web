@@ -106,7 +106,17 @@ describe('UserSearchComponent', () => {
         expect(routerMock.navigate).toHaveBeenCalledWith(['/chat', 'conv1']);
     });
 
-    it('should handle tab changes and inferred status', () => {
+    it('should handle tab changes and inferred status for PENDING_OUTGOING', () => {
+        component.isFriendsMode = true;
+        component.onTabChange(1);
+        expect(component.activeTabIndex).toBe(1);
+        expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_OUTGOING');
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
+        component.loadUsers();
+        expect(component.users[0].relationStatus).toBe('PENDING_OUTGOING');
+    });
+
+    it('should handle tab changes and inferred status for PENDING_INCOMING', () => {
         component.isFriendsMode = true;
         component.onTabChange(2);
         expect(component.activeTabIndex).toBe(2);
@@ -114,6 +124,13 @@ describe('UserSearchComponent', () => {
         socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
         component.loadUsers();
         expect(component.users[0].relationStatus).toBe('PENDING_INCOMING');
+    });
+
+    it('should NOT remove friend if dialog is cancelled', () => {
+        dialogMock.open.mockReturnValue({ afterClosed: () => of(false) });
+        const user = { userId: 1, userName: 'Alice' } as any;
+        component.onRemoveFriend(user);
+        expect(socialServiceMock.removeFriend).not.toHaveBeenCalled();
     });
 
     it('should open dialog and reload on confirm remove friend', () => {
