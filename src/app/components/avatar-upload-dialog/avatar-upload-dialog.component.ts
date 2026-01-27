@@ -45,7 +45,11 @@ export class AvatarUploadDialogComponent {
 
     imageCropped(event: ImageCroppedEvent) {
         if (event.objectUrl) {
-            this.croppedImage = this.sanitizer.bypassSecurityTrustUrl(event.objectUrl);
+            // Security: Only bypass sanitization for blob URLs generated locally by the cropper
+            // from a user-selected file. This protects against potential XSS if a malicious URL was injected.
+            if (event.objectUrl.startsWith('blob:')) {
+                this.croppedImage = this.sanitizer.bypassSecurityTrustUrl(event.objectUrl);
+            }
             this.blob = event.blob || null;
         }
     }
