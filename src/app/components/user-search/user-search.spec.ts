@@ -76,9 +76,13 @@ describe('UserSearchComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should load users on init when route data is emitted', () => {
+    it('should load users on init and search mode', () => {
         routeDataSubject.next({ mode: 'search' });
-        expect(socialServiceMock.searchUsers).toHaveBeenCalled();
+        expect(socialServiceMock.searchUsers).toHaveBeenCalledWith(undefined);
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
+        component.loadUsers();
+        expect(component.users.length).toBe(1);
+        expect(component.users[0].relationStatus).toBeUndefined();
     });
 
     it('should search users and filter locally', () => {

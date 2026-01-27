@@ -13,8 +13,8 @@ export class App implements OnInit {
   protected readonly title = signal('calendar-app');
 
   constructor(
-    private keycloakService: KeycloakService,
-    private userService: UserService
+    private readonly keycloakService: KeycloakService,
+    private readonly userService: UserService
   ) { }
 
   async ngOnInit() {
