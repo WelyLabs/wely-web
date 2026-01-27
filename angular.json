@@ -86,6 +86,11 @@
             "tsConfig": "tsconfig.spec.json",
             "setupFiles": [
               "src/test-setup.ts"
+            ],
+            "coverage": true,
+            "coverageReporters": [
+              "lcov",
+              "text"
             ]
           }
         }
