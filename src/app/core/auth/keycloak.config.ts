@@ -1,3 +1,5 @@
+import { environment } from '../../../environments/environment';
+
 /**
  * Configuration centralisée pour Keycloak
  * Modifiez ces valeurs pour adapter la configuration à votre environnement
@@ -6,7 +8,7 @@ export const KEYCLOAK_CONFIG = {
     /**
      * URL du serveur Keycloak
      */
-    url: 'http://localhost:8080',
+    url: environment.keycloakUrl,
 
     /**
      * Nom du realm Keycloak

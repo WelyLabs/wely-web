@@ -57,7 +57,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    this.breakpointObserver.observe([Breakpoints.Handset, Breakpoints.Tablet])
+    this.breakpointObserver.observe(['(max-width: 1023px)'])
       .subscribe(result => {
         this.isMobile = result.matches;
         // Automatically open sidebar when switching to desktop, close when switching to mobile

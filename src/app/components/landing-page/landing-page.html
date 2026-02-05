@@ -11,7 +11,30 @@
             <button mat-stroked-button (click)="launchApp()">Login</button>
             <button mat-flat-button color="primary" class="signup-btn" (click)="signup()">Sign Up</button>
         </div>
+
+        <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMenu()" aria-label="Menu">
+            <mat-icon>{{ showMobileMenu ? 'close' : 'menu' }}</mat-icon>
+        </button>
     </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" [class.active]="showMobileMenu" (click)="closeMenu()">
+        <div class="mobile-menu-content" (click)="$event.stopPropagation()">
+            <div class="mobile-logo">
+                Glass<span class="highlight">Calendar</span>
+            </div>
+            <div class="mobile-links">
+                <a href="#" (click)="closeMenu()">Features</a>
+                <a href="#" (click)="closeMenu()">Pricing</a>
+                <a href="#" (click)="closeMenu()">About</a>
+                <div class="mobile-actions">
+                    <button mat-stroked-button (click)="launchApp(); closeMenu()">Login</button>
+                    <button mat-flat-button color="primary" class="signup-btn" (click)="signup(); closeMenu()">Sign Up
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Hero Section -->
     <header class="hero-section">

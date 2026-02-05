@@ -1,4 +1,6 @@
 export const environment = {
     production: true,
-    apiUrl: 'http://localhost:8081/api/v1'
+    apiUrl: '/api/v1',
+    rsocketUrl: '/rsocket',
+    keycloakUrl: 'https://auth.welylabs.app'
 };

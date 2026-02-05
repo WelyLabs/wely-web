@@ -290,7 +290,7 @@
         }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1023px) {
         width: 280px;
         margin: 0;
         height: 100vh;
@@ -308,11 +308,17 @@
     display: flex !important;
     flex-direction: column !important;
 
-    @media (max-width: 768px) {
-        padding: 0 !important; // Content will manage its own side padding
+    @media (max-width: 1023px) {
+        padding: 0 !important;
         height: 100dvh;
         max-height: 100dvh;
         overflow: hidden;
+
+        .page-container {
+            padding: 16px 16px 24px; // Elegant top and side padding
+            overflow-y: auto; // Allow scrolling within the padded container
+            height: 100%;
+        }
     }
 }
 

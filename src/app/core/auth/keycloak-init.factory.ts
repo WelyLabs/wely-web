@@ -2,6 +2,7 @@ import { KeycloakService } from 'keycloak-angular';
 import { KEYCLOAK_CONFIG } from './keycloak.config';
 import { UserService } from '../../services/user.service';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Détecte la langue du navigateur et retourne le code de langue approprié pour Keycloak
@@ -31,9 +32,10 @@ export function initializeKeycloak(keycloak: KeycloakService, userService: UserS
                 clientId: KEYCLOAK_CONFIG.clientId
             },
             initOptions: {
-                onLoad: 'check-sso',
-                silentCheckSsoRedirectUri:
-                    window.location.origin + '/assets/silent-check-sso.html',
+                onLoad: (environment as any).keycloakSilentCheckSso !== false ? 'check-sso' : undefined,
+                silentCheckSsoRedirectUri: (environment as any).keycloakSilentCheckSso !== false
+                    ? window.location.origin + '/assets/silent-check-sso.html'
+                    : undefined,
                 checkLoginIframe: false,
                 locale: getBrowserLocale()
             },

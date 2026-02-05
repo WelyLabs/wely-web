@@ -31,6 +31,8 @@ export class LandingPageComponent {
         }
     ];
 
+    showMobileMenu = false;
+
     constructor(
         private router: Router,
         private keycloak: KeycloakService
@@ -52,5 +54,13 @@ export class LandingPageComponent {
         await this.keycloak.register({
             redirectUri: window.location.origin + '/calendar'
         });
+    }
+
+    toggleMenu() {
+        this.showMobileMenu = !this.showMobileMenu;
+    }
+
+    closeMenu() {
+        this.showMobileMenu = false;
     }
 }
