@@ -30,40 +30,44 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
 
 /* Modern Startup Theme Variables */
 :root {
-  --primary-blue: #3b82f6;
+  --primary-blue: #2563eb;
   --primary-orange: #f97316;
-  --dark-blue: #1e40af;
-  --light-blue: #60a5fa;
-  --dark-orange: #ea580c;
-  --light-orange: #fb923c;
 
-  --bg-canvas: #ffffff;
-  --bg-subtle: #f8fafc;
+  // Soft, premium background colors from mockup
+  --bg-canvas: #fcfaf7;
+  --bg-subtle: #f3f0ea;
   --bg-card: #ffffff;
-  --bg-card-hover: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.7);
 
-  --border-default: #e2e8f0;
-  --border-accent: rgba(249, 115, 22, 0.3);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  // Borders & Accents
+  --border-default: rgba(0, 0, 0, 0.03);
+  --border-subtle: rgba(0, 0, 0, 0.015);
 
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-on-gradient: #ffffff;
+  // Refined Micro-shadows
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.01);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.04);
+  --shadow-premium: 0 10px 40px rgba(0, 0, 0, 0.02);
 
-  --accent-gradient: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-orange) 100%);
-  --sidebar-width: 250px;
-  --header-height: 60px;
+  // Typography
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #a1a1a1;
+
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #f97316 100%);
+  --sidebar-width: 280px;
 }
 
 html,
 body {
   height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg-canvas);
   color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Global Box Sizing Reset */

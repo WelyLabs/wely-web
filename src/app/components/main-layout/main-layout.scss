@@ -7,34 +7,32 @@
     width: var(--sidebar-width);
     border-right: 1px solid var(--border-default);
     background: var(--bg-canvas);
-    backdrop-filter: blur(20px);
-    margin: 12px;
-    margin-right: 0;
-    height: calc(100vh - 24px);
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: visible; // Allow menu to show
+    margin: 0; // Seamless side integration
+    height: 100vh;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: visible;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border-default);
 
     ::ng-deep .mat-drawer-inner-container {
         display: flex;
         flex-direction: column;
-        overflow: visible; // Allow menu to show
+        overflow: visible;
     }
 
     .logo-container {
-        padding: 24px 16px;
-        border-bottom: 1px solid var(--border-default);
+        padding: 32px 24px;
+        border-bottom: 1px solid var(--border-subtle);
 
         .logo-text {
             margin: 0;
-            font-weight: 700;
-            font-size: 18px;
-            letter-spacing: -0.5px;
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: -0.8px;
             color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
 
             .highlight {
                 background: var(--accent-gradient);
@@ -46,69 +44,52 @@
     }
 
     .nav-list {
-        padding-top: 16px;
+        padding: 24px 12px;
         flex: 1;
         overflow-y: auto;
-        overflow-x: hidden;
         display: flex;
         flex-direction: column;
+        gap: 4px;
 
         .nav-item {
             color: var(--text-secondary);
-            margin: 6px 12px;
             border-radius: 12px;
-            height: 44px;
+            height: 48px;
             display: flex;
             align-items: center;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none; // Ensure no underline
-            padding: 0 16px; // Add padding for icon spacing
-
-            &::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: var(--accent-gradient);
-                opacity: 0;
-                transition: opacity 0.3s ease;
-                border-radius: 12px;
-            }
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
+            padding: 0 16px;
+            font-weight: 500;
+            font-size: 14px;
 
             &:hover {
+                background: var(--bg-subtle);
+                color: var(--text-primary);
                 transform: translateX(4px);
-
-                &::before {
-                    opacity: 0.15;
-                }
-            }
-
-            &.active {
-                background: var(--accent-gradient);
-                color: white;
-                font-weight: 600;
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-
-                &::before {
-                    opacity: 0;
-                }
             }
 
             mat-icon {
-                color: inherit;
+                font-size: 22px;
+                width: 22px;
+                height: 22px;
                 margin-right: 12px;
-                font-size: 20px;
-                width: 20px;
-                height: 20px;
-                position: relative;
-                z-index: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                transition: transform 0.2s ease;
+            }
+
+            &.active {
+                background: var(--text-primary);
+                color: white;
+                font-weight: 600;
+
+                mat-icon {
+                    color: white;
+                }
+
+                &:hover {
+                    transform: none;
+                    background: #000;
+                }
             }
 
             .label {
@@ -291,18 +272,16 @@
     }
 
     @media (max-width: 1023px) {
-        width: 280px;
-        margin: 0;
-        height: 100vh;
-        border-radius: 0;
+        display: none !important;
+        width: 0 !important;
+        visibility: hidden !important;
     }
 }
 
 .content-area {
     background: var(--bg-canvas);
-    padding: 12px 24px 8px 24px;
+    padding: 24px;
     height: 100vh;
-    max-height: 100vh;
     overflow: hidden;
     position: relative;
     display: flex !important;
@@ -311,12 +290,10 @@
     @media (max-width: 1023px) {
         padding: 0 !important;
         height: 100dvh;
-        max-height: 100dvh;
-        overflow: hidden;
 
         .page-container {
-            padding: 16px 16px 24px; // Elegant top and side padding
-            overflow-y: auto; // Allow scrolling within the padded container
+            padding: 20px;
+            overflow-y: auto;
             height: 100%;
         }
     }

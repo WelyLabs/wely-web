@@ -32,6 +32,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   currentDate = new Date();
   days: CalendarDay[] = [];
   weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  hours = Array.from({ length: 24 }, (_, i) => i);
+  currentTimePosition = 0;
+  private timeUpdateInterval?: any;
+  viewMode: 'month' | 'week' = 'month';
 
   selectedDate: Date | null = null;
   selectedEvents: CalendarEvent[] = [];
@@ -58,11 +62,39 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
       this.events = [...this.personalEvents, ...subscribedEvents];
       this.generateCalendar();
+      this.updateTimePosition();
+
+      // Update time position every minute
+      this.timeUpdateInterval = setInterval(() => this.updateTimePosition(), 60000);
+
+      // Default selection to Today
+      const today = this.days.find((d: CalendarDay) => d.isToday);
+      if (today) {
+        this.selectDate(today);
+      }
     });
   }
 
   ngOnDestroy() {
     this.subscription?.unsubscribe();
+    if (this.timeUpdateInterval) clearInterval(this.timeUpdateInterval);
+  }
+
+  private updateTimePosition() {
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const totalMinutes = 24 * 60;
+    this.currentTimePosition = (minutes / totalMinutes) * 100;
+  }
+
+  isToday(date: Date): boolean {
+    const today = new Date();
+    return this.isSameDate(date, today);
+  }
+
+  toggleView(mode: 'month' | 'week') {
+    this.viewMode = mode;
+    this.generateCalendar();
   }
 
   private convertFeedEventToCalendarEvent(feedEvent: FeedEvent): CalendarEvent {
@@ -76,6 +108,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   generateCalendar() {
+    if (this.viewMode === 'month') {
+      this.generateMonthView();
+    } else {
+      this.generateWeekView();
+    }
+  }
+
+  private generateMonthView() {
     const year = this.currentDate.getFullYear();
     const month = this.currentDate.getMonth();
 
@@ -122,20 +162,61 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
-  isSameDate(d1: Date, d2: Date): boolean {
-    return d1.getDate() === d2.getDate() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getFullYear() === d2.getFullYear();
+  private generateWeekView() {
+    this.days = [];
+    const current = new Date(this.currentDate);
+    const dayOfWeek = current.getDay();
+    const firstDayOfWeek = new Date(current.setDate(current.getDate() - dayOfWeek));
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(firstDayOfWeek);
+      date.setDate(firstDayOfWeek.getDate() + i);
+      this.days.push({
+        date: date,
+        isCurrentMonth: date.getMonth() === this.currentDate.getMonth(),
+        isToday: this.isSameDate(date, new Date()),
+        hasEvents: this.events.some(e => this.isSameDate(e.date, date))
+      });
+    }
   }
 
-  prevMonth() {
-    this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
-    this.generateCalendar();
-    this.selectedDate = null; // Deselect on month change
+  isSameDate(date1: Date, date2: Date): boolean {
+    return date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate();
   }
 
-  nextMonth() {
-    this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+  getEventsForDay(date: Date): CalendarEvent[] {
+    return this.events.filter(event => this.isSameDate(event.date, date));
+  }
+
+  getEventsForHour(date: Date, hour: number): CalendarEvent[] {
+    // This is a simplified version since our time is stored as a string like '10:00 AM'
+    // In a real app, this would use a proper Date/Time object
+    return this.events.filter(event => {
+      if (!this.isSameDate(event.date, date)) return false;
+
+      const timeStr = event.time.toLowerCase();
+      if (timeStr === 'all day') return hour === 0; // Show all day events at midnight or a special slot
+
+      const match = timeStr.match(/(\d+):/);
+      if (match) {
+        let eventHour = parseInt(match[1]);
+        const isPM = timeStr.includes('pm');
+        if (isPM && eventHour !== 12) eventHour += 12;
+        if (!isPM && eventHour === 12) eventHour = 0;
+        return eventHour === hour;
+      }
+      return false;
+    });
+  }
+
+  navigate(delta: number) {
+    if (this.viewMode === 'month') {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + delta, 1);
+    } else {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), this.currentDate.getDate() + (delta * 7));
+    }
     this.generateCalendar();
     this.selectedDate = null;
   }
@@ -143,11 +224,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
   selectDate(day: CalendarDay) {
     this.selectedDate = day.date;
     this.selectedEvents = this.events.filter(e => this.isSameDate(e.date, day.date));
-
-    // If no events for this day, maybe add a dummy one for demo if it's today
-    if (this.selectedEvents.length === 0 && day.isToday) {
-      // Keep empty to show "No events" state
-    }
   }
 
   closeDetails() {

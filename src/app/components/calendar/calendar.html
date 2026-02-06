@@ -1,66 +1,118 @@
-<div class="calendar-container" [class.split-view]="selectedDate">
+<div class="calendar-container" [class.split-view]="selectedDate && viewMode === 'month'"
+    [class.week-mode]="viewMode === 'week'">
 
     <!-- Calendar Section -->
     <div class="calendar-section">
-        <div class="header flex justify-between items-center mb-8 pb-5 border-b-2 border-transparent"
-            style="border-image: var(--accent-gradient) 1;">
-            <button mat-icon-button (click)="prevMonth()" aria-label="Mois précédent">
-                <mat-icon>chevron_left</mat-icon>
-            </button>
-            <h2 class="m-0 font-bold text-3xl gradient-text">{{ currentDate | date:'MMMM yyyy' }}</h2>
-            <button mat-icon-button (click)="nextMonth()" aria-label="Mois suivant">
-                <mat-icon>chevron_right</mat-icon>
-            </button>
-        </div>
+        <div class="calendar-header">
+            <div class="title-group">
+                <h2 class="current-month">{{ currentDate | date: (viewMode === 'month' ? 'MMMM yyyy' : 'MMM d, yyyy') }}
+                </h2>
+            </div>
 
-        <div class="weekdays grid grid-cols-7 text-center mb-2 font-semibold text-sm"
-            style="color: var(--text-secondary);">
-            <div *ngFor="let day of weekDays">{{ day }}</div>
-        </div>
+            <div class="header-controls">
+                <div class="view-toggle">
+                    <button [class.active]="viewMode === 'month'" (click)="toggleView('month')">Month</button>
+                    <button [class.active]="viewMode === 'week'" (click)="toggleView('week')">Week</button>
+                </div>
 
-        <div
-            class="days-grid grid grid-cols-7 grid-rows-6 gap-px bg-border-default border border-border-default rounded-md overflow-hidden flex-1">
-            <div *ngFor="let day of days"
-                class="day-cell bg-white p-2 cursor-pointer flex flex-col items-start justify-start transition-colors duration-200 relative"
-                [class.other-month]="!day.isCurrentMonth" [class.today]="day.isToday"
-                [class.selected]="selectedDate && isSameDate(day.date, selectedDate)" [class.has-events]="day.hasEvents"
-                (click)="selectDate(day)">
-                <span class="day-number text-sm mb-1">{{ day.date | date:'d' }}</span>
-                <div class="event-dots flex gap-0.5" *ngIf="day.hasEvents">
-                    <div class="dot w-1.5 h-1.5 rounded-full bg-green-600"></div>
+                <div class="nav-buttons">
+                    <button (click)="navigate(-1)" aria-label="Previous">
+                        <mat-icon>chevron_left</mat-icon>
+                    </button>
+                    <button (click)="navigate(1)" aria-label="Next">
+                        <mat-icon>chevron_right</mat-icon>
+                    </button>
                 </div>
             </div>
         </div>
+
+        <!-- Month View Layout -->
+        <ng-container *ngIf="viewMode === 'month'">
+            <div class="weekdays">
+                <div *ngFor="let day of weekDays" class="weekday-name">{{ day }}</div>
+            </div>
+
+            <div class="days-grid month-grid" [class.selection-active]="selectedDate">
+                <div *ngFor="let day of days; let i = index" class="day-cell" [class.other-month]="!day.isCurrentMonth"
+                    [class.today]="day.isToday" [class.selected]="selectedDate && isSameDate(day.date, selectedDate)"
+                    (click)="selectDate(day)">
+
+                    <div class="day-content">
+                        <span class="day-number">{{ day.date | date:'d' }}</span>
+                        <div class="event-dots" *ngIf="day.hasEvents">
+                            <span class="dot"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+
+        <!-- Week View Layout (Apple Style Schedule) -->
+        <ng-container *ngIf="viewMode === 'week'">
+            <div class="week-schedule-container">
+                <!-- Time Axis -->
+                <div class="time-axis">
+                    <div class="axis-header"></div>
+                    <div *ngFor="let hour of hours" class="hour-slot">
+                        {{ hour | number:'2.0' }}:00
+                    </div>
+                </div>
+
+                <!-- Day Columns -->
+                <div class="day-columns">
+                    <div *ngFor="let day of days" class="day-column" [class.today]="day.isToday">
+                        <div class="column-header">
+                            <span class="day-label">{{ day.date | date:'EEE' }}</span>
+                            <span class="date-label">{{ day.date | date:'d' }}</span>
+                        </div>
+                        <div class="hour-slots">
+                            <!-- Timeline Indicator -->
+                            <div class="timeline-indicator" [class.vivid]="isToday(day.date)"
+                                [style.top.%]="currentTimePosition">
+                                <div class="dot" *ngIf="isToday(day.date)"></div>
+                                <div class="line"></div>
+                            </div>
+
+                            <div *ngFor="let hour of hours" class="hour-cell">
+                                <div class="event-container">
+                                    <div *ngFor="let event of getEventsForHour(day.date, hour)"
+                                        class="inline-event-card" (click)="viewEventDetails(event)">
+                                        <div class="event-accent"></div>
+                                        <span class="event-title">{{ event.title }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ng-container>
     </div>
 
-    <!-- Event Details Section (Split View) -->
-    <div class="details-section flex flex-col p-8 opacity-0 transition-all duration-300"
-        [class.opacity-100]="selectedDate" [class.translate-x-0]="selectedDate" *ngIf="selectedDate">
-        <div class="details-header flex justify-between items-center mb-4 border-b border-border-default pb-4">
-            <h3 class="m-0 font-semibold text-primary">{{ selectedDate | date:'fullDate' }}</h3>
-            <button mat-icon-button (click)="closeDetails()" aria-label="Fermer les détails">
+    <!-- Details Section (Month View Only) -->
+    <div class="details-section" [class.visible]="selectedDate && viewMode === 'month'">
+        <div class="details-header">
+            <h3>{{ selectedDate | date:'EEEE, d MMMM yyyy' }}</h3>
+            <button (click)="selectedDate = null">
                 <mat-icon>close</mat-icon>
             </button>
         </div>
 
-        <div class="events-list flex-1 overflow-hidden flex flex-col gap-4 px-0.5">
-            <div *ngIf="selectedEvents.length === 0" class="no-events text-center text-secondary mt-10">
-                <p>No events for this day.</p>
-                <button mat-stroked-button color="primary">Add Event</button>
+        <div class="events-list">
+            <div *ngIf="selectedEvents.length === 0" class="no-events">
+                <p>Aucun événement pour ce jour</p>
+                <button>Ajouter un événement</button>
             </div>
 
-            <div *ngFor="let event of selectedEvents"
-                class="event-card p-4 my-1 bg-white border border-border-default rounded-md flex gap-4 items-start cursor-pointer transition-all duration-200 relative hover:shadow-md hover:border-primary-blue hover:border-2 hover:my-0.5 hover:-mx-px hover:z-10"
-                (click)="viewEventDetails(event)">
-                <div class="event-time font-semibold text-secondary min-w-[70px] text-sm">{{ event.time }}</div>
-                <div class="event-info flex-1">
-                    <h4 class="m-0 mb-1 font-semibold text-primary text-sm">{{ event.title }}</h4>
-                    <p class="m-0 text-sm text-secondary">{{ event.description }}</p>
+            <div *ngFor="let event of selectedEvents" class="event-card">
+                <div class="event-accent"></div>
+                <div class="event-time">{{ event.time }}</div>
+                <div class="event-info">
+                    <h4>{{ event.title }}</h4>
+                    <p>{{ event.description }}</p>
                 </div>
-                <mat-icon
-                    class="arrow-icon text-primary-blue text-xl w-5 h-5 opacity-0 transition-all duration-200 hover:opacity-100 hover:translate-x-1">arrow_forward</mat-icon>
+                <mat-icon class="arrow-icon">chevron_right</mat-icon>
             </div>
         </div>
     </div>
-
 </div>

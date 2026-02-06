@@ -6,140 +6,138 @@
 
 .feed-container {
     padding: 32px;
-    min-height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background: var(--bg-canvas);
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
+    background: transparent;
 
     .feed-header {
-        margin-bottom: 32px;
+        margin-bottom: 48px;
         color: var(--text-primary);
-        border-bottom: 1px solid var(--border-default);
-        padding-bottom: 16px;
+        border-bottom: none;
+        padding-bottom: 0;
 
         h1 {
-            font-size: 2rem;
-            margin: 0 0 8px 0;
-            font-weight: 600;
+            font-size: 40px;
+            letter-spacing: -2px;
+            font-weight: 800;
+            margin-bottom: 8px;
         }
 
         p {
-            font-size: 1.1rem;
+            font-size: 18px;
+            font-weight: 500;
             color: var(--text-secondary);
-            margin: 0;
         }
     }
 
     .events-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 24px;
-        padding-bottom: 64px;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 32px;
+        padding-bottom: 80px;
     }
 
     .event-card {
+        background: white;
+        border-radius: 32px;
+        border: 1px solid var(--border-default);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
-        overflow: hidden;
-        transition: all 0.2s ease;
-        background: var(--bg-canvas);
-        border: 1px solid var(--border-default);
-        border-radius: 6px;
-        box-shadow: var(--shadow-sm);
 
         &:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-            border-color: var(--border-subtle);
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--text-tertiary);
         }
 
         .card-image {
-            height: 180px;
+            height: 220px;
             background-size: cover;
             background-position: center;
             position: relative;
-            border-bottom: 1px solid var(--border-default);
 
             .date-badge {
                 position: absolute;
-                top: 16px;
-                right: 16px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 8px 12px;
-                background: var(--bg-canvas);
-                border: 1px solid var(--border-default);
-                border-radius: 6px;
-                color: var(--text-primary);
-                font-weight: 600;
-                line-height: 1.2;
-                box-shadow: var(--shadow-sm);
+                top: 20px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(10px);
+                padding: 10px 14px;
+                border-radius: 16px;
+                text-align: center;
+                box-shadow: var(--shadow-lg);
 
                 .month {
-                    font-size: 0.8rem;
+                    display: block;
+                    font-size: 11px;
+                    font-weight: 800;
                     text-transform: uppercase;
-                    color: var(--text-secondary);
+                    color: var(--primary-blue);
+                    letter-spacing: 1px;
                 }
 
                 .day {
-                    font-size: 1.2rem;
+                    display: block;
+                    font-size: 20px;
+                    font-weight: 800;
+                    color: var(--text-primary);
                 }
             }
         }
 
         .card-content {
-            padding: 20px;
+            padding: 24px;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            flex: 1;
 
             .organizer {
-                font-size: 0.85rem;
-                color: var(--text-secondary);
-                font-weight: 600;
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--text-tertiary);
                 text-transform: uppercase;
-                margin-bottom: 8px;
+                letter-spacing: 1px;
+                margin-bottom: 12px;
             }
 
             h2 {
-                margin: 0 0 8px 0;
-                font-size: 1.25rem;
-                font-weight: 600;
-                line-height: 1.3;
-                color: var(--accent-fg);
+                font-size: 22px;
+                font-weight: 800;
+                letter-spacing: -0.5px;
+                margin-bottom: 8px;
+                color: var(--text-primary);
+                line-height: 1.2;
                 cursor: pointer;
-                transition: all 0.2s ease;
+                transition: color 0.2s;
 
                 &:hover {
-                    text-decoration: underline;
-                    color: var(--primary-orange);
+                    color: var(--primary-blue);
                 }
             }
 
             .location {
                 display: flex;
                 align-items: center;
-                gap: 4px;
-                font-size: 0.9rem;
+                gap: 6px;
+                font-size: 14px;
+                font-weight: 500;
                 color: var(--text-secondary);
-                margin-bottom: 12px;
+                margin-bottom: 16px;
 
                 mat-icon {
                     font-size: 18px;
                     width: 18px;
                     height: 18px;
+                    color: var(--text-tertiary);
                 }
             }
 
             .description {
-                font-size: 0.95rem;
-                line-height: 1.5;
-                color: var(--text-primary);
-                margin: 0 0 20px 0;
+                font-size: 15px;
+                line-height: 1.6;
+                color: var(--text-secondary);
+                margin-bottom: 24px;
                 flex: 1;
             }
 
@@ -147,32 +145,46 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-top: 1px solid var(--border-default);
-                padding-top: 16px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border-subtle);
 
                 button[mat-flat-button] {
-                    border-radius: 6px;
-                    box-shadow: none;
-                    border: 1px solid rgba(27, 31, 36, 0.15);
+                    height: 44px;
+                    padding: 0 20px;
+                    border-radius: 14px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    transition: all 0.2s;
 
-                    // Mimic GitHub buttons
                     &.mat-primary {
-                        background-color: #2da44e;
+                        background: var(--text-primary);
                         color: white;
 
                         &:hover {
-                            background-color: #2c974b;
+                            background: #000;
+                            transform: scale(1.05);
                         }
                     }
 
                     &.mat-accent {
-                        background-color: var(--bg-canvas-subtle);
+                        background: var(--bg-subtle);
                         color: var(--text-primary);
-                        border-color: var(--border-default);
 
                         &:hover {
-                            background-color: #f3f4f6;
+                            background: var(--border-default);
+                            transform: scale(1.05);
                         }
+                    }
+                }
+
+                button[mat-icon-button] {
+                    background: var(--bg-subtle);
+                    color: var(--text-secondary);
+                    border-radius: 12px;
+
+                    &:hover {
+                        background: var(--border-default);
+                        color: var(--text-primary);
                     }
                 }
             }

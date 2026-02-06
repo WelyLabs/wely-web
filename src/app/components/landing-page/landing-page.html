@@ -2,7 +2,7 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="logo">
-            Glass<span class="highlight">Calendar</span>
+            <span class="highlight">Wely</span>
         </div>
         <div class="nav-links">
             <a href="#">Features</a>
@@ -21,7 +21,7 @@
     <div class="mobile-menu-overlay" [class.active]="showMobileMenu" (click)="closeMenu()">
         <div class="mobile-menu-content" (click)="$event.stopPropagation()">
             <div class="mobile-logo">
-                Glass<span class="highlight">Calendar</span>
+                <span class="highlight">Wely</span>
             </div>
             <div class="mobile-links">
                 <a href="#" (click)="closeMenu()">Features</a>
@@ -40,57 +40,75 @@
     <header class="hero-section">
         <div class="hero-content">
             <h1 class="hero-title">
-                Experience the Future of <br>
-                <span class="gradient-text">Event Management</span>
+                Experience the <br>
+                <span class="gradient-text">Future of Time</span>
             </h1>
             <p class="hero-subtitle">
-                A beautiful, intuitive, and powerful calendar application designed for modern teams and individuals.
-                Plan, connect, and celebrate like never before.
+                The most beautiful, intuitive, and high-performance calendar designed for modern teams.
+                Plan smarter, execute faster.
             </p>
             <div class="hero-actions">
-                <button mat-flat-button color="primary" class="cta-button" (click)="launchApp()">
-                    Get Started Free
-                    <mat-icon>arrow_forward</mat-icon>
-                </button>
-                <button mat-stroked-button class="secondary-button">
-                    View Demo
-                </button>
+                <button class="cta-button" (click)="launchApp()">Get Started for Free</button>
+                <button class="secondary-button" (click)="launchApp()">View Demo</button>
             </div>
         </div>
 
-        <!-- Abstract Visual/Decoration -->
         <div class="hero-visual">
-            <div class="glass-card card-1">
-                <div class="card-header">
-                    <div class="circle red"></div>
-                    <div class="circle yellow"></div>
-                    <div class="circle green"></div>
-                </div>
-                <div class="card-body">
-                    <div class="skeleton-line w-3/4"></div>
-                    <div class="skeleton-line w-1/2"></div>
-                </div>
+            <div class="mockup-container">
+                <img src="assets/wely-mockup.png" alt="Wely Calendar Mockup">
             </div>
-            <div class="glass-card card-2">
-                <mat-icon class="card-icon">event</mat-icon>
-                <span>Meeting at 10:00 AM</span>
+            <div class="floating-element el-1">
+                <mat-icon>event</mat-icon>
+                <span>New Event Created</span>
+            </div>
+            <div class="floating-element el-2">
+                <mat-icon>bolt</mat-icon>
+                <span>Performance Optimized</span>
             </div>
         </div>
     </header>
 
     <!-- Features Section -->
     <section class="features-section">
-        <div class="feature-card glass-panel" *ngFor="let feature of features">
-            <div class="icon-wrapper">
-                <mat-icon>{{ feature.icon }}</mat-icon>
+        <span class="section-tag">Powerful Features</span>
+        <h2 class="section-title">Built for the next generation of teams</h2>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="icon-wrapper">
+                    <mat-icon>calendar_today</mat-icon>
+                </div>
+                <h3>Intelligent Grid</h3>
+                <p>A seamless, interactive experience that adapts to your workflow. Focused and distraction-free.</p>
             </div>
-            <h3>{{ feature.title }}</h3>
-            <p>{{ feature.description }}</p>
+
+            <div class="feature-card">
+                <div class="icon-wrapper">
+                    <mat-icon>auto_awesome</mat-icon>
+                </div>
+                <h3>Smart Scheduling</h3>
+                <p>AI-powered suggestions to find the perfect time for your team across all timezones.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon-wrapper">
+                    <mat-icon>security</mat-icon>
+                </div>
+                <h3>Enterprise Security</h3>
+                <p>Private by default. Your data is encrypted and protected with industry-leading standards.</p>
+            </div>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2025 GlassCalendar. All rights reserved.</p>
+        <div class="footer-logo">Wely</div>
+        <div class="footer-links">
+            <a href="#">Terms</a>
+            <a href="#">Privacy</a>
+            <a href="#">Security</a>
+            <a href="#">Contact</a>
+        </div>
+        <p class="copyright">&copy; 2026 Wely Inc. All rights reserved.</p>
     </footer>
 </div>
