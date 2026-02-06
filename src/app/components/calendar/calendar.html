@@ -1,11 +1,15 @@
 <div class="calendar-container" [class.split-view]="selectedDate && viewMode === 'month'"
-    [class.week-mode]="viewMode === 'week'">
+    [class.week-mode]="viewMode === 'week'" [class.day-mode]="viewMode === 'day'">
 
     <!-- Calendar Section -->
     <div class="calendar-section">
         <div class="calendar-header">
             <div class="title-group">
-                <h2 class="current-month">{{ currentDate | date: (viewMode === 'month' ? 'MMMM yyyy' : 'MMM d, yyyy') }}
+                <h2 class="current-month">
+                    <ng-container *ngIf="viewMode === 'month'">{{ currentDate | date: 'MMMM yyyy' }}</ng-container>
+                    <ng-container *ngIf="viewMode === 'week'">Semaine {{ getWeekNumber(currentDate) }}, {{ currentDate |
+                        date: 'yyyy' }}</ng-container>
+                    <ng-container *ngIf="viewMode === 'day'">{{ currentDate | date: 'MMM d, yyyy' }}</ng-container>
                 </h2>
             </div>
 
@@ -13,6 +17,7 @@
                 <div class="view-toggle">
                     <button [class.active]="viewMode === 'month'" (click)="toggleView('month')">Month</button>
                     <button [class.active]="viewMode === 'week'" (click)="toggleView('week')">Week</button>
+                    <button [class.active]="viewMode === 'day'" (click)="toggleView('day')">Day</button>
                 </div>
 
                 <div class="nav-buttons">
@@ -47,9 +52,9 @@
             </div>
         </ng-container>
 
-        <!-- Week View Layout (Apple Style Schedule) -->
-        <ng-container *ngIf="viewMode === 'week'">
-            <div class="week-schedule-container">
+        <!-- Week/Day View Layout (Apple Style Schedule) -->
+        <ng-container *ngIf="viewMode === 'week' || viewMode === 'day'">
+            <div class="week-schedule-container" [class.day-mode]="viewMode === 'day'">
                 <!-- Time Axis -->
                 <div class="time-axis">
                     <div class="axis-header"></div>
@@ -76,7 +81,8 @@
                             <div *ngFor="let hour of hours" class="hour-cell">
                                 <div class="event-container">
                                     <div *ngFor="let event of getEventsForHour(day.date, hour)"
-                                        class="inline-event-card" (click)="viewEventDetails(event)">
+                                        class="inline-event-card" [style.top.%]="getEventMinuteOffset(event)"
+                                        (click)="viewEventDetails(event)">
                                         <div class="event-accent"></div>
                                         <span class="event-title">{{ event.title }}</span>
                                     </div>

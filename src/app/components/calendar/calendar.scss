@@ -244,6 +244,14 @@
         border-radius: 32px;
         min-width: 0;
 
+        &.day-mode {
+            .day-columns {
+                grid-template-columns: 1fr;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+        }
+
         @media (max-width: 768px) {
             padding: 0 12px 24px;
         }
@@ -325,25 +333,29 @@
 
                     .timeline-indicator {
                         position: absolute;
-                        left: -4px; // Align with day column edges
-                        right: -4px;
+                        left: 0;
+                        right: 0;
                         z-index: 20;
                         pointer-events: none;
                         display: flex;
                         align-items: center;
                         transition: opacity 0.3s;
                         opacity: 0.15; // Dim by default
+                        height: 0; // Ensure no height to prevent offset
 
                         &.vivid {
                             opacity: 1;
                             z-index: 21;
 
                             .dot {
+                                position: absolute;
+                                left: 0;
+                                top: 50%;
+                                transform: translate(-4px, -50%);
                                 width: 8px;
                                 height: 8px;
                                 background: #ff3b30;
                                 border-radius: 50%;
-                                margin-left: -4px;
                                 box-shadow: 0 0 8px rgba(255, 59, 48, 0.4);
                             }
 
@@ -364,13 +376,16 @@
                         border-bottom: 1px solid var(--border-subtle);
                         padding: 4px;
 
+
                         .event-container {
+                            position: relative;
                             height: 100%;
-                            display: flex;
-                            flex-direction: column;
-                            gap: 4px;
+                            width: 100%;
 
                             .inline-event-card {
+                                position: absolute;
+                                left: 4px;
+                                right: 4px;
                                 background: white;
                                 border-radius: 12px;
                                 padding: 8px 12px;
@@ -381,11 +396,13 @@
                                 transition: all 0.2s;
                                 box-shadow: var(--shadow-sm);
                                 border: 1px solid var(--border-default);
+                                z-index: 10;
 
                                 &:hover {
                                     transform: translateY(-2px);
                                     box-shadow: var(--shadow-md);
                                     border-color: var(--primary-blue);
+                                    z-index: 15;
                                 }
 
                                 .event-accent {

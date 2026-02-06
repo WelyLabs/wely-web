@@ -35,7 +35,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   hours = Array.from({ length: 24 }, (_, i) => i);
   currentTimePosition = 0;
   private timeUpdateInterval?: any;
-  viewMode: 'month' | 'week' = 'month';
+  viewMode: 'month' | 'week' | 'day' = 'month';
 
   selectedDate: Date | null = null;
   selectedEvents: CalendarEvent[] = [];
@@ -66,12 +66,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
       // Update time position every minute
       this.timeUpdateInterval = setInterval(() => this.updateTimePosition(), 60000);
-
-      // Default selection to Today
-      const today = this.days.find((d: CalendarDay) => d.isToday);
-      if (today) {
-        this.selectDate(today);
-      }
     });
   }
 
@@ -87,14 +81,56 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.currentTimePosition = (minutes / totalMinutes) * 100;
   }
 
+  getWeekNumber(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
   isToday(date: Date): boolean {
     const today = new Date();
     return this.isSameDate(date, today);
   }
 
-  toggleView(mode: 'month' | 'week') {
+  private scrollToCurrentTime() {
+    const container = document.querySelector('.week-schedule-container');
+    if (!container) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    // Each hour slot is 80px tall, scroll to show current hour in the middle of viewport
+    const hourHeight = 80;
+    const headerHeight = 100; // Column header height
+    const scrollPosition = (currentHour * hourHeight) + headerHeight - (window.innerHeight / 3);
+
+    container.scrollTo({
+      top: Math.max(0, scrollPosition),
+      behavior: 'smooth'
+    });
+  }
+
+  toggleView(mode: 'month' | 'week' | 'day') {
     this.viewMode = mode;
+
+    // Clear selection when switching to Month view
+    if (mode === 'month') {
+      this.selectedDate = null;
+    }
+
+    // Set selectedDate for Day view if not already set
+    if (mode === 'day' && !this.selectedDate) {
+      this.selectedDate = new Date(this.currentDate);
+    }
+
     this.generateCalendar();
+
+    // Auto-scroll to current time in Week/Day views
+    if (mode === 'week' || mode === 'day') {
+      setTimeout(() => this.scrollToCurrentTime(), 100);
+    }
   }
 
   private convertFeedEventToCalendarEvent(feedEvent: FeedEvent): CalendarEvent {
@@ -110,8 +146,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   generateCalendar() {
     if (this.viewMode === 'month') {
       this.generateMonthView();
-    } else {
+    } else if (this.viewMode === 'week') {
       this.generateWeekView();
+    } else {
+      this.generateDayView();
     }
   }
 
@@ -180,6 +218,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
+  private generateDayView() {
+    this.days = [];
+    const date = this.selectedDate ? new Date(this.selectedDate) : new Date(this.currentDate);
+    this.days.push({
+      date: date,
+      isCurrentMonth: true,
+      isToday: this.isSameDate(date, new Date()),
+      hasEvents: this.events.some(e => this.isSameDate(e.date, date))
+    });
+  }
+
   isSameDate(date1: Date, date2: Date): boolean {
     return date1.getFullYear() === date2.getFullYear() &&
       date1.getMonth() === date2.getMonth() &&
@@ -211,14 +260,34 @@ export class CalendarComponent implements OnInit, OnDestroy {
     });
   }
 
+  getEventMinuteOffset(event: CalendarEvent): number {
+    // Extract minutes from time string like '03:00 PM' or '12:30 PM'
+    const timeStr = event.time.toLowerCase();
+    if (timeStr === 'all day') return 0;
+
+    const match = timeStr.match(/(\d+):(\d+)/);
+    if (match) {
+      const minutes = parseInt(match[2]);
+      // Return percentage offset within the hour (0-100%)
+      return (minutes / 60) * 100;
+    }
+    return 0;
+  }
+
   navigate(delta: number) {
     if (this.viewMode === 'month') {
       this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + delta, 1);
-    } else {
+    } else if (this.viewMode === 'week') {
       this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), this.currentDate.getDate() + (delta * 7));
+    } else {
+      // Day view navigation: move by 1 day and sync selectedDate
+      const nextDate = this.selectedDate ? new Date(this.selectedDate) : new Date(this.currentDate);
+      nextDate.setDate(nextDate.getDate() + delta);
+      this.selectedDate = nextDate;
+      this.currentDate = new Date(nextDate);
     }
     this.generateCalendar();
-    this.selectedDate = null;
+    if (this.viewMode !== 'day') this.selectedDate = null;
   }
 
   selectDate(day: CalendarDay) {
