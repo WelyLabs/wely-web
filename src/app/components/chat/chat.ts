@@ -97,6 +97,14 @@ export class ChatComponent implements OnInit, OnDestroy {
         console.log('📦 Conversation loaded:', conv);
         this.conversation = conv;
 
+        // If title is missing, try to derive it
+        if (!this.conversation.title && conv.messages && conv.messages.length > 0) {
+            const firstOtherMessage = conv.messages.find(m => m.senderId !== this.currentUserId);
+            if (firstOtherMessage) {
+                this.conversation.title = firstOtherMessage.senderName;
+            }
+        }
+
         // CRITICAL FIX: If friendId is missing (e.g. loaded by convId), find it in participants
         if (!this.friendId && conv.participantIds) {
             this.friendId = conv.participantIds.find(id => id !== this.currentUserId) || null;
@@ -197,5 +205,9 @@ export class ChatComponent implements OnInit, OnDestroy {
 
     goBack() {
         this.navigationService.back();
+    }
+
+    getAvatarInitial(title: string | undefined): string {
+        return (title && title.length > 0) ? title.charAt(0).toUpperCase() : '?';
     }
 }

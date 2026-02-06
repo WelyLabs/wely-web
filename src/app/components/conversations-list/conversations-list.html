@@ -1,46 +1,65 @@
-<div class="conv-list-container">
-    <header class="list-header">
-        <h1>Messages</h1>
-        <button mat-icon-button color="primary" routerLink="/users" aria-label="Nouvelle discussion">
-            <mat-icon>add_comment</mat-icon>
+<div class="conv-page-container">
+    <header class="page-header">
+        <div class="title-group">
+            <h1>Messages</h1>
+            <p class="subtitle">Discutez avec votre équipe et vos amis</p>
+        </div>
+        <button mat-flat-button class="new-conv-btn" routerLink="/users">
+            <mat-icon>add</mat-icon>
+            <span>Nouveau</span>
         </button>
     </header>
 
-    <div class="loading-state" *ngIf="isLoading">
-        <div class="premium-spinner"></div>
-        <p>Chargement des conversations...</p>
-    </div>
-
-    <div class="error-state" *ngIf="!isLoading && error">
-        <mat-icon color="warn">error_outline</mat-icon>
-        <p>{{ error }}</p>
-        <button mat-flat-button color="primary" (click)="loadConversations()">Réessayer</button>
-    </div>
-
-    <div class="empty-state" *ngIf="!isLoading && !error && conversations.length === 0">
-        <div class="empty-icon-wrapper">
-            <mat-icon>chat_bubble_outline</mat-icon>
+    <div class="content-area">
+        <!-- Loading State -->
+        <div class="loading-state" *ngIf="isLoading">
+            <div class="loader-ring"></div>
+            <p>Chargement des messages...</p>
         </div>
-        <h2>Aucune discussion</h2>
-        <p>Commencez à discuter avec vos amis !</p>
-        <button mat-flat-button color="primary" routerLink="/friends">Trouver des amis</button>
-    </div>
 
-    <div class="list-content" *ngIf="!isLoading && !error && conversations.length > 0">
-        <div class="conv-card" *ngFor="let conv of conversations" matRipple (click)="openConversation(conv)">
-            <div class="avatar" [style.background]="'linear-gradient(135deg, #3b82f6, #6366f1)'">
-                {{ getAvatarInitial(conv.title) }}
+        <!-- Error State -->
+        <div class="error-state" *ngIf="!isLoading && error">
+            <div class="error-icon">
+                <mat-icon>error_outline</mat-icon>
             </div>
+            <p>{{ error }}</p>
+            <button mat-stroked-button (click)="loadConversations()">Réessayer</button>
+        </div>
 
-            <div class="conv-info">
-                <div class="info-top">
-                    <span class="title">{{ conv.title }}</span>
-                    <span class="time">{{ conv.updatedAt | date:'shortTime' }}</span>
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!isLoading && !error && conversations.length === 0">
+            <div class="empty-icon">
+                <mat-icon>chat_bubble_outline</mat-icon>
+            </div>
+            <h2>Aucune discussion</h2>
+            <p>Lancez votre première conversation avec un ami !</p>
+            <button mat-flat-button class="find-friends-btn" routerLink="/friends">Trouver des amis</button>
+        </div>
+
+        <!-- Conversation List -->
+        <div class="conversations-grid" *ngIf="!isLoading && !error && conversations.length > 0">
+            <div class="conv-item" *ngFor="let conv of conversations; let i = index"
+                [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)">
+
+                <div class="avatar-wrapper">
+                    <div class="avatar-gradient">
+                        {{ getAvatarInitial(conv.title) }}
+                    </div>
+                    <div class="status-indicator online"></div>
                 </div>
-                <div class="info-bottom">
-                    <p class="last-msg">{{ getLastMessageContent(conv) }}</p>
-                    <div class="unread-dot" *ngIf="false"></div> <!-- Unread logic placeholder -->
+
+                <div class="conv-details">
+                    <div class="details-top">
+                        <h3 class="name">{{ conv.title }}</h3>
+                        <span class="timestamp">{{ conv.updatedAt | date:'HH:mm' }}</span>
+                    </div>
+                    <div class="details-bottom">
+                        <p class="preview">{{ getLastMessageContent(conv) }}</p>
+                        <div class="unread-badge" *ngIf="false">1</div>
+                    </div>
                 </div>
+
+                <mat-icon class="chevron">chevron_right</mat-icon>
             </div>
         </div>
     </div>

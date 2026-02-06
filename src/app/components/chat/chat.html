@@ -1,27 +1,45 @@
-<div class="chat-container">
-    <div class="chat-header">
-        <button mat-icon-button (click)="goBack()">
-            <mat-icon>arrow_back</mat-icon>
-        </button>
-        <h2>{{ conversation ? 'Conversation' : 'Chargement...' }}</h2>
-    </div>
+<div class="chat-page-container">
+    <div class="chat-window-glass">
+        <!-- Header -->
+        <header class="chat-header">
+            <button mat-icon-button class="back-btn" (click)="goBack()">
+                <mat-icon>arrow_back</mat-icon>
+            </button>
+            <div class="user-info">
+                <div class="avatar-sm">
+                    {{ conversation ? getAvatarInitial(conversation.title) : '?' }}
+                </div>
+                <div class="text-info">
+                    <h2 class="chat-title">{{ conversation ? conversation.title : 'Chargement...' }}</h2>
+                    <span class="status-text">En ligne</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button mat-icon-button><mat-icon>videocam</mat-icon></button>
+                <button mat-icon-button><mat-icon>call</mat-icon></button>
+            </div>
+        </header>
 
-    <div class="chat-content-wrapper">
-        <div class="loading-state" *ngIf="isLoading">
-            <div class="spinner"></div>
-            <p>Chargement de la conversation...</p>
+        <!-- Chat Content -->
+        <div class="chat-content-area">
+            <div class="loading-state" *ngIf="isLoading">
+                <div class="loader-ring"></div>
+                <p>Chargement du chat...</p>
+            </div>
+
+            <div class="error-state" *ngIf="error">
+                <mat-icon>error_outline</mat-icon>
+                <p>{{ error }}</p>
+                <button mat-flat-button class="retry-btn"
+                    (click)="convId && loadConversationById(convId)">Réessayer</button>
+            </div>
+
+            <div class="chat-shared-wrapper" *ngIf="!isLoading && !error">
+                <app-shared-chat [messages]="chatMessages" [loading]="isSending" [historyLoading]="isHistoryLoading"
+                    [hasMore]="hasMoreHistory" [placeholder]="placeholder" (onSend)="onSendMessage($event)"
+                    (onLoadMore)="onLoadMoreMessages()">
+                </app-shared-chat>
+            </div>
         </div>
-
-        <div class="error-state" *ngIf="error">
-            <mat-icon>error_outline</mat-icon>
-            <p>{{ error }}</p>
-            <button mat-raised-button color="primary"
-                (click)="convId && loadConversationById(convId)">Réessayer</button>
-        </div>
-
-        <app-shared-chat *ngIf="!isLoading && !error" [messages]="chatMessages" [loading]="isSending"
-            [historyLoading]="isHistoryLoading" [hasMore]="hasMoreHistory" [placeholder]="placeholder"
-            (onSend)="onSendMessage($event)" (onLoadMore)="onLoadMoreMessages()" style="height: 100%; width: 100%;">
-        </app-shared-chat>
     </div>
 </div>

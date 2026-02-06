@@ -63,7 +63,7 @@ export class ConversationsListComponent implements OnInit {
         return prefix + conv.lastMessage.content;
     }
 
-    getAvatarInitial(title: string): string {
-        return title ? title.charAt(0).toUpperCase() : '?';
+    getAvatarInitial(title: string | undefined): string {
+        return (title && title.length > 0) ? title.charAt(0).toUpperCase() : '?';
     }
 }

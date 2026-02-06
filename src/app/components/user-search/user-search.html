@@ -1,85 +1,79 @@
 <div class="user-search-container">
-    <div class="header">
-        <h1 class="title">
-            <mat-icon>{{ isFriendsMode ? 'group' : 'people' }}</mat-icon>
-            {{ isFriendsMode ? 'Mes Amis' : 'Rechercher des utilisateurs' }}
-        </h1>
-        <p class="subtitle">{{ isFriendsMode ? 'Vos amis et demandes en attente' : 'Trouvez et connectez-vous avec
-            d\'autres utilisateurs' }}</p>
-    </div>
+    <div class="search-header">
+        <div class="title-group">
+            <h1>
+                <ng-container *ngIf="isFriendsMode">Mes Amis</ng-container>
+                <ng-container *ngIf="!isFriendsMode">Recherche</ng-container>
+            </h1>
+            <p class="subtitle">
+                {{ isFriendsMode ? 'Gérez vos relations et contacts' : 'Découvrez de nouveaux membres' }}
+            </p>
+        </div>
 
-    <div class="search-bar">
-        <div class="search-container">
-            <mat-form-field appearance="outline" class="search-field" [subscriptSizing]="'dynamic'">
-                <mat-icon matPrefix>search</mat-icon>
-                <input matInput [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
-                    placeholder="Rechercher par nom..." type="text">
-                <button *ngIf="searchQuery" matSuffix mat-icon-button (click)="searchQuery = ''; onSearchChange()"
-                    aria-label="Clear">
+        <div class="header-actions">
+            <!-- Search bar refined -->
+            <div class="search-bar-modern">
+                <mat-icon>search</mat-icon>
+                <input [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" placeholder="Rechercher..."
+                    type="text">
+                <button *ngIf="searchQuery" mat-icon-button (click)="searchQuery = ''; onSearchChange()"
+                    class="clear-btn">
                     <mat-icon>close</mat-icon>
                 </button>
-            </mat-form-field>
-            <button *ngIf="isFriendsMode" mat-mini-fab class="add-friend-mini-btn" (click)="openAddFriendDialog()"
-                title="Ajouter un ami">
-                <mat-icon>person_add</mat-icon>
-            </button>
-        </div>
-    </div>
-
-    <!-- Tabs (Persistent) -->
-    <!-- Tabs (Persistent) -->
-    <div class="tabs-container" *ngIf="isFriendsMode">
-        <!-- Desktop Tabs -->
-        <mat-tab-group *ngIf="!isMobile" [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)"
-            animationDuration="0ms">
-            <mat-tab label="Amis"></mat-tab>
-            <mat-tab label="Demandes envoyées"></mat-tab>
-            <mat-tab label="Demandes reçues"></mat-tab>
-        </mat-tab-group>
-
-        <!-- Mobile Tabs Navigation -->
-        <div class="mobile-tabs-nav" *ngIf="isMobile">
-            <button mat-icon-button (click)="prevTab()" [disabled]="activeTabIndex === 0">
-                <mat-icon>chevron_left</mat-icon>
-            </button>
-            <span class="current-tab-label">{{ tabLabels[activeTabIndex] }}</span>
-            <button mat-icon-button (click)="nextTab()" [disabled]="activeTabIndex === 2">
-                <mat-icon>chevron_right</mat-icon>
-            </button>
-        </div>
-    </div>
-
-    <!-- Loading State -->
-    <div class="loading-state" *ngIf="isLoading">
-        <div class="spinner"></div>
-        <p>Chargement des utilisateurs...</p>
-    </div>
-
-    <!-- Error State -->
-    <div class="error-state" *ngIf="error && !isLoading">
-        <mat-icon>error_outline</mat-icon>
-        <p>{{ error }}</p>
-        <button mat-raised-button (click)="loadUsers()">Réessayer</button>
-    </div>
-
-    <!-- Content -->
-    <div class="content-wrapper" *ngIf="!isLoading && !error">
-        <ng-container *ngTemplateOutlet="usersGrid"></ng-container>
-    </div>
-
-    <ng-template #usersGrid>
-        <div class="users-grid">
-            <div class="empty-state" *ngIf="filteredUsers.length === 0">
-                <mat-icon>person_search</mat-icon>
-                <p>Aucun utilisateur trouvé</p>
-                <span class="hint">Essayez une autre recherche</span>
             </div>
 
-            <app-user-card *ngFor="let user of filteredUsers" [user]="user" [showFriendBadge]="!isFriendsMode"
-                (addFriend)="onAddFriend($event)" (acceptFriend)="onAcceptFriend($event)"
-                (declineFriend)="onDeclineFriend($event)" (removeFriend)="onRemoveFriend($event)"
-                (chat)="onChat($event)">
-            </app-user-card>
+            <!-- Add Friend Action -->
+            <button *ngIf="isFriendsMode" mat-flat-button class="invite-btn" (click)="openAddFriendDialog()">
+                <mat-icon>person_add</mat-icon>
+                <span>Inviter</span>
+            </button>
         </div>
-    </ng-template>
+    </div>
+
+    <!-- Segmented Tabs for Friends Mode -->
+    <div class="tabs-segment-wrapper" *ngIf="isFriendsMode">
+        <div class="tabs-segment">
+            <button [class.active]="activeTabIndex === 0" (click)="onTabChange(0)">Amis</button>
+            <button [class.active]="activeTabIndex === 1" (click)="onTabChange(1)">Invités</button>
+            <button [class.active]="activeTabIndex === 2" (click)="onTabChange(2)">Reçus</button>
+        </div>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="results-content">
+        <!-- Loading -->
+        <div class="loading-state" *ngIf="isLoading">
+            <div class="loader-ring"></div>
+            <p>Chargement...</p>
+        </div>
+
+        <!-- Error -->
+        <div class="error-state" *ngIf="error && !isLoading">
+            <mat-icon>error_outline</mat-icon>
+            <p>{{ error }}</p>
+            <button mat-flat-button (click)="loadUsers()">Réessayer</button>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid-wrapper" *ngIf="!isLoading && !error">
+            <div class="users-grid" *ngIf="filteredUsers.length > 0">
+                <app-user-card *ngFor="let user of filteredUsers; let i = index" [user]="user"
+                    [showFriendBadge]="!isFriendsMode" [style.animation-delay]="(i * 0.05) + 's'"
+                    (addFriend)="onAddFriend($event)" (acceptFriend)="onAcceptFriend($event)"
+                    (declineFriend)="onDeclineFriend($event)" (removeFriend)="onRemoveFriend($event)"
+                    (chat)="onChat($event)">
+                </app-user-card>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" *ngIf="filteredUsers.length === 0">
+                <div class="empty-icon">
+                    <mat-icon>person_search</mat-icon>
+                </div>
+                <h3>Aucun résultat</h3>
+                <p>Nous n'avons trouvé aucun utilisateur correspondant à votre recherche.</p>
+                <button mat-stroked-button (click)="searchQuery = ''; onSearchChange()">Voir tout</button>
+            </div>
+        </div>
+    </div>
 </div>

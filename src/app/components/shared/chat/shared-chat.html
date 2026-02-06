@@ -1,39 +1,50 @@
-<div class="chat-container">
-    <div class="messages-list" #scrollContainer>
+<div class="shared-chat-container">
+    <div class="messages-viewport" #scrollContainer>
         <div #topSentinel style="height: 1px; width: 100%;"></div>
 
+        <!-- History Loading -->
         <div class="history-loader" *ngIf="historyLoading">
             <div class="mini-spinner"></div>
-            <span>Chargement des anciens messages...</span>
+            <span>Chargement de l'historique...</span>
         </div>
 
+        <!-- History End -->
         <div class="history-end-marker" *ngIf="!hasMore && messages.length > 0">
             <div class="marker-content">
-                <mat-icon>chat_bubble_outline</mat-icon>
-                <span>C'est ici que tout a commencé !</span>
+                <mat-icon>verified_user</mat-icon>
+                <span>Début de votre conversation sécurisée</span>
             </div>
         </div>
 
-        <div class="empty-state" *ngIf="!loading && messages.length === 0">
-            <p>No messages yet. Start the conversation!</p>
+        <!-- Empty State -->
+        <div class="chat-empty-state" *ngIf="!loading && messages.length === 0">
+            <div class="empty-icon">
+                <mat-icon>forum</mat-icon>
+            </div>
+            <p>Aucun message encore. Envoyez le premier !</p>
         </div>
 
-        <div *ngFor="let msg of messages; let index = index; trackBy: trackByMessage" class="message-bubble"
+        <!-- Message Bubbles -->
+        <div *ngFor="let msg of messages; let index = index; trackBy: trackByMessage" class="message-row"
             [class.me]="msg.isMe">
-            <div class="sender" *ngIf="!msg.isMe">{{ msg.senderName }}</div>
-            <div class="text">{{ msg.text }}</div>
-            <div class="time">{{ msg.time | date:'shortTime' }}</div>
+
+            <div class="message-bubble">
+                <div class="sender-name" *ngIf="!msg.isMe">{{ msg.senderName }}</div>
+                <div class="message-text">{{ msg.text }}</div>
+                <div class="message-time">{{ msg.time | date:'HH:mm' }}</div>
+            </div>
         </div>
     </div>
 
-    <div class="chat-input" *ngIf="!loading || messages.length > 0">
-        <mat-form-field appearance="outline">
-            <input matInput [(ngModel)]="newMessage" [placeholder]="placeholder" (keyup.enter)="sendMessage()"
-                [disabled]="loading">
-            <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!newMessage.trim() || loading"
-                color="primary">
+    <!-- Input Bar -->
+    <div class="chat-input-bar" *ngIf="!loading || messages.length > 0">
+        <div class="input-glass-container">
+            <input type="text" [(ngModel)]="newMessage" [placeholder]="placeholder" (keyup.enter)="sendMessage()"
+                [disabled]="loading" class="modern-input">
+
+            <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage.trim() || loading">
                 <mat-icon>send</mat-icon>
             </button>
-        </mat-form-field>
+        </div>
     </div>
 </div>

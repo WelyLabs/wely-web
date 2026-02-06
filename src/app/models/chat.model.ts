@@ -26,6 +26,7 @@ export interface Conversation {
     id: string;
     participantIds: string[];
     type: ConversationType;
+    title?: string; // Optional title for UI
     updatedAt: string; // ISO DateTime
     lastMessage?: Message;
     messages: Message[];
