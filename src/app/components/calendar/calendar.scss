@@ -11,8 +11,8 @@
     padding: 0;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: hidden;
-    background: transparent;
     position: relative; // Ensure positioning context
+    max-width: 100%; // Prevent horizontal overflow
 
     &.split-view {
         .calendar-section {
@@ -53,6 +53,11 @@
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     background: transparent;
     min-width: 0; // Prevent content from forcing width expansion
+    max-width: 100%; // Enforce containment
+
+    @media (max-width: 1023px) {
+        padding: 20px;
+    }
 
     .calendar-header {
         display: flex;
@@ -75,6 +80,10 @@
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -1px;
+
+            @media (max-width: 768px) {
+                font-size: 24px;
+            }
         }
 
         .header-controls {
@@ -84,6 +93,13 @@
             background: rgba(0, 0, 0, 0.03);
             padding: 6px;
             border-radius: 20px;
+
+            @media (max-width: 768px) {
+                gap: 8px;
+                padding: 4px;
+                width: 100%;
+                justify-content: space-between;
+            }
 
             .view-toggle {
                 display: flex;
@@ -101,6 +117,11 @@
                     color: var(--text-secondary);
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+                    @media (max-width: 768px) {
+                        padding: 6px 12px;
+                        font-size: 12px;
+                    }
 
                     &.active {
                         background: white;
@@ -138,7 +159,7 @@
 
     .weekdays {
         display: grid;
-        grid-template-columns: repeat(7, 1fr);
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         padding: 0 40px 16px;
 
         @media (max-width: 768px) {
@@ -157,7 +178,7 @@
 
     .month-grid {
         display: grid;
-        grid-template-columns: repeat(7, 1fr);
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         grid-template-rows: repeat(6, 1fr);
         gap: 20px;
         padding: 0 40px 40px;
@@ -165,8 +186,8 @@
         min-height: 700px;
 
         @media (max-width: 768px) {
-            padding: 0 12px 24px;
-            gap: 12px;
+            padding: 0 8px 16px;
+            gap: 8px;
             min-height: auto;
             grid-template-rows: auto;
         }
@@ -175,6 +196,13 @@
             background: transparent;
             min-height: 120px;
             padding: 8px;
+
+            @media (max-width: 768px) {
+                min-height: 80px;
+                padding: 4px;
+                border-radius: 12px;
+            }
+
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             border-radius: 20px;
@@ -253,7 +281,8 @@
         }
 
         @media (max-width: 768px) {
-            padding: 0 12px 24px;
+            padding: 0 4px 16px;
+            border-radius: 20px;
         }
 
         .time-axis {
@@ -261,6 +290,15 @@
             flex-shrink: 0;
             border-right: 1px solid var(--border-default);
             padding-top: 100px; // Column header height
+            position: sticky;
+            left: 0;
+            z-index: 90;
+            background: var(--bg-canvas);
+
+            @media (max-width: 768px) {
+                width: 44px;
+                padding-top: 80px;
+            }
 
             .hour-slot {
                 height: 80px;
@@ -272,6 +310,12 @@
                 display: flex;
                 align-items: flex-start;
                 justify-content: flex-end;
+
+                @media (max-width: 768px) {
+                    height: 60px;
+                    font-size: 10px;
+                    padding-right: 8px;
+                }
             }
         }
 
@@ -306,7 +350,7 @@
                     position: sticky;
                     top: 0;
                     background: var(--bg-canvas);
-                    z-index: 10;
+                    z-index: 100;
 
                     .day-label {
                         font-size: 12px;
@@ -375,6 +419,10 @@
                         height: 80px;
                         border-bottom: 1px solid var(--border-subtle);
                         padding: 4px;
+
+                        @media (max-width: 768px) {
+                            height: 60px;
+                        }
 
 
                         .event-container {
@@ -538,10 +586,16 @@
             top: 12px;
             left: 50%;
             transform: translateX(-50%);
-            width: 40px;
-            height: 4px;
-            background: var(--border-default);
-            border-radius: 2px;
+            width: 48px;
+            height: 5px;
+            background: var(--text-tertiary);
+            border-radius: 3px;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+        }
+
+        &:active::before {
+            opacity: 0.8;
         }
     }
 
@@ -552,6 +606,10 @@
         margin-bottom: 24px;
         padding-bottom: 20px;
         border-bottom: 1px solid var(--border-default);
+
+        @media (max-width: 1023px) {
+            padding-top: 8px;
+        }
 
         h3 {
             margin: 0;
@@ -572,6 +630,10 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
+
+            @media (max-width: 1023px) {
+                display: none;
+            }
 
             &:hover {
                 background: var(--border-default);

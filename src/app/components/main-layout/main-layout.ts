@@ -13,7 +13,8 @@ import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
 import { NotificationService } from '../../services/notification.service';
 import { Message } from '../../models/chat.model';
-import { Subscription } from 'rxjs';
+import { Subscription, filter } from 'rxjs';
+import { NavigationEnd } from '@angular/router';
 
 @Component({
   selector: 'app-main-layout',
@@ -45,7 +46,9 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   showUserMenu = false;
   showMobileMenu = false;
   showCopySuccess = false;
+  isChatPage = false;
   private chatSubscription?: Subscription;
+  private routerSubscription?: Subscription;
 
   constructor(
     private breakpointObserver: BreakpointObserver,
@@ -92,6 +95,14 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
         this.notificationService.showChatNotification(msg);
       }
     });
+
+    // Track route changes to hide mobile avatar on chat page
+    this.isChatPage = this.router.url.includes('/chat/');
+    this.routerSubscription = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      this.isChatPage = event.urlAfterRedirects.includes('/chat/');
+    });
   }
 
   toggleSidenav() {
@@ -121,5 +132,6 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.chatSubscription?.unsubscribe();
+    this.routerSubscription?.unsubscribe();
   }
 }

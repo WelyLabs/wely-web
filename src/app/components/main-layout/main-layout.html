@@ -57,6 +57,16 @@
 
   <mat-sidenav-content class="content-area">
     <div class="page-container">
+      <!-- Mobile Profile Trigger -->
+      <div class="mobile-profile-trigger" *ngIf="isMobile && !isChatPage" (click)="toggleMobileMenu()"
+        [class.active]="showMobileMenu">
+        <div class="avatar-ring">
+          <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
+            [alt]="'Photo de profil de ' + userProfile?.firstName">
+          <span *ngIf="!userProfile?.profilePicUrl">{{ userProfile?.firstName?.[0] || 'U' }}</span>
+        </div>
+      </div>
+
       <router-outlet></router-outlet>
     </div>
 
@@ -66,17 +76,6 @@
         <mat-icon>{{ item.icon }}</mat-icon>
         <span class="label">{{ item.label }}</span>
       </a>
-
-      <!-- Mobile Profile Button -->
-      <button class="nav-item profile-btn" (click)="toggleMobileMenu()" [class.active]="showMobileMenu"
-        aria-label="Menu profil">
-        <div class="nav-avatar">
-          <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
-            [alt]="'Photo de profil de ' + userProfile?.firstName">
-          <span *ngIf="!userProfile?.profilePicUrl" aria-hidden="true">{{ userProfile?.firstName?.[0] || 'U' }}</span>
-        </div>
-        <span class="label">Moi</span>
-      </button>
     </div>
 
     <!-- Mobile Menu Overlay -->

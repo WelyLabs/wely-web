@@ -1,44 +1,64 @@
 <div class="feed-container">
     <div class="feed-header">
         <h1>Discover Events</h1>
-        <p>Find and subscribe to events happening around you.</p>
+        <p>Swipe right to add to your calendar, left to skip.</p>
     </div>
 
-    <div class="events-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-16">
-        <div *ngFor="let event of events"
-            class="event-card flex flex-col overflow-hidden transition-all duration-200 bg-white border border-border-default rounded-md shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-border-subtle">
-            <div class="card-image h-45 bg-cover bg-center relative border-b border-border-default"
-                [style.background-image]="'url(' + event.image + ')'" [attr.aria-label]="'Image pour ' + event.title"
-                role="img">
-                <div
-                    class="date-badge absolute top-4 right-4 flex flex-col items-center p-2 px-3 bg-white border border-border-default rounded-md text-primary font-semibold leading-tight shadow-sm">
-                    <span class="month text-xs uppercase text-secondary">{{ event.date | date:'MMM' }}</span>
-                    <span class="day text-xl">{{ event.date | date:'dd' }}</span>
+    <div class="swipe-container" *ngIf="currentEvents.length > 0">
+        <!-- Stack of cards (show max 3) -->
+        <div *ngFor="let event of currentEvents; let i = index" class="event-card" [class.top-card]="i === 0"
+            [style.z-index]="currentEvents.length - i"
+            [style.transform]="i === 0 ? cardTransform : getStackTransform(i)"
+            (touchstart)="i === 0 ? onCardTouchStart($event) : null"
+            (touchmove)="i === 0 ? onCardTouchMove($event) : null" (touchend)="i === 0 ? onCardTouchEnd($event) : null"
+            (mousedown)="i === 0 ? onCardMouseDown($event) : null"
+            (mousemove)="i === 0 ? onCardMouseMove($event) : null" (mouseup)="i === 0 ? onCardMouseUp($event) : null"
+            (mouseleave)="i === 0 ? onCardMouseUp($event) : null">
+
+            <!-- Swipe Overlays -->
+            <div class="swipe-overlay swipe-overlay-left" [style.opacity]="i === 0 ? leftOverlayOpacity : 0">
+                <mat-icon>close</mat-icon>
+                <span>Skip</span>
+            </div>
+            <div class="swipe-overlay swipe-overlay-right" [style.opacity]="i === 0 ? rightOverlayOpacity : 0">
+                <mat-icon>favorite</mat-icon>
+                <span>Add to Calendar</span>
+            </div>
+
+            <div class="card-image" [style.background-image]="'url(' + event.image + ')'"
+                [attr.aria-label]="'Image pour ' + event.title" role="img">
+                <div class="date-badge">
+                    <span class="month">{{ event.date | date:'MMM' }}</span>
+                    <span class="day">{{ event.date | date:'dd' }}</span>
                 </div>
             </div>
 
-            <div class="card-content p-5 flex flex-col flex-1">
-                <div class="organizer text-sm text-secondary font-semibold uppercase mb-2">{{ event.organizer }}</div>
-                <h2 class="m-0 mb-2 text-xl font-semibold leading-snug text-accent-fg cursor-pointer transition-all duration-200 hover:underline hover:text-primary-orange"
-                    (click)="viewEventDetails(event)">{{ event.title }}</h2>
-                <div class="location flex items-center gap-1 text-sm text-secondary mb-3">
-                    <mat-icon class="text-lg w-[18px] h-[18px]">location_on</mat-icon>
+            <div class="card-content">
+                <div class="organizer">{{ event.organizer }}</div>
+                <h2>{{ event.title }}</h2>
+                <div class="location">
+                    <mat-icon>location_on</mat-icon>
                     {{ event.location }}
                 </div>
-                <p class="description text-base leading-relaxed text-primary m-0 mb-5 flex-1">{{ event.description }}
-                </p>
-
-                <div class="actions flex justify-between items-center border-t border-border-default pt-4">
-                    <button mat-flat-button [color]="event.subscribed ? 'accent' : 'primary'"
-                        (click)="toggleSubscription(event)" class="rounded-md shadow-none border border-gray-300">
-                        <mat-icon>{{ event.subscribed ? 'check' : 'add' }}</mat-icon>
-                        {{ event.subscribed ? 'Subscribed' : 'Subscribe' }}
-                    </button>
-                    <button mat-icon-button aria-label="Partager l'événement">
-                        <mat-icon>share</mat-icon>
-                    </button>
-                </div>
+                <p class="description">{{ event.description }}</p>
             </div>
         </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons" *ngIf="currentEvents.length > 0">
+        <button mat-fab color="warn" (click)="swipeLeft()" aria-label="Skip event">
+            <mat-icon>close</mat-icon>
+        </button>
+        <button mat-fab class="add-button" (click)="swipeRight()" aria-label="Add to calendar">
+            <mat-icon>favorite</mat-icon>
+        </button>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="currentEvents.length === 0">
+        <mat-icon>event_available</mat-icon>
+        <h2>No more events!</h2>
+        <p>You've reviewed all available events. Check back later for more.</p>
     </div>
 </div>

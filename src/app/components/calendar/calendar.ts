@@ -51,6 +51,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
   events: CalendarEvent[] = [];
   private subscription?: Subscription;
 
+  // Touch event tracking for swipe-to-dismiss
+  private touchStartY = 0;
+  private touchCurrentY = 0;
+  private isDragging = false;
+
   constructor(private eventService: Event, private router: Router) { }
 
   ngOnInit() {
@@ -72,6 +77,48 @@ export class CalendarComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.subscription?.unsubscribe();
     if (this.timeUpdateInterval) clearInterval(this.timeUpdateInterval);
+  }
+
+  // Touch event handlers for swipe-to-dismiss on mobile
+  onDetailsTouchStart(event: TouchEvent) {
+    this.touchStartY = event.touches[0].clientY;
+    this.touchCurrentY = this.touchStartY;
+    this.isDragging = true;
+  }
+
+  onDetailsTouchMove(event: TouchEvent) {
+    if (!this.isDragging) return;
+
+    this.touchCurrentY = event.touches[0].clientY;
+    const deltaY = this.touchCurrentY - this.touchStartY;
+
+    // Only allow downward swipe
+    if (deltaY > 0) {
+      // Prevent Safari's pull-to-refresh
+      event.preventDefault();
+
+      const detailsSection = event.currentTarget as HTMLElement;
+      detailsSection.style.transform = `translateY(${deltaY}px)`;
+      detailsSection.style.transition = 'none';
+    }
+  }
+
+  onDetailsTouchEnd(event: TouchEvent) {
+    if (!this.isDragging) return;
+
+    const deltaY = this.touchCurrentY - this.touchStartY;
+    const detailsSection = event.currentTarget as HTMLElement;
+
+    // If swiped down more than 100px, close the panel
+    if (deltaY > 100) {
+      this.selectedDate = null;
+      this.selectedEvents = [];
+    }
+
+    // Reset transform
+    detailsSection.style.transform = '';
+    detailsSection.style.transition = '';
+    this.isDragging = false;
   }
 
   private updateTimePosition() {
@@ -101,13 +148,29 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // Each hour slot is 80px tall, scroll to show current hour in the middle of viewport
-    const hourHeight = 80;
-    const headerHeight = 100; // Column header height
-    const scrollPosition = (currentHour * hourHeight) + headerHeight - (window.innerHeight / 3);
+    // Vertical Scroll
+    // Each hour slot is 80px tall (desktop) or 60px (mobile)
+    const isMobile = window.innerWidth <= 768;
+    const hourHeight = isMobile ? 60 : 80;
+    const headerHeight = isMobile ? 80 : 100;
+
+    const verticalScroll = (currentHour * hourHeight) + headerHeight - (container.clientHeight / 2);
+
+    // Horizontal Scroll to today
+    const todayColumn = container.querySelector('.day-column.today') as HTMLElement;
+    let horizontalScroll = 0;
+    if (todayColumn) {
+      // Find position relative to the container
+      const containerRect = container.getBoundingClientRect();
+      const columnRect = todayColumn.getBoundingClientRect();
+
+      // Calculate scroll to center the column
+      horizontalScroll = container.scrollLeft + (columnRect.left - containerRect.left) - (container.clientWidth / 2) + (todayColumn.clientWidth / 2);
+    }
 
     container.scrollTo({
-      top: Math.max(0, scrollPosition),
+      top: Math.max(0, verticalScroll),
+      left: Math.max(0, horizontalScroll),
       behavior: 'smooth'
     });
   }

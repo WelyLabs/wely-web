@@ -115,6 +115,12 @@
     padding: 24px;
     background: linear-gradient(to top, var(--bg-card) 60%, transparent);
 
+    @media (max-width: 768px) {
+        padding: 16px;
+        background: var(--bg-card); // Solid background for better visibility on mobile
+        border-top: 1px solid var(--border-subtle);
+    }
+
     .input-glass-container {
         background: var(--bg-subtle);
         border: 1px solid var(--border-default);

@@ -96,7 +96,9 @@
     </div>
 
     <!-- Details Section (Month View Only) -->
-    <div class="details-section" [class.visible]="selectedDate && viewMode === 'month'">
+    <div class="details-section" [class.visible]="selectedDate && viewMode === 'month'"
+        (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
+        (touchend)="onDetailsTouchEnd($event)">
         <div class="details-header">
             <h3>{{ selectedDate | date:'EEEE, d MMMM yyyy' }}</h3>
             <button (click)="selectedDate = null">
