@@ -3,7 +3,6 @@
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    touch-action: pan-y; // Allow vertical scroll, prevent horizontal
 }
 
 .feed-container {
@@ -52,6 +51,8 @@
         max-width: 500px;
         height: 600px;
         margin-bottom: 32px;
+        touch-action: pan-y;
+        overflow: visible;
 
         @media (max-width: 768px) {
             height: 550px;

@@ -79,7 +79,7 @@
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div class="mobile-menu-overlay" *ngIf="isMobile && showMobileMenu" (click)="closeMobileMenu()">
+    <div class="mobile-menu-overlay" [class.show]="showMobileMenu" (click)="closeMobileMenu()">
       <div class="mobile-menu-content" (click)="$event.stopPropagation()">
         <div class="mobile-user-header">
           <div class="avatar-large">

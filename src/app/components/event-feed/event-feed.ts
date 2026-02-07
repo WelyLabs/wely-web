@@ -23,8 +23,9 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   private touchStartX = 0;
   private touchCurrentX = 0;
   private isDragging = false;
-  private startY = 0; // Track Y position to detect horizontal vs vertical swipe
+  private animationFrameId?: number;
   cardTransform = '';
+  cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
   leftOverlayOpacity = 0;
   rightOverlayOpacity = 0;
 
@@ -55,9 +56,14 @@ export class EventFeedComponent implements OnInit, OnDestroy {
 
   onCardTouchStart(event: TouchEvent) {
     this.touchStartX = event.touches[0].clientX;
-    this.startY = event.touches[0].clientY;
     this.touchCurrentX = this.touchStartX;
     this.isDragging = true;
+    // Disable transition during drag for smooth movement
+    this.cardTransition = 'none';
+    // Cancel any pending animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
   }
 
   onCardTouchMove(event: TouchEvent) {
@@ -65,33 +71,40 @@ export class EventFeedComponent implements OnInit, OnDestroy {
 
     this.touchCurrentX = event.touches[0].clientX;
     const deltaX = this.touchCurrentX - this.touchStartX;
-    const deltaY = event.touches[0].clientY - this.startY;
 
-    // Prevent horizontal scroll if swipe is more horizontal than vertical
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      event.preventDefault();
+    // Use requestAnimationFrame for smooth updates
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
     }
 
-    const rotation = deltaX / 20; // Max rotation ±15deg at 300px
+    this.animationFrameId = requestAnimationFrame(() => {
+      const rotation = deltaX / 20;
+      this.cardTransform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
 
-    // Update card transform
-    this.cardTransform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
-
-    // Update overlay opacity
-    if (deltaX > 0) {
-      this.rightOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-      this.leftOverlayOpacity = 0;
-    } else {
-      this.leftOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-      this.rightOverlayOpacity = 0;
-    }
+      if (deltaX > 0) {
+        this.rightOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
+        this.leftOverlayOpacity = 0;
+      } else {
+        this.leftOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
+        this.rightOverlayOpacity = 0;
+      }
+    });
   }
 
   onCardTouchEnd(event: TouchEvent) {
     if (!this.isDragging) return;
 
+    // Cancel any pending animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
+    }
+
     const deltaX = this.touchCurrentX - this.touchStartX;
     const threshold = 100;
+
+    // Re-enable transition for smooth return or swipe animation
+    this.cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 
     if (deltaX > threshold) {
       // Swipe right - add to calendar
@@ -111,9 +124,14 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   onCardMouseDown(event: MouseEvent) {
     event.preventDefault();
     this.touchStartX = event.clientX;
-    this.startY = event.clientY;
     this.touchCurrentX = this.touchStartX;
     this.isDragging = true;
+    // Disable transition during drag
+    this.cardTransition = 'none';
+    // Cancel any pending animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
   }
 
   onCardMouseMove(event: MouseEvent) {
@@ -121,24 +139,40 @@ export class EventFeedComponent implements OnInit, OnDestroy {
 
     this.touchCurrentX = event.clientX;
     const deltaX = this.touchCurrentX - this.touchStartX;
-    const rotation = deltaX / 20;
 
-    this.cardTransform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
-
-    if (deltaX > 0) {
-      this.rightOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-      this.leftOverlayOpacity = 0;
-    } else {
-      this.leftOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-      this.rightOverlayOpacity = 0;
+    // Use requestAnimationFrame for smooth updates
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
     }
+
+    this.animationFrameId = requestAnimationFrame(() => {
+      const rotation = deltaX / 20;
+      this.cardTransform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
+
+      if (deltaX > 0) {
+        this.rightOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
+        this.leftOverlayOpacity = 0;
+      } else {
+        this.leftOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
+        this.rightOverlayOpacity = 0;
+      }
+    });
   }
 
   onCardMouseUp(event: MouseEvent) {
     if (!this.isDragging) return;
 
+    // Cancel any pending animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
+    }
+
     const deltaX = this.touchCurrentX - this.touchStartX;
     const threshold = 100;
+
+    // Re-enable transition
+    this.cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 
     if (deltaX > threshold) {
       this.animateSwipeRight();
