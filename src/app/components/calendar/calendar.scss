@@ -56,7 +56,7 @@
     max-width: 100%; // Enforce containment
 
     @media (max-width: 1023px) {
-        padding: 20px;
+        padding: 16px 12px;
     }
 
     .calendar-header {
@@ -67,6 +67,7 @@
         gap: 20px;
         width: 100%; // Ensure header spans the constrained width
         flex-shrink: 0;
+
 
         @media (max-width: 768px) {
             flex-direction: column;
@@ -93,6 +94,10 @@
             background: rgba(0, 0, 0, 0.03);
             padding: 6px;
             border-radius: 20px;
+
+            @media (max-width: 1023px) and (min-width: 769px) {
+                margin-right: 64px; // Clear floating avatar
+            }
 
             @media (max-width: 768px) {
                 gap: 8px;
@@ -162,8 +167,8 @@
         grid-template-columns: repeat(7, minmax(0, 1fr));
         padding: 0 40px 16px;
 
-        @media (max-width: 768px) {
-            padding: 0 20px 12px;
+        @media (max-width: 1023px) {
+            padding: 0 0 12px;
         }
 
         .weekday-name {
@@ -185,8 +190,8 @@
         flex: 1;
         min-height: 700px;
 
-        @media (max-width: 768px) {
-            padding: 0 8px 16px;
+        @media (max-width: 1023px) {
+            padding: 0 0 16px;
             gap: 8px;
             min-height: auto;
             grid-template-rows: auto;
@@ -280,8 +285,8 @@
             }
         }
 
-        @media (max-width: 768px) {
-            padding: 0 4px 16px;
+        @media (max-width: 1023px) {
+            padding: 0 0 16px;
             border-radius: 20px;
         }
 

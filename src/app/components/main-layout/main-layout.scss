@@ -287,20 +287,21 @@
     display: flex !important;
     flex-direction: column !important;
 
+    .page-container {
+        padding: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
     @media (max-width: 1023px) {
         padding: 0 !important;
         height: 100dvh;
         display: flex !important;
         flex-direction: column !important;
-
-        .page-container {
-            padding: 0;
-            overflow: hidden;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
     }
 }
 
@@ -355,8 +356,8 @@
 // Mobile Profile Trigger (Top Right)
 .mobile-profile-trigger {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 8px; // Visually center-align with h2 title (~24px font)
+    right: 12px;
     z-index: 2000;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
