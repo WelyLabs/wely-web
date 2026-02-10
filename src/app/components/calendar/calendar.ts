@@ -83,24 +83,31 @@ export class CalendarComponent implements OnInit, OnDestroy {
   onDetailsTouchStart(event: TouchEvent) {
     this.touchStartY = event.touches[0].clientY;
     this.touchCurrentY = this.touchStartY;
-    this.isDragging = true;
+    this.isDragging = false;
   }
 
   onDetailsTouchMove(event: TouchEvent) {
+    const currentY = event.touches[0].clientY;
+    const deltaY = currentY - this.touchStartY;
+
+    // Only start dragging if we've moved significantly (threshold of 10px)
+    if (!this.isDragging && Math.abs(deltaY) > 10) {
+      // Only allow downward swipe to start a drag for dismissal
+      if (deltaY > 0) {
+        this.isDragging = true;
+      }
+    }
+
     if (!this.isDragging) return;
 
-    this.touchCurrentY = event.touches[0].clientY;
-    const deltaY = this.touchCurrentY - this.touchStartY;
+    this.touchCurrentY = currentY;
 
-    // Only allow downward swipe
-    if (deltaY > 0) {
-      // Prevent Safari's pull-to-refresh
-      event.preventDefault();
+    // Prevent Safari's pull-to-refresh and other default behaviors only when dragging
+    event.preventDefault();
 
-      const detailsSection = event.currentTarget as HTMLElement;
-      detailsSection.style.transform = `translateY(${deltaY}px)`;
-      detailsSection.style.transition = 'none';
-    }
+    const detailsSection = event.currentTarget as HTMLElement;
+    detailsSection.style.transform = `translateY(${deltaY}px)`;
+    detailsSection.style.transition = 'none';
   }
 
   onDetailsTouchEnd(event: TouchEvent) {

@@ -18,10 +18,10 @@
         .calendar-section {
             flex: 0 0 60%;
 
-            @media (max-width: 768px) {
-                flex: 1; // Reset flex on mobile
-                opacity: 0.3; // Dim background
-                pointer-events: none; // Prevent interaction
+            @media (max-width: 1023px) {
+                flex: 1; // Take full width when details are at the bottom
+                opacity: 1;
+                pointer-events: auto;
             }
         }
 
@@ -36,11 +36,33 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                z-index: 50;
-                border-radius: 0;
                 border: none;
                 background: var(--bg-canvas);
             }
+        }
+    }
+}
+
+.details-backdrop {
+    display: none;
+
+    @media (max-width: 1023px) {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 1050; // Above calendar but below details-section (1100)
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+        &.visible {
+            opacity: 1;
+            pointer-events: auto;
         }
     }
 }
@@ -69,10 +91,11 @@
         flex-shrink: 0;
 
 
-        @media (max-width: 768px) {
+        @media (max-width: 1023px) {
             flex-direction: column;
             align-items: flex-start;
             gap: 24px;
+            margin-bottom: 32px;
         }
 
         h2 {
@@ -81,6 +104,10 @@
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -1px;
+
+            @media (max-width: 1023px) {
+                font-size: 28px;
+            }
 
             @media (max-width: 768px) {
                 font-size: 24px;
@@ -95,15 +122,13 @@
             padding: 6px;
             border-radius: 20px;
 
-            @media (max-width: 1023px) and (min-width: 769px) {
-                margin-right: 64px; // Clear floating avatar
-            }
-
-            @media (max-width: 768px) {
+            @media (max-width: 1023px) {
                 gap: 8px;
                 padding: 4px;
                 width: 100%;
                 justify-content: space-between;
+                margin-top: 0; // Reset previous alignment hack
+                margin-right: 0; // Clear floating avatar dodge logic
             }
 
             .view-toggle {
@@ -583,6 +608,7 @@
             border-right: none;
             border-bottom: none;
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.05);
+            z-index: 1100; // Above bottom nav (1000)
         }
 
         &::before {
@@ -693,6 +719,8 @@
             cursor: pointer;
             position: relative;
             border: 1px solid transparent;
+            pointer-events: auto;
+            z-index: 10;
 
             &:hover {
                 background: white;

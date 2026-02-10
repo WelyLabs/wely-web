@@ -55,6 +55,18 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       const state = window.history.state;
       this.event = state?.event || null;
       this.isFeedEvent = false;
+
+      // If state is lost (e.g. refresh), try to recover Feed events shown in calendar
+      if (!this.event && parseInt(eventId) >= 1000) {
+        const originalId = parseInt(eventId) - 1000;
+        this.subscription = this.eventService.events$.subscribe(events => {
+          const feedEvent = events.find(e => e.id === originalId);
+          if (feedEvent) {
+            this.event = feedEvent;
+            this.isFeedEvent = true;
+          }
+        });
+      }
     }
   }
 

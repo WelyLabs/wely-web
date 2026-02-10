@@ -1,6 +1,8 @@
 <div class="calendar-container" [class.split-view]="selectedDate && viewMode === 'month'"
     [class.week-mode]="viewMode === 'week'" [class.day-mode]="viewMode === 'day'">
 
+    <div class="details-backdrop" [class.visible]="selectedDate && viewMode === 'month'" (click)="closeDetails()"></div>
+
     <!-- Calendar Section -->
     <div class="calendar-section">
         <div class="calendar-header">
@@ -112,7 +114,7 @@
                 <button>Ajouter un événement</button>
             </div>
 
-            <div *ngFor="let event of selectedEvents" class="event-card">
+            <div *ngFor="let event of selectedEvents" class="event-card" (click)="viewEventDetails(event)">
                 <div class="event-accent"></div>
                 <div class="event-time">{{ event.time }}</div>
                 <div class="event-info">

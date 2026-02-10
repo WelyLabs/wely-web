@@ -46,9 +46,9 @@ describe('CalendarComponent', () => {
         expect(component.events.length).toBeGreaterThan(mockEvents.length); // personal + subscribed
     });
 
-    it('should change month when nextMonth is called', () => {
+    it('should change month when navigate(1) is called', () => {
         const initialMonth = component.currentDate.getMonth();
-        component.nextMonth();
+        component.navigate(1);
         expect(component.currentDate.getMonth()).toBe((initialMonth + 1) % 12);
     });
 
@@ -67,9 +67,9 @@ describe('CalendarComponent', () => {
         expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'calendar', event.id], expect.any(Object));
     });
 
-    it('should change month when prevMonth is called', () => {
+    it('should change month when navigate(-1) is called', () => {
         const initialMonth = component.currentDate.getMonth();
-        component.prevMonth();
+        component.navigate(-1);
         expect(component.currentDate.getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
     });
 
@@ -102,5 +102,42 @@ describe('CalendarComponent', () => {
         const spy = vi.spyOn(component['subscription']!, 'unsubscribe');
         component.ngOnDestroy();
         expect(spy).toHaveBeenCalled();
+    });
+
+    describe('Touch handling', () => {
+        it('should NOT set isDragging for small movements', () => {
+            const touchStartEvent = { touches: [{ clientY: 100 }] } as any;
+            component.onDetailsTouchStart(touchStartEvent);
+            expect(component['isDragging']).toBe(false);
+
+            const touchMoveEvent = { touches: [{ clientY: 105 }], preventDefault: vi.fn() } as any;
+            component.onDetailsTouchMove(touchMoveEvent);
+            expect(component['isDragging']).toBe(false);
+            expect(touchMoveEvent.preventDefault).not.toHaveBeenCalled();
+        });
+
+        it('should set isDragging for large downward movements', () => {
+            const touchStartEvent = { touches: [{ clientY: 100 }] } as any;
+            component.onDetailsTouchStart(touchStartEvent);
+
+            const touchMoveEvent = {
+                touches: [{ clientY: 115 }],
+                preventDefault: vi.fn(),
+                currentTarget: document.createElement('div')
+            } as any;
+            component.onDetailsTouchMove(touchMoveEvent);
+            expect(component['isDragging']).toBe(true);
+            expect(touchMoveEvent.preventDefault).toHaveBeenCalled();
+        });
+
+        it('should NOT set isDragging for large upward movements (as we only want downward dismiss)', () => {
+            const touchStartEvent = { touches: [{ clientY: 100 }] } as any;
+            component.onDetailsTouchStart(touchStartEvent);
+
+            const touchMoveEvent = { touches: [{ clientY: 85 }], preventDefault: vi.fn() } as any;
+            component.onDetailsTouchMove(touchMoveEvent);
+            expect(component['isDragging']).toBe(false);
+            expect(touchMoveEvent.preventDefault).not.toHaveBeenCalled();
+        });
     });
 });
