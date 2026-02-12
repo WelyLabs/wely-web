@@ -135,9 +135,10 @@
         <!-- Creation Form -->
         <div class="creation-form" *ngIf="isCreatingEvent">
             <div class="form-group">
-                <input type="text" [(ngModel)]="newEventData.title" placeholder="Titre de l'événement" class="title-input">
+                <input type="text" [(ngModel)]="newEventData.title" placeholder="Titre de l'événement"
+                    class="title-input">
             </div>
-            
+
             <div class="form-group">
                 <mat-icon>location_on</mat-icon>
                 <input type="text" [(ngModel)]="newEventData.location" placeholder="Lieu">
@@ -145,12 +146,20 @@
 
             <div class="form-group">
                 <mat-icon>schedule</mat-icon>
-                <input type="datetime-local" [ngModel]="newEventData.date | date:'yyyy-MM-ddTHH:mm'" (ngModelChange)="newEventData.date = $event">
+                <input type="datetime-local" [ngModel]="newEventData.date | date:'yyyy-MM-ddTHH:mm'"
+                    (ngModelChange)="newEventData.date = $event">
             </div>
 
             <div class="form-group description-group">
                 <mat-icon>notes</mat-icon>
                 <textarea [(ngModel)]="newEventData.description" placeholder="Notes"></textarea>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" [(ngModel)]="newEventData.subscribeByDefault">
+                    <span>S'inscrire par défaut</span>
+                </label>
             </div>
 
             <div class="form-actions">

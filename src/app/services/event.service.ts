@@ -3,6 +3,15 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, map, Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export interface EventCreateRequest {
+  title: string;
+  date: Date;
+  location: string;
+  image?: string;
+  description?: string;
+  subscribeByDefault: boolean;
+}
+
 export interface FeedEvent {
   id: string;
   title: string;
@@ -11,15 +20,17 @@ export interface FeedEvent {
   location: string;
   image: string;
   description: string;
-  subscribed: boolean;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class EventService {
-  private eventsSubject = new BehaviorSubject<FeedEvent[]>([]);
-  events$ = this.eventsSubject.asObservable();
+  private subscribedEventsSubject = new BehaviorSubject<FeedEvent[]>([]);
+  subscribedEvents$ = this.subscribedEventsSubject.asObservable();
+
+  private feedEventsSubject = new BehaviorSubject<FeedEvent[]>([]);
+  feedEvents$ = this.feedEventsSubject.asObservable();
 
   private readonly API_URL = `${environment.apiUrl}/events-service/events`;
 
@@ -28,14 +39,20 @@ export class EventService {
   }
 
   refreshEvents(): void {
-    this.http.get<FeedEvent[]>(this.API_URL).pipe(
+    this.http.get<FeedEvent[]>(`${this.API_URL}/me/subscribed`).pipe(
       map((events: any[]) => events.map((e: any) => this.mapDate(e)))
     ).subscribe((events: FeedEvent[]) => {
-      this.eventsSubject.next(events);
+      this.subscribedEventsSubject.next(events);
+    });
+
+    this.http.get<FeedEvent[]>(`${this.API_URL}/me/feed`).pipe(
+      map((events: any[]) => events.map((e: any) => this.mapDate(e)))
+    ).subscribe((events: FeedEvent[]) => {
+      this.feedEventsSubject.next(events);
     });
   }
 
-  createEvent(event: Partial<FeedEvent>): Observable<FeedEvent> {
+  createEvent(event: EventCreateRequest): Observable<FeedEvent> {
     return this.http.post<FeedEvent>(this.API_URL, event).pipe(
       map((e: any) => this.mapDate(e)),
       tap(() => this.refreshEvents())
@@ -45,14 +62,7 @@ export class EventService {
   toggleSubscription(event: FeedEvent): Observable<FeedEvent> {
     return this.http.post<FeedEvent>(`${this.API_URL}/${event.id}/subscribe`, {}).pipe(
       map((e: any) => this.mapDate(e)),
-      tap((updatedEvent: FeedEvent) => {
-        const currentEvents = this.eventsSubject.value;
-        const index = currentEvents.findIndex(e => e.id === event.id);
-        if (index !== -1) {
-          currentEvents[index] = updatedEvent;
-          this.eventsSubject.next([...currentEvents]);
-        }
-      })
+      tap(() => this.refreshEvents())
     );
   }
 

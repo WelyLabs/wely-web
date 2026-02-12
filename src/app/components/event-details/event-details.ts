@@ -46,7 +46,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     const eventType = this.route.snapshot.paramMap.get('type');
 
     if (eventId && eventType === 'feed') {
-      this.subscription = this.eventService.events$.subscribe(events => {
+      this.subscription = this.eventService.feedEvents$.subscribe(events => {
         this.event = events.find((e: FeedEvent) => e.id === eventId) || null;
         this.isFeedEvent = true;
       });
@@ -58,7 +58,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
       // If state is lost (e.g. refresh), try to recover Feed events shown in calendar
       if (!this.event) {
-        this.subscription = this.eventService.events$.subscribe(events => {
+        this.subscription = this.eventService.subscribedEvents$.subscribe(events => {
           const feedEvent = events.find((e: FeedEvent) => e.id === eventId);
           if (feedEvent) {
             this.event = feedEvent;
@@ -88,7 +88,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
   // Type guard to check if event is FeedEvent
   isFeedEventType(event: FeedEvent | CalendarEvent): event is FeedEvent {
-    return 'organizer' in event;
+    return 'organizerId' in event;
   }
 
   // Helper methods to safely access FeedEvent properties

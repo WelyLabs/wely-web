@@ -32,8 +32,8 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   constructor(private eventService: EventService, private router: Router) { }
 
   ngOnInit() {
-    this.subscription = this.eventService.events$.subscribe(events => {
-      this.events = events.filter(e => !e.subscribed); // Only show unsubscribed events
+    this.subscription = this.eventService.feedEvents$.subscribe(events => {
+      this.events = events;
       this.updateCurrentEvents();
     });
   }

@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { EventService, FeedEvent } from '../../services/event.service';
+import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Subscription } from 'rxjs';
 
 interface CalendarDay {
@@ -43,11 +43,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   // Creation form state
   isCreatingEvent = false;
-  newEventData: Partial<FeedEvent> = {
+  newEventData: EventCreateRequest = {
     title: '',
     description: '',
     location: '',
-    date: new Date()
+    date: new Date(),
+    subscribeByDefault: true,
   };
 
   // Personal events
@@ -69,11 +70,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
   constructor(private eventService: EventService, private router: Router) { }
 
   ngOnInit() {
-    this.subscription = this.eventService.events$.subscribe((feedEvents: FeedEvent[]) => {
+    this.subscription = this.eventService.subscribedEvents$.subscribe((feedEvents: FeedEvent[]) => {
       // Merge personal events with subscribed feed events
-      const subscribedEvents = feedEvents
-        .filter((e: FeedEvent) => e.subscribed)
-        .map((e: FeedEvent) => this.convertFeedEventToCalendarEvent(e));
+      const subscribedEvents = feedEvents.map((e: FeedEvent) => this.convertFeedEventToCalendarEvent(e));
 
       this.events = [...this.personalEvents, ...subscribedEvents];
       this.generateCalendar();
@@ -386,7 +385,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
       title: '',
       description: '',
       location: '',
-      date: this.selectedDate ? new Date(this.selectedDate) : new Date()
+      date: this.selectedDate ? new Date(this.selectedDate) : new Date(),
+      subscribeByDefault: true
     };
   }
 
