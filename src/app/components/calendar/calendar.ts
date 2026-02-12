@@ -2,8 +2,9 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Event, FeedEvent } from '../../services/event.service';
+import { EventService, FeedEvent } from '../../services/event.service';
 import { Subscription } from 'rxjs';
 
 interface CalendarDay {
@@ -14,7 +15,7 @@ interface CalendarDay {
 }
 
 interface CalendarEvent {
-  id: number;
+  id: string | number;
   title: string;
   time: string;
   description: string;
@@ -24,7 +25,7 @@ interface CalendarEvent {
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
 })
@@ -39,6 +40,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   selectedDate: Date | null = null;
   selectedEvents: CalendarEvent[] = [];
+
+  // Creation form state
+  isCreatingEvent = false;
+  newEventData: Partial<FeedEvent> = {
+    title: '',
+    description: '',
+    location: '',
+    date: new Date()
+  };
 
   // Personal events
   personalEvents: CalendarEvent[] = [
@@ -56,14 +66,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private touchCurrentY = 0;
   private isDragging = false;
 
-  constructor(private eventService: Event, private router: Router) { }
+  constructor(private eventService: EventService, private router: Router) { }
 
   ngOnInit() {
-    this.subscription = this.eventService.events$.subscribe(feedEvents => {
+    this.subscription = this.eventService.events$.subscribe((feedEvents: FeedEvent[]) => {
       // Merge personal events with subscribed feed events
       const subscribedEvents = feedEvents
-        .filter(e => e.subscribed)
-        .map(e => this.convertFeedEventToCalendarEvent(e));
+        .filter((e: FeedEvent) => e.subscribed)
+        .map((e: FeedEvent) => this.convertFeedEventToCalendarEvent(e));
 
       this.events = [...this.personalEvents, ...subscribedEvents];
       this.generateCalendar();
@@ -205,7 +215,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   private convertFeedEventToCalendarEvent(feedEvent: FeedEvent): CalendarEvent {
     return {
-      id: feedEvent.id + 1000, // Offset to avoid ID conflicts
+      id: feedEvent.id,
       title: feedEvent.title,
       time: 'All Day',
       description: feedEvent.description,
@@ -367,6 +377,33 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   closeDetails() {
     this.selectedDate = null;
+    this.isCreatingEvent = false;
+  }
+
+  startCreatingEvent() {
+    this.isCreatingEvent = true;
+    this.newEventData = {
+      title: '',
+      description: '',
+      location: '',
+      date: this.selectedDate ? new Date(this.selectedDate) : new Date()
+    };
+  }
+
+  cancelCreatingEvent() {
+    this.isCreatingEvent = false;
+  }
+
+  submitEvent() {
+    if (!this.newEventData.title || !this.newEventData.date) return;
+
+    this.eventService.createEvent(this.newEventData).subscribe({
+      next: () => {
+        this.isCreatingEvent = false;
+        this.selectedDate = null;
+      },
+      error: (err) => console.error('Error creating event:', err)
+    });
   }
 
   viewEventDetails(event: CalendarEvent) {

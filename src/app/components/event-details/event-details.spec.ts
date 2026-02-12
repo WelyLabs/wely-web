@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { EventDetailsComponent } from './event-details';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Event } from '../../services/event.service';
+import { EventService } from '../../services/event.service';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -13,7 +13,7 @@ describe('EventDetailsComponent', () => {
     let routerMock: any;
     let activatedRouteMock: any;
 
-    const mockFeedEvent = { id: 1, title: 'Feed Event', organizer: 'Org 1', date: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false };
+    const mockFeedEvent = { id: 1, title: 'Feed Event', organizerId: 'Org 1', date: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false };
 
     beforeEach(async () => {
         const MockIntersectionObserver = class {
@@ -49,7 +49,7 @@ describe('EventDetailsComponent', () => {
         }).overrideComponent(EventDetailsComponent, {
             set: {
                 providers: [
-                    { provide: Event, useValue: eventServiceMock },
+                    { provide: EventService, useValue: eventServiceMock },
                     { provide: Router, useValue: routerMock },
                     { provide: ActivatedRoute, useValue: activatedRouteMock }
                 ]

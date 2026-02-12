@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
-import { Event, FeedEvent } from '../../services/event.service';
+import { EventService, FeedEvent } from '../../services/event.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -29,7 +29,7 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   leftOverlayOpacity = 0;
   rightOverlayOpacity = 0;
 
-  constructor(private eventService: Event, private router: Router) { }
+  constructor(private eventService: EventService, private router: Router) { }
 
   ngOnInit() {
     this.subscription = this.eventService.events$.subscribe(events => {
@@ -199,8 +199,8 @@ export class EventFeedComponent implements OnInit, OnDestroy {
     this.rightOverlayOpacity = 1;
 
     setTimeout(() => {
-      // Add to calendar
-      this.eventService.toggleSubscription(currentEvent);
+      // Add to calendar via API
+      this.eventService.toggleSubscription(currentEvent).subscribe();
       this.removeCurrentCard();
     }, 300);
   }

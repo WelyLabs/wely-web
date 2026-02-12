@@ -4,11 +4,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
-import { Event, FeedEvent } from '../../services/event.service';
+import { EventService, FeedEvent } from '../../services/event.service';
 import { Subscription } from 'rxjs';
 
 interface CalendarEvent {
-  id: number;
+  id: string | number;
   title: string;
   time: string;
   description: string;
@@ -38,7 +38,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private eventService: Event
+    private eventService: EventService
   ) { }
 
   ngOnInit() {
@@ -47,7 +47,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
     if (eventId && eventType === 'feed') {
       this.subscription = this.eventService.events$.subscribe(events => {
-        this.event = events.find(e => e.id === parseInt(eventId)) || null;
+        this.event = events.find((e: FeedEvent) => e.id === eventId) || null;
         this.isFeedEvent = true;
       });
     } else if (eventId && eventType === 'calendar') {
@@ -57,10 +57,9 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       this.isFeedEvent = false;
 
       // If state is lost (e.g. refresh), try to recover Feed events shown in calendar
-      if (!this.event && parseInt(eventId) >= 1000) {
-        const originalId = parseInt(eventId) - 1000;
+      if (!this.event) {
         this.subscription = this.eventService.events$.subscribe(events => {
-          const feedEvent = events.find(e => e.id === originalId);
+          const feedEvent = events.find((e: FeedEvent) => e.id === eventId);
           if (feedEvent) {
             this.event = feedEvent;
             this.isFeedEvent = true;
@@ -102,7 +101,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   getOrganizer(): string | undefined {
-    return this.isFeedEvent && this.event ? (this.event as FeedEvent).organizer : undefined;
+    return this.isFeedEvent && this.event ? (this.event as FeedEvent).organizerId : undefined;
   }
 
   getTime(): string | undefined {

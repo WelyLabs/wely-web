@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EventFeedComponent } from './event-feed';
-import { Event, FeedEvent } from '../../services/event.service';
+import { EventService, FeedEvent } from '../../services/event.service';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -13,7 +13,7 @@ describe('EventFeedComponent', () => {
     let routerMock: any;
 
     const mockEvents: FeedEvent[] = [
-        { id: 1, title: 'Event 1', organizer: 'Org 1', date: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false }
+        { id: '1', title: 'Event 1', organizerId: 'Org 1', date: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false }
     ];
 
     beforeEach(async () => {
@@ -32,7 +32,7 @@ describe('EventFeedComponent', () => {
         }).overrideComponent(EventFeedComponent, {
             set: {
                 providers: [
-                    { provide: Event, useValue: eventServiceMock },
+                    { provide: EventService, useValue: eventServiceMock },
                     { provide: Router, useValue: routerMock }
                 ]
             }
