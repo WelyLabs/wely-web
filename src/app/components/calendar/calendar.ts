@@ -565,7 +565,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       endDate.setHours(Math.floor(maxHour), (maxHour % 1 === 0.25 ? 15 : maxHour % 1 === 0.5 ? 30 : maxHour % 1 === 0.75 ? 45 : 0), 0, 0);
 
       const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
-      this.startCreatingEvent(uiEvent, endDate);
+      this.startCreatingEvent(uiEvent, undefined, this.selectedDate, endDate);
     } else {
       // Clear if it was just a click
       this.cancelCreatingEvent();

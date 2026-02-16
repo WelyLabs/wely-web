@@ -1,6 +1,7 @@
 import { KeycloakService } from 'keycloak-angular';
 import { KEYCLOAK_CONFIG } from './keycloak.config';
 import { UserService } from '../../services/user.service';
+import { AuthService } from './auth.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -22,7 +23,7 @@ function getBrowserLocale(): string {
     return supportedLanguages.includes(langCode) ? langCode : 'fr';
 }
 
-export function initializeKeycloak(keycloak: KeycloakService, userService: UserService) {
+export function initializeKeycloak(keycloak: KeycloakService, userService: UserService, authService: AuthService) {
     return async () => {
         // Initialize Keycloak
         const authenticated = await keycloak.init({
@@ -44,9 +45,10 @@ export function initializeKeycloak(keycloak: KeycloakService, userService: UserS
             bearerExcludedUrls: ['/assets', '/clients/public']
         });
 
-        // If user is authenticated, preload user data
+        // If user is authenticated, preload user data and start refresh timer
         if (authenticated) {
             console.log('✅ User authenticated, preloading user data...');
+            authService.scheduleTokenRefresh();
             try {
                 await firstValueFrom(userService.loadAndSetCurrentUser());
                 console.log('✅ User data preloaded successfully');
