@@ -5,7 +5,8 @@ import { environment } from '../../environments/environment';
 
 export interface EventCreateRequest {
   title: string;
-  date: Date;
+  startDate: Date;
+  endDate?: Date;
   location: string;
   image?: string;
   description?: string;
@@ -16,7 +17,8 @@ export interface FeedEvent {
   id: string;
   title: string;
   organizerId: string;
-  date: Date;
+  startDate: Date;
+  endDate: Date;
   location: string;
   image: string;
   description: string;
@@ -67,25 +69,18 @@ export class EventService {
   }
 
   private mapDate(event: any): FeedEvent {
-    if (!event.date) return event;
+    const mapSingleDate = (d: any) => {
+      if (!d) return null;
+      if (Array.isArray(d)) {
+        return new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0, d[5] || 0);
+      }
+      const date = new Date(d);
+      return isNaN(date.getTime()) ? null : date;
+    };
 
-    let date: Date;
-    if (Array.isArray(event.date)) {
-      // Jackson LocalDateTime format: [year, month, day, hour, minute, second]
-      // Month in JS is 0-indexed
-      date = new Date(
-        event.date[0],
-        event.date[1] - 1,
-        event.date[2],
-        event.date[3] || 0,
-        event.date[4] || 0,
-        event.date[5] || 0
-      );
-    } else {
-      // ISO string or already a Date (though unlikely from JSON)
-      date = new Date(event.date);
-    }
+    const startDate = mapSingleDate(event.startDate) || new Date();
+    const endDate = mapSingleDate(event.endDate) || new Date(startDate.getTime() + 3600000); // Default +1h
 
-    return { ...event, date };
+    return { ...event, startDate, endDate };
   }
 }

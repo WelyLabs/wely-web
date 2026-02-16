@@ -34,8 +34,8 @@
             <div class="card-image" [style.background-image]="'url(' + event.image + ')'"
                 [attr.aria-label]="'Image pour ' + event.title" role="img">
                 <div class="date-badge">
-                    <span class="month">{{ event.date | date:'MMM' }}</span>
-                    <span class="day">{{ event.date | date:'dd' }}</span>
+                    <span class="month">{{ event.startDate | date:'MMM' }}</span>
+                    <span class="day">{{ event.startDate | date:'dd' }}</span>
                 </div>
             </div>
 

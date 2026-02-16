@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,20 +19,24 @@ interface CalendarEvent {
   title: string;
   time: string;
   description: string;
-  date: Date;
+  startDate: Date;
+  endDate: Date;
 }
+
+import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
+import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-popover';
 
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
 })
 export class CalendarComponent implements OnInit, OnDestroy {
   currentDate = new Date();
   days: CalendarDay[] = [];
-  weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   hours = Array.from({ length: 24 }, (_, i) => i);
   currentTimePosition = 0;
   private timeUpdateInterval?: any;
@@ -41,33 +45,70 @@ export class CalendarComponent implements OnInit, OnDestroy {
   selectedDate: Date | null = null;
   selectedEvents: CalendarEvent[] = [];
 
-  // Creation form state
-  isCreatingEvent = false;
-  newEventData: EventCreateRequest = {
-    title: '',
+  // Popover state
+  isPopoverVisible = false;
+  popoverPosition = { x: 0, y: 0, arrowSide: 'top' as 'top' | 'left' | 'right' };
+  isMobilePopover = false;
+  popoverData: EventCreateRequest = {
+    title: 'New Event',
     description: '',
     location: '',
-    date: new Date(),
-    subscribeByDefault: true,
+    startDate: new Date(),
+    endDate: new Date(),
+    subscribeByDefault: false,
   };
 
-  // Personal events
+  // Touch event tracking
+  private touchStartPos = { x: 0, y: 0 };
   personalEvents: CalendarEvent[] = [
-    { id: 1, title: 'Team Meeting', time: '10:00 AM', description: 'Weekly sync with the team.', date: new Date() },
-    { id: 2, title: 'Lunch with Client', time: '12:30 PM', description: 'Discuss project roadmap.', date: new Date() },
-    { id: 3, title: 'Code Review', time: '03:00 PM', description: 'Review PR #123.', date: new Date() }
+    {
+      id: 1,
+      title: 'Team Meeting',
+      time: '10:00 AM - 11:30 AM',
+      description: 'Weekly sync with the team.',
+      startDate: new Date(new Date().setHours(10, 0, 0, 0)),
+      endDate: new Date(new Date().setHours(11, 30, 0, 0))
+    },
+    {
+      id: 2,
+      title: 'Lunch with Client',
+      time: '12:30 PM - 1:30 PM',
+      description: 'Discuss project roadmap.',
+      startDate: new Date(new Date().setHours(12, 30, 0, 0)),
+      endDate: new Date(new Date().setHours(13, 30, 0, 0))
+    },
+    {
+      id: 3,
+      title: 'Code Review',
+      time: '03:00 PM - 4:00 PM',
+      description: 'Review PR #123.',
+      startDate: new Date(new Date().setHours(15, 0, 0, 0)),
+      endDate: new Date(new Date().setHours(16, 0, 0, 0))
+    }
   ];
 
   // All events (personal + subscribed)
   events: CalendarEvent[] = [];
   private subscription?: Subscription;
 
+  // New Selection State (Apple Style)
+  isSelectingRange = false;
+  selectionStartHour: number | null = null;
+  selectionEndHour: number | null = null;
+  selectionDate: Date | null = null;
+  private selectionTimeout?: any;
+  private readonly SELECTION_DELAY = 250; // ms
+
   // Touch event tracking for swipe-to-dismiss
   private touchStartY = 0;
   private touchCurrentY = 0;
   private isDragging = false;
 
-  constructor(private eventService: EventService, private router: Router) { }
+  constructor(
+    private eventService: EventService,
+    private router: Router,
+    private el: ElementRef
+  ) { }
 
   ngOnInit() {
     this.subscription = this.eventService.subscribedEvents$.subscribe((feedEvents: FeedEvent[]) => {
@@ -192,6 +233,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   toggleView(mode: 'month' | 'week' | 'day') {
+    this.cancelCreatingEvent();
     this.viewMode = mode;
 
     // Clear selection when switching to Month view
@@ -213,13 +255,29 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   private convertFeedEventToCalendarEvent(feedEvent: FeedEvent): CalendarEvent {
+    const start = new Date(feedEvent.startDate);
+    const end = feedEvent.endDate ? new Date(feedEvent.endDate) : new Date(start.getTime() + 3600000);
+
     return {
       id: feedEvent.id,
       title: feedEvent.title,
-      time: 'All Day',
+      time: this.formatTimeRange(start, end),
       description: feedEvent.description,
-      date: feedEvent.date
+      startDate: start,
+      endDate: end
     };
+  }
+
+  private formatTimeRange(start: Date, end: Date): string {
+    const format = (d: Date) => {
+      let hours = d.getHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes} ${ampm}`;
+    };
+    return `${format(start)} - ${format(end)}`;
   }
 
   generateCalendar() {
@@ -239,7 +297,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    const startingDayOfWeek = firstDay.getDay();
+    const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Convert 0=Sun to 6, 1=Mon to 0
     const totalDays = lastDay.getDate();
 
     this.days = [];
@@ -262,7 +320,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         date: date,
         isCurrentMonth: true,
         isToday: this.isSameDate(date, new Date()),
-        hasEvents: this.events.some(e => this.isSameDate(e.date, date))
+        hasEvents: this.events.some(e => this.isSameDate(e.startDate, date))
       });
     }
 
@@ -282,7 +340,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private generateWeekView() {
     this.days = [];
     const current = new Date(this.currentDate);
-    const dayOfWeek = current.getDay();
+    const dayOfWeek = (current.getDay() + 6) % 7;
     const firstDayOfWeek = new Date(current.setDate(current.getDate() - dayOfWeek));
 
     for (let i = 0; i < 7; i++) {
@@ -292,7 +350,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         date: date,
         isCurrentMonth: date.getMonth() === this.currentDate.getMonth(),
         isToday: this.isSameDate(date, new Date()),
-        hasEvents: this.events.some(e => this.isSameDate(e.date, date))
+        hasEvents: this.events.some(e => this.isSameDate(e.startDate, date))
       });
     }
   }
@@ -304,7 +362,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       date: date,
       isCurrentMonth: true,
       isToday: this.isSameDate(date, new Date()),
-      hasEvents: this.events.some(e => this.isSameDate(e.date, date))
+      hasEvents: this.events.some(e => this.isSameDate(e.startDate, date))
     });
   }
 
@@ -315,42 +373,30 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   getEventsForDay(date: Date): CalendarEvent[] {
-    return this.events.filter(event => this.isSameDate(event.date, date));
+    return this.events.filter(event => this.isSameDate(event.startDate, date));
+  }
+
+  getAllDayEvents(date: Date): CalendarEvent[] {
+    return this.events.filter(event =>
+      this.isSameDate(event.startDate, date) && event.time.toLowerCase() === 'all day'
+    );
   }
 
   getEventsForHour(date: Date, hour: number): CalendarEvent[] {
-    // This is a simplified version since our time is stored as a string like '10:00 AM'
-    // In a real app, this would use a proper Date/Time object
     return this.events.filter(event => {
-      if (!this.isSameDate(event.date, date)) return false;
-
-      const timeStr = event.time.toLowerCase();
-      if (timeStr === 'all day') return hour === 0; // Show all day events at midnight or a special slot
-
-      const match = timeStr.match(/(\d+):/);
-      if (match) {
-        let eventHour = parseInt(match[1]);
-        const isPM = timeStr.includes('pm');
-        if (isPM && eventHour !== 12) eventHour += 12;
-        if (!isPM && eventHour === 12) eventHour = 0;
-        return eventHour === hour;
-      }
-      return false;
+      if (!this.isSameDate(event.startDate, date)) return false;
+      return event.startDate.getHours() === hour;
     });
   }
 
-  getEventMinuteOffset(event: CalendarEvent): number {
-    // Extract minutes from time string like '03:00 PM' or '12:30 PM'
-    const timeStr = event.time.toLowerCase();
-    if (timeStr === 'all day') return 0;
+  getEventHeight(event: CalendarEvent): number {
+    const durationMs = event.endDate.getTime() - event.startDate.getTime();
+    const durationHours = durationMs / (1000 * 60 * 60);
+    return durationHours * 100; // 1h = 100% of the cell
+  }
 
-    const match = timeStr.match(/(\d+):(\d+)/);
-    if (match) {
-      const minutes = parseInt(match[2]);
-      // Return percentage offset within the hour (0-100%)
-      return (minutes / 60) * 100;
-    }
-    return 0;
+  getEventMinuteOffset(event: CalendarEvent): number {
+    return (event.startDate.getMinutes() / 60) * 100;
   }
 
   navigate(delta: number) {
@@ -369,38 +415,296 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.viewMode !== 'day') this.selectedDate = null;
   }
 
+  onMonthDayMouseDown(event: MouseEvent | TouchEvent, day: CalendarDay) {
+    if (this.isPopoverVisible) return;
+
+    // Save start position for scroll detection
+    const clientX = (event instanceof MouseEvent) ? event.clientX : (event as TouchEvent).touches[0].clientX;
+    const clientY = (event instanceof MouseEvent) ? event.clientY : (event as TouchEvent).touches[0].clientY;
+    this.touchStartPos = { x: clientX, y: clientY };
+
+    // Clear any previous timer
+    if (this.selectionTimeout) {
+      clearTimeout(this.selectionTimeout);
+    }
+
+    this.selectionTimeout = setTimeout(() => {
+      // Prevent default ONLY once hold is confirmed to avoid blocking scroll initially
+      if (event.cancelable) event.preventDefault();
+
+      this.selectedDate = day.date;
+      this.selectedEvents = this.events.filter(e => this.isSameDate(e.startDate, day.date));
+
+      const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).touches[0] as unknown as MouseEvent;
+      this.startCreatingEvent(uiEvent);
+    }, this.SELECTION_DELAY);
+  }
+
+  onMonthDayMouseUp() {
+    if (this.selectionTimeout) {
+      clearTimeout(this.selectionTimeout);
+      this.selectionTimeout = null;
+    }
+  }
+
   selectDate(day: CalendarDay) {
     this.selectedDate = day.date;
-    this.selectedEvents = this.events.filter(e => this.isSameDate(e.date, day.date));
+    this.selectedEvents = this.events.filter(e => this.isSameDate(e.startDate, day.date));
+  }
+
+  // Week/Day View Drag-to-Select
+  onTimeMouseDown(event: MouseEvent | TouchEvent, date: Date, hour: number) {
+    if (this.isPopoverVisible) return;
+
+    // Save start position
+    const clientX = (event instanceof MouseEvent) ? event.clientX : (event as TouchEvent).touches[0].clientX;
+    const clientY = (event instanceof MouseEvent) ? event.clientY : (event as TouchEvent).touches[0].clientY;
+    this.touchStartPos = { x: clientX, y: clientY };
+
+    // Clear any previous selection state
+    this.cancelCreatingEvent();
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const relativeY = clientY - rect.top;
+    const fractionalHour = Math.round((relativeY / rect.height) * 4) / 4;
+    const startHour = hour + fractionalHour;
+
+    this.selectionTimeout = setTimeout(() => {
+      // Lock scroll only after hold is successful
+      if (event.cancelable) event.preventDefault();
+
+      this.isSelectingRange = true;
+      this.selectionDate = date;
+      this.selectionStartHour = startHour;
+      this.selectionEndHour = startHour + 0.5;
+    }, this.SELECTION_DELAY);
+  }
+
+  onTimeMouseEnter(hour: number) {
+    if (!this.isSelectingRange) return;
+    this.selectionEndHour = hour;
+  }
+
+  onTouchMove(event: TouchEvent) {
+    const touch = event.touches[0];
+
+    // Case 1: Not selected yet, checking for scroll intent
+    if (this.selectionTimeout && !this.isSelectingRange) {
+      const moveDistance = Math.sqrt(
+        Math.pow(touch.clientX - this.touchStartPos.x, 2) +
+        Math.pow(touch.clientY - this.touchStartPos.y, 2)
+      );
+
+      if (moveDistance > 10) {
+        // User moved too much, they likely want to scroll, cancel the hold
+        clearTimeout(this.selectionTimeout);
+        this.selectionTimeout = null;
+      }
+      return;
+    }
+
+    if (!this.isSelectingRange) return;
+
+    // Case 2: Already selecting (drag mode), lock scroll and expand selection
+    if (event.cancelable) event.preventDefault();
+
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    let target = element as HTMLElement;
+    while (target && !target.classList.contains('hour-cell')) {
+      target = target.parentElement as HTMLElement;
+    }
+
+    if (target) {
+      const hourAttr = target.getAttribute('data-hour');
+      if (hourAttr !== null) {
+        const hour = parseFloat(hourAttr);
+        if (this.selectionEndHour !== hour) {
+          this.onTimeMouseEnter(hour);
+        }
+      }
+    }
+  }
+
+  onTimeMouseUp(event: MouseEvent | TouchEvent) {
+    if (this.selectionTimeout) {
+      clearTimeout(this.selectionTimeout);
+      this.selectionTimeout = null;
+    }
+
+    if (!this.isSelectingRange) return;
+
+    this.isSelectingRange = false;
+
+    // Drag detection: only open if start and end are different (at least 30min or a clear drag)
+    const startHour = this.selectionStartHour || 0;
+    const endHour = this.selectionEndHour || 0;
+    const hasDragged = Math.abs(endHour - startHour) > 0;
+
+    if (this.selectionDate && hasDragged) {
+      const minHour = Math.min(startHour, endHour);
+      const maxHour = Math.max(startHour, endHour);
+
+      this.selectedDate = new Date(this.selectionDate);
+      this.selectedDate.setHours(Math.floor(minHour), (minHour % 1 === 0.25 ? 15 : minHour % 1 === 0.5 ? 30 : minHour % 1 === 0.75 ? 45 : 0), 0, 0);
+
+      const endDate = new Date(this.selectionDate);
+      endDate.setHours(Math.floor(maxHour), (maxHour % 1 === 0.25 ? 15 : maxHour % 1 === 0.5 ? 30 : maxHour % 1 === 0.75 ? 45 : 0), 0, 0);
+
+      const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
+      this.startCreatingEvent(uiEvent, endDate);
+    } else {
+      // Clear if it was just a click
+      this.cancelCreatingEvent();
+    }
+  }
+
+  getSelectionStyle(date: Date) {
+    if (!this.selectionDate || !this.isSameDate(date, this.selectionDate)) {
+      return { display: 'none' };
+    }
+
+    if (!this.isSelectingRange && !this.isPopoverVisible) {
+      return { display: 'none' };
+    }
+
+    const start = Math.min(this.selectionStartHour || 0, this.selectionEndHour || 0);
+    const end = Math.max(this.selectionStartHour || 0, this.selectionEndHour || 0);
+    const duration = end - start;
+
+    const isMobile = window.innerWidth <= 768;
+    const hourHeight = isMobile ? 60 : 80;
+
+    // Ensure at least a small line (4px) is visible
+    const height = Math.max(duration * hourHeight, 4);
+
+    return {
+      display: 'block',
+      top: `${start * hourHeight}px`,
+      height: `${height}px`
+    };
   }
 
   closeDetails() {
     this.selectedDate = null;
-    this.isCreatingEvent = false;
+    this.isPopoverVisible = false;
   }
 
-  startCreatingEvent() {
-    this.isCreatingEvent = true;
-    this.newEventData = {
-      title: '',
+  startCreatingEvent(event: MouseEvent, endDate?: Date) {
+    if (!this.selectedDate) return;
+
+    // Default duration is 30 minutes if not specified
+    const finalEndDate = endDate || new Date(new Date(this.selectedDate).getTime() + 30 * 60000);
+
+    this.popoverData = {
+      title: 'New Event',
       description: '',
       location: '',
-      date: this.selectedDate ? new Date(this.selectedDate) : new Date(),
-      subscribeByDefault: true
+      startDate: this.selectedDate,
+      endDate: finalEndDate,
+      subscribeByDefault: false,
     };
+
+    // Calculate position based on the click/drag event
+    this.calculatePopoverPosition(event);
+    this.isPopoverVisible = true;
+  }
+
+  private calculatePopoverPosition(event: MouseEvent) {
+    const container = this.el.nativeElement.querySelector('.calendar-container');
+    const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+
+    let x = event.clientX - containerRect.left;
+    let y = event.clientY - containerRect.top;
+    let arrowSide: 'top' | 'left' | 'right' = 'top';
+
+    const popoverWidth = 320;
+    const popoverHeight = 400;
+    const padding = 20;
+
+    this.isMobilePopover = window.innerWidth <= 768;
+
+    if (this.isMobilePopover) {
+      this.popoverPosition = { x: 0, y: 0, arrowSide: 'top' };
+      return;
+    }
+
+    if (this.viewMode === 'week' || this.viewMode === 'day') {
+      // Find the column based on selectionDate instead of event.target to be "sticky"
+      let column: HTMLElement | null = null;
+      if (this.selectionDate) {
+        const dayColumns = this.el.nativeElement.querySelectorAll('.day-column');
+        const dayIndex = this.days.findIndex(d => this.isSameDate(d.date, this.selectionDate!));
+        if (dayIndex !== -1) {
+          // +1 because of time-axis being the first child in some layouts,
+          // but here we use querySelectorAll so we check the actual index
+          column = dayColumns[dayIndex] as HTMLElement;
+        }
+      }
+
+      if (column) {
+        const rect = column.getBoundingClientRect();
+        const relativeRect = {
+          left: rect.left - containerRect.left,
+          right: rect.right - containerRect.left,
+          top: rect.top - containerRect.top,
+          bottom: rect.bottom - containerRect.top
+        };
+
+        const dayIndex = Array.from(column.parentElement?.children || []).indexOf(column) - 1;
+
+        if (dayIndex <= 2) {
+          x = relativeRect.right + 5;
+          arrowSide = 'left';
+        } else {
+          x = relativeRect.left - popoverWidth - 5;
+          arrowSide = 'right';
+        }
+
+        const selectionOverlay = column.querySelector('.selection-overlay');
+        if (selectionOverlay) {
+          const selectionRect = selectionOverlay.getBoundingClientRect();
+          const relativeSelectionTop = selectionRect.top - containerRect.top;
+          y = relativeSelectionTop + (selectionRect.height / 2) - 100;
+        } else {
+          y = (event.clientY - containerRect.top) - 50;
+        }
+      }
+    } else {
+      x = (event.clientX - containerRect.left) - (popoverWidth / 2);
+      y = (event.clientY - containerRect.top) + 15;
+      arrowSide = 'top';
+    }
+
+    // Boundary checks relative to container
+    const maxWidth = containerRect.width || window.innerWidth;
+    const maxHeight = containerRect.height || window.innerHeight;
+
+    x = Math.max(padding, Math.min(x, maxWidth - popoverWidth - padding));
+    y = Math.max(padding, Math.min(y, maxHeight - popoverHeight - padding));
+
+    this.popoverPosition = { x, y, arrowSide };
   }
 
   cancelCreatingEvent() {
-    this.isCreatingEvent = false;
+    this.isPopoverVisible = false;
+    this.selectionDate = null;
+    this.selectionStartHour = null;
+    this.selectionEndHour = null;
+    this.selectedDate = null;
   }
 
-  submitEvent() {
-    if (!this.newEventData.title || !this.newEventData.date) return;
+  submitEvent(data: EventCreateRequest) {
+    if (!data.title || !data.startDate) return;
 
-    this.eventService.createEvent(this.newEventData).subscribe({
+    this.eventService.createEvent(data).subscribe({
       next: () => {
-        this.isCreatingEvent = false;
+        this.isPopoverVisible = false;
         this.selectedDate = null;
+        this.selectionDate = null;
+        this.selectionStartHour = null;
+        this.selectionEndHour = null;
+        this.generateCalendar();
       },
       error: (err) => console.error('Error creating event:', err)
     });

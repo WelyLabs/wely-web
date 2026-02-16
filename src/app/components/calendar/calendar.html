@@ -42,7 +42,9 @@
             <div class="days-grid month-grid" [class.selection-active]="selectedDate">
                 <div *ngFor="let day of days; let i = index" class="day-cell" [class.other-month]="!day.isCurrentMonth"
                     [class.today]="day.isToday" [class.selected]="selectedDate && isSameDate(day.date, selectedDate)"
-                    (click)="selectDate(day)">
+                    (click)="selectDate(day)" (mousedown)="onMonthDayMouseDown($event, day)"
+                    (touchstart)="onMonthDayMouseDown($event, day)" (mouseup)="onMonthDayMouseUp()"
+                    (touchend)="onMonthDayMouseUp()">
 
                     <div class="day-content">
                         <span class="day-number">{{ day.date | date:'d' }}</span>
@@ -56,7 +58,8 @@
 
         <!-- Week/Day View Layout (Apple Style Schedule) -->
         <ng-container *ngIf="viewMode === 'week' || viewMode === 'day'">
-            <div class="week-schedule-container" [class.day-mode]="viewMode === 'day'">
+            <div class="week-schedule-container" [class.day-mode]="viewMode === 'day'"
+                (mouseup)="onTimeMouseUp($event)">
                 <!-- Time Axis -->
                 <div class="time-axis">
                     <div class="axis-header"></div>
@@ -72,6 +75,15 @@
                             <span class="day-label">{{ day.date | date:'EEE' }}</span>
                             <span class="date-label">{{ day.date | date:'d' }}</span>
                         </div>
+
+                        <!-- Full Day Events Section -->
+                        <div class="full-day-events" *ngIf="getAllDayEvents(day.date).length > 0">
+                            <div *ngFor="let event of getAllDayEvents(day.date)" class="full-day-card"
+                                (click)="viewEventDetails(event)">
+                                <span class="event-title">{{ event.title }}</span>
+                            </div>
+                        </div>
+
                         <div class="hour-slots">
                             <!-- Timeline Indicator -->
                             <div class="timeline-indicator" [class.vivid]="isToday(day.date)"
@@ -80,13 +92,26 @@
                                 <div class="line"></div>
                             </div>
 
-                            <div *ngFor="let hour of hours" class="hour-cell">
-                                <div class="event-container">
-                                    <div *ngFor="let event of getEventsForHour(day.date, hour)"
-                                        class="inline-event-card" [style.top.%]="getEventMinuteOffset(event)"
-                                        (click)="viewEventDetails(event)">
-                                        <div class="event-accent"></div>
-                                        <span class="event-title">{{ event.title }}</span>
+                            <!-- Selection Overlay -->
+                            <div class="selection-overlay" [ngStyle]="getSelectionStyle(day.date)">
+                                <div class="selection-box">
+                                    <span class="selection-time">New Event</span>
+                                </div>
+                            </div>
+
+                            <div class="hours-container" (mouseup)="onTimeMouseUp($event)"
+                                (touchend)="onTimeMouseUp($event)" (touchmove)="onTouchMove($event)">
+                                <div *ngFor="let hour of hours" class="hour-cell" [attr.data-hour]="hour"
+                                    (mousedown)="onTimeMouseDown($event, day.date, hour)"
+                                    (touchstart)="onTimeMouseDown($event, day.date, hour)"
+                                    (mouseenter)="onTimeMouseEnter(hour)">
+                                    <div class="event-container">
+                                        <div *ngFor="let event of getEventsForHour(day.date, hour)"
+                                            class="inline-event-card" [style.top.%]="getEventMinuteOffset(event)"
+                                            [style.height.%]="getEventHeight(event)" (click)="viewEventDetails(event)">
+                                            <div class="event-accent"></div>
+                                            <span class="event-title">{{ event.title }}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -108,10 +133,10 @@
             </button>
         </div>
 
-        <div class="events-list" *ngIf="!isCreatingEvent">
+        <div class="events-list">
             <div *ngIf="selectedEvents.length === 0" class="no-events">
                 <p>Aucun événement pour ce jour</p>
-                <button (click)="startCreatingEvent()">Ajouter un événement</button>
+                <button (click)="startCreatingEvent($event)">Ajouter un événement</button>
             </div>
 
             <div *ngFor="let event of selectedEvents" class="event-card" (click)="viewEventDetails(event)">
@@ -125,47 +150,17 @@
             </div>
 
             <div class="add-event-fab" *ngIf="selectedEvents.length > 0">
-                <button (click)="startCreatingEvent()">
+                <button (click)="startCreatingEvent($event)">
                     <mat-icon>add</mat-icon>
                     Nouveaux événement
                 </button>
             </div>
         </div>
-
-        <!-- Creation Form -->
-        <div class="creation-form" *ngIf="isCreatingEvent">
-            <div class="form-group">
-                <input type="text" [(ngModel)]="newEventData.title" placeholder="Titre de l'événement"
-                    class="title-input">
-            </div>
-
-            <div class="form-group">
-                <mat-icon>location_on</mat-icon>
-                <input type="text" [(ngModel)]="newEventData.location" placeholder="Lieu">
-            </div>
-
-            <div class="form-group">
-                <mat-icon>schedule</mat-icon>
-                <input type="datetime-local" [ngModel]="newEventData.date | date:'yyyy-MM-ddTHH:mm'"
-                    (ngModelChange)="newEventData.date = $event">
-            </div>
-
-            <div class="form-group description-group">
-                <mat-icon>notes</mat-icon>
-                <textarea [(ngModel)]="newEventData.description" placeholder="Notes"></textarea>
-            </div>
-
-            <div class="form-group checkbox-group">
-                <label class="checkbox-container">
-                    <input type="checkbox" [(ngModel)]="newEventData.subscribeByDefault">
-                    <span>S'inscrire par défaut</span>
-                </label>
-            </div>
-
-            <div class="form-actions">
-                <button class="cancel-btn" (click)="cancelCreatingEvent()">Annuler</button>
-                <button class="submit-btn" [disabled]="!newEventData.title" (click)="submitEvent()">Ajouter</button>
-            </div>
-        </div>
     </div>
+
+    <!-- Quick Event Popover (Apple Style) -->
+    <div class="popover-backdrop" *ngIf="isPopoverVisible" (click)="cancelCreatingEvent()"></div>
+    <app-quick-event-popover *ngIf="isPopoverVisible" [data]="popoverData" [position]="popoverPosition"
+        [isMobile]="isMobilePopover" (save)="submitEvent($event)" (cancel)="cancelCreatingEvent()">
+    </app-quick-event-popover>
 </div>

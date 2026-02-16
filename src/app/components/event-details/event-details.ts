@@ -12,7 +12,7 @@ interface CalendarEvent {
   title: string;
   time: string;
   description: string;
-  date: Date;
+  startDate: Date;
 }
 
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';

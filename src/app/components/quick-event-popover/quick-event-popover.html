@@ -1,0 +1,43 @@
+<div class="popover-container" [style.left.px]="isMobile ? 0 : position.x" [style.top.px]="isMobile ? 0 : position.y"
+    [class.arrow-left]="!isMobile && position.arrowSide === 'left'"
+    [class.arrow-right]="!isMobile && position.arrowSide === 'right'"
+    [class.arrow-top]="!isMobile && position.arrowSide === 'top'" [class.mobile-centered]="isMobile"
+    (click)="$event.stopPropagation()">
+    <div class="popover-content">
+        <div class="form-group title-group">
+            <input type="text" [(ngModel)]="data.title" placeholder="Titre de l'événement" autofocus
+                (keyup.enter)="onSave()">
+        </div>
+
+        <div class="form-group">
+            <mat-icon>location_on</mat-icon>
+            <input type="text" [(ngModel)]="data.location" placeholder="Ajouter un lieu">
+        </div>
+
+        <div class="form-group date-group">
+            <mat-icon>schedule</mat-icon>
+            <div class="time-range">
+                <span>{{ data.startDate | date:'EEEE, d MMMM' }}</span>
+                <span class="hours">{{ data.startDate | date:'HH:mm' }} - {{ data.endDate | date:'HH:mm' }}</span>
+            </div>
+        </div>
+
+        <div class="form-group notes-group">
+            <mat-icon>notes</mat-icon>
+            <textarea [(ngModel)]="data.description" placeholder="Ajouter des notes"></textarea>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label class="checkbox-container">
+                <input type="checkbox" [(ngModel)]="data.subscribeByDefault">
+                <span>S'inscrire par défaut</span>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button class="cancel-btn" (click)="onCancel()">Annuler</button>
+            <button class="submit-btn" [disabled]="!data.title" (click)="onSave()">Ajouter</button>
+        </div>
+    </div>
+    <div class="popover-arrow"></div>
+</div>
