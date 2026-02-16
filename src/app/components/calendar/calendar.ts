@@ -47,7 +47,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   // Popover state
   isPopoverVisible = false;
+  isDetailsOpen = false;
+  private isHoldActive = false;
   popoverPosition = { x: 0, y: 0, arrowSide: 'top' as 'top' | 'left' | 'right' };
+  arrowOffset = 50;
   isMobilePopover = false;
   popoverData: EventCreateRequest = {
     title: 'New Event',
@@ -97,7 +100,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   selectionEndHour: number | null = null;
   selectionDate: Date | null = null;
   private selectionTimeout?: any;
-  private readonly SELECTION_DELAY = 250; // ms
+  private readonly SELECTION_DELAY = 400; // ms
 
   // Touch event tracking for swipe-to-dismiss
   private touchStartY = 0;
@@ -239,6 +242,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Clear selection when switching to Month view
     if (mode === 'month') {
       this.selectedDate = null;
+      this.isDetailsOpen = false;
     }
 
     // Set selectedDate for Day view if not already set
@@ -423,6 +427,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const clientY = (event instanceof MouseEvent) ? event.clientY : (event as TouchEvent).touches[0].clientY;
     this.touchStartPos = { x: clientX, y: clientY };
 
+    this.isHoldActive = false;
+
     // Clear any previous timer
     if (this.selectionTimeout) {
       clearTimeout(this.selectionTimeout);
@@ -434,9 +440,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
       this.selectedDate = day.date;
       this.selectedEvents = this.events.filter(e => this.isSameDate(e.startDate, day.date));
+      this.isHoldActive = true;
+      this.isDetailsOpen = false;
 
       const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).touches[0] as unknown as MouseEvent;
-      this.startCreatingEvent(uiEvent);
+      this.startCreatingEvent(uiEvent, day.date);
     }, this.SELECTION_DELAY);
   }
 
@@ -448,8 +456,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   selectDate(day: CalendarDay) {
+    if (this.isHoldActive) {
+      this.isHoldActive = false;
+      return;
+    }
     this.selectedDate = day.date;
     this.selectedEvents = this.events.filter(e => this.isSameDate(e.startDate, day.date));
+    this.isDetailsOpen = true;
   }
 
   // Week/Day View Drag-to-Select
@@ -587,32 +600,38 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   closeDetails() {
     this.selectedDate = null;
+    this.isDetailsOpen = false;
     this.isPopoverVisible = false;
   }
 
-  startCreatingEvent(event: MouseEvent, endDate?: Date) {
-    if (!this.selectedDate) return;
+  startCreatingEvent(event: MouseEvent, targetDate?: Date, startDate?: Date, endDate?: Date) {
+    if (!this.selectedDate && !targetDate) return;
 
-    // Default duration is 30 minutes if not specified
-    const finalEndDate = endDate || new Date(new Date(this.selectedDate).getTime() + 30 * 60000);
+    const baseDate = startDate || targetDate || this.selectedDate || new Date();
+    const finalEndDate = endDate || new Date(baseDate.getTime() + 30 * 60000);
 
     this.popoverData = {
       title: 'New Event',
       description: '',
       location: '',
-      startDate: this.selectedDate,
+      startDate: baseDate,
       endDate: finalEndDate,
       subscribeByDefault: false,
     };
 
+    // Use current selectedDate if not provided to ensure calculation matches
+    const dateToAnchor = targetDate || this.selectedDate;
+
     // Calculate position based on the click/drag event
-    this.calculatePopoverPosition(event);
+    this.calculatePopoverPosition(event, dateToAnchor);
     this.isPopoverVisible = true;
+    this.isDetailsOpen = false; // Double check separation
   }
 
-  private calculatePopoverPosition(event: MouseEvent) {
+  private calculatePopoverPosition(event: MouseEvent, targetDate?: Date | null) {
     const container = this.el.nativeElement.querySelector('.calendar-container');
     const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+    const dateToAnchor = targetDate || this.selectedDate;
 
     let x = event.clientX - containerRect.left;
     let y = event.clientY - containerRect.top;
@@ -629,15 +648,39 @@ export class CalendarComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.viewMode === 'week' || this.viewMode === 'day') {
-      // Find the column based on selectionDate instead of event.target to be "sticky"
+    if (this.viewMode === 'month' && dateToAnchor) {
+      const dayCells = this.el.nativeElement.querySelectorAll('.day-cell');
+      const dayIndex = this.days.findIndex(d => this.isSameDate(d.date, dateToAnchor));
+
+      if (dayIndex !== -1) {
+        const cell = dayCells[dayIndex] as HTMLElement;
+        const rect = cell.getBoundingClientRect();
+        const relativeRect = {
+          left: rect.left - containerRect.left,
+          right: rect.right - containerRect.left,
+          top: rect.top - containerRect.top,
+          bottom: rect.bottom - containerRect.top
+        };
+
+        const colIndex = dayIndex % 7;
+        if (colIndex <= 3) {
+          x = relativeRect.right + 5;
+          arrowSide = 'left';
+        } else {
+          x = relativeRect.left - popoverWidth - 5;
+          arrowSide = 'right';
+        }
+        // Center vertically relative to cell
+        y = relativeRect.top + (rect.height / 2) - (popoverHeight / 2);
+      }
+    } else if ((this.viewMode === 'week' || this.viewMode === 'day') && (this.selectionDate || dateToAnchor)) {
+      // Use selectionDate or passed date for Week/Day view
+      const activeDate = this.selectionDate || dateToAnchor;
       let column: HTMLElement | null = null;
-      if (this.selectionDate) {
+      if (activeDate) {
         const dayColumns = this.el.nativeElement.querySelectorAll('.day-column');
-        const dayIndex = this.days.findIndex(d => this.isSameDate(d.date, this.selectionDate!));
+        const dayIndex = this.days.findIndex(d => this.isSameDate(d.date, activeDate));
         if (dayIndex !== -1) {
-          // +1 because of time-axis being the first child in some layouts,
-          // but here we use querySelectorAll so we check the actual index
           column = dayColumns[dayIndex] as HTMLElement;
         }
       }
@@ -651,9 +694,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
           bottom: rect.bottom - containerRect.top
         };
 
-        const dayIndex = Array.from(column.parentElement?.children || []).indexOf(column) - 1;
+        const colIndex = Array.from(column.parentElement?.children || []).indexOf(column) - (this.viewMode === 'week' ? 1 : 0);
 
-        if (dayIndex <= 2) {
+        if (colIndex <= 3) {
           x = relativeRect.right + 5;
           arrowSide = 'left';
         } else {
@@ -665,15 +708,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
         if (selectionOverlay) {
           const selectionRect = selectionOverlay.getBoundingClientRect();
           const relativeSelectionTop = selectionRect.top - containerRect.top;
-          y = relativeSelectionTop + (selectionRect.height / 2) - 100;
+          y = relativeSelectionTop + (selectionRect.height / 2) - (popoverHeight / 2);
         } else {
-          y = (event.clientY - containerRect.top) - 50;
+          y = relativeRect.top + (rect.height / 2) - (popoverHeight / 2);
         }
       }
-    } else {
-      x = (event.clientX - containerRect.left) - (popoverWidth / 2);
-      y = (event.clientY - containerRect.top) + 15;
-      arrowSide = 'top';
     }
 
     // Boundary checks relative to container
@@ -684,6 +723,44 @@ export class CalendarComponent implements OnInit, OnDestroy {
     y = Math.max(padding, Math.min(y, maxHeight - popoverHeight - padding));
 
     this.popoverPosition = { x, y, arrowSide };
+
+    // Calculate Arrow Offset to point exactly to the target
+    if ((arrowSide === 'left' || arrowSide === 'right') && dateToAnchor) {
+      let targetCenterY = 0;
+      if (this.viewMode === 'month') {
+        const dayCells = this.el.nativeElement.querySelectorAll('.day-cell');
+        const dayIndex = this.days.findIndex(d => this.isSameDate(d.date, dateToAnchor));
+        if (dayIndex !== -1) {
+          const rect = dayCells[dayIndex].getBoundingClientRect();
+          targetCenterY = rect.top - containerRect.top + (rect.height / 2);
+        }
+      } else {
+        // Week/Day view selection sticky position
+        const activeDate = this.selectionDate || dateToAnchor;
+        const dayColumns = this.el.nativeElement.querySelectorAll('.day-column');
+        const dayIndex = this.days.findIndex(d => this.isSameDate(d.date, activeDate));
+
+        if (dayIndex !== -1) {
+          const column = dayColumns[dayIndex] as HTMLElement;
+          const selectionOverlay = column?.querySelector('.selection-overlay');
+          if (selectionOverlay) {
+            const rect = selectionOverlay.getBoundingClientRect();
+            targetCenterY = rect.top - containerRect.top + (rect.height / 2);
+          } else {
+            const rect = column.getBoundingClientRect();
+            targetCenterY = rect.top - containerRect.top + (rect.height / 2);
+          }
+        }
+      }
+
+      if (targetCenterY > 0) {
+        this.arrowOffset = Math.max(10, Math.min(90, ((targetCenterY - y) / popoverHeight) * 100));
+      } else {
+        this.arrowOffset = 50;
+      }
+    } else {
+      this.arrowOffset = 50;
+    }
   }
 
   cancelCreatingEvent() {
@@ -700,6 +777,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.eventService.createEvent(data).subscribe({
       next: () => {
         this.isPopoverVisible = false;
+        this.isDetailsOpen = false;
         this.selectedDate = null;
         this.selectionDate = null;
         this.selectionStartHour = null;

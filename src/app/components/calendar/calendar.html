@@ -1,7 +1,8 @@
-<div class="calendar-container" [class.split-view]="selectedDate && viewMode === 'month'"
+<div class="calendar-container" [class.split-view]="isDetailsOpen && viewMode === 'month'"
     [class.week-mode]="viewMode === 'week'" [class.day-mode]="viewMode === 'day'">
 
-    <div class="details-backdrop" [class.visible]="selectedDate && viewMode === 'month'" (click)="closeDetails()"></div>
+    <div class="details-backdrop" [class.visible]="isDetailsOpen && viewMode === 'month'" (click)="closeDetails()">
+    </div>
 
     <!-- Calendar Section -->
     <div class="calendar-section">
@@ -123,12 +124,12 @@
     </div>
 
     <!-- Details Section (Month View Only) -->
-    <div class="details-section" [class.visible]="selectedDate && viewMode === 'month'"
+    <div class="details-section" [class.visible]="isDetailsOpen && viewMode === 'month'"
         (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
         (touchend)="onDetailsTouchEnd($event)">
         <div class="details-header">
             <h3>{{ selectedDate | date:'EEEE, d MMMM yyyy' }}</h3>
-            <button (click)="selectedDate = null">
+            <button (click)="closeDetails()">
                 <mat-icon>close</mat-icon>
             </button>
         </div>
@@ -136,7 +137,6 @@
         <div class="events-list">
             <div *ngIf="selectedEvents.length === 0" class="no-events">
                 <p>Aucun événement pour ce jour</p>
-                <button (click)="startCreatingEvent($event)">Ajouter un événement</button>
             </div>
 
             <div *ngFor="let event of selectedEvents" class="event-card" (click)="viewEventDetails(event)">
@@ -149,18 +149,13 @@
                 <mat-icon class="arrow-icon">chevron_right</mat-icon>
             </div>
 
-            <div class="add-event-fab" *ngIf="selectedEvents.length > 0">
-                <button (click)="startCreatingEvent($event)">
-                    <mat-icon>add</mat-icon>
-                    Nouveaux événement
-                </button>
-            </div>
         </div>
     </div>
 
     <!-- Quick Event Popover (Apple Style) -->
     <div class="popover-backdrop" *ngIf="isPopoverVisible" (click)="cancelCreatingEvent()"></div>
     <app-quick-event-popover *ngIf="isPopoverVisible" [data]="popoverData" [position]="popoverPosition"
-        [isMobile]="isMobilePopover" (save)="submitEvent($event)" (cancel)="cancelCreatingEvent()">
+        [arrowOffset]="arrowOffset" [isMobile]="isMobilePopover" (save)="submitEvent($event)"
+        (cancel)="cancelCreatingEvent()">
     </app-quick-event-popover>
 </div>

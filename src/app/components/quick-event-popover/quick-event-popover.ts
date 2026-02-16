@@ -22,6 +22,7 @@ export class QuickEventPopoverComponent {
         subscribeByDefault: true
     };
     @Input() position = { x: 0, y: 0, arrowSide: 'top' as 'top' | 'left' | 'right' };
+    @Input() arrowOffset = 50; // Percentage from top
     @Input() isMobile = false;
 
     @Output() save = new EventEmitter<EventCreateRequest>();

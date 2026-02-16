@@ -42,7 +42,6 @@
         transform-origin: left center;
 
         .popover-arrow {
-            top: 50%;
             left: -10px;
             margin-top: -10px;
             transform: none;
@@ -55,7 +54,6 @@
         transform-origin: right center;
 
         .popover-arrow {
-            top: 50%;
             right: -10px;
             left: auto;
             margin-top: -10px;
@@ -243,7 +241,7 @@
     border-style: solid;
     border-width: 0 10px 10px 10px;
     border-color: transparent transparent rgba(255, 255, 255, 0.85) transparent;
-    top: -10px;
+    // top will be set via [style.top.%]
     left: 50%;
     transform: translateX(-50%);
 }
