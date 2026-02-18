@@ -7,8 +7,11 @@ on:
   pull_request:
     branches:
       - main
-      - dev
     types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sonarqube:
     name: SonarQube
