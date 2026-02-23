@@ -14,7 +14,7 @@ interface CalendarDay {
   hasEvents: boolean;
 }
 
-interface CalendarEvent {
+export interface CalendarEvent {
   id: string | number;
   title: string;
   time: string;

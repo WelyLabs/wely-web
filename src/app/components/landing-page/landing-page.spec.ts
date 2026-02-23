@@ -57,4 +57,18 @@ describe('LandingPageComponent', () => {
         await component.signup();
         expect(keycloakMock.register).toHaveBeenCalled();
     });
+
+    it('should toggle mobile menu', () => {
+        expect(component.showMobileMenu).toBe(false);
+        component.toggleMenu();
+        expect(component.showMobileMenu).toBe(true);
+        component.toggleMenu();
+        expect(component.showMobileMenu).toBe(false);
+    });
+
+    it('should close mobile menu', () => {
+        component.showMobileMenu = true;
+        component.closeMenu();
+        expect(component.showMobileMenu).toBe(false);
+    });
 });

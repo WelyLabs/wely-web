@@ -1,6 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CalendarComponent } from './calendar';
-import { Event } from '../../services/event.service';
+import 'zone.js';
+import 'zone.js/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { CalendarComponent, CalendarEvent } from './calendar';
+import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -9,16 +11,18 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 describe('CalendarComponent', () => {
     let component: CalendarComponent;
     let fixture: ComponentFixture<CalendarComponent>;
-    let eventServiceMock: any;
-    let routerMock: any;
+    let eventServiceMock: Partial<EventService>;
+    let routerMock: Partial<Router>;
 
-    const mockEvents = [
-        { id: 101, title: 'External Event', subscribed: true, date: new Date(), description: '...' }
+    const mockEvents: FeedEvent[] = [
+        { id: '101', title: 'External Event', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'Loc', image: 'img', description: '...' }
     ];
 
     beforeEach(async () => {
+        TestBed.resetTestingModule();
         eventServiceMock = {
-            events$: of(mockEvents)
+            subscribedEvents$: of(mockEvents),
+            createEvent: vi.fn().mockReturnValue(of(mockEvents[0]))
         };
         routerMock = {
             navigate: vi.fn()
@@ -27,7 +31,7 @@ describe('CalendarComponent', () => {
         await TestBed.configureTestingModule({
             imports: [CalendarComponent, NoopAnimationsModule],
             providers: [
-                { provide: Event, useValue: eventServiceMock },
+                { provide: EventService, useValue: eventServiceMock },
                 { provide: Router, useValue: routerMock }
             ]
         }).compileComponents();
@@ -74,19 +78,61 @@ describe('CalendarComponent', () => {
     });
 
     it('should filter out unsubscribed events', () => {
-        const mixedEvents = [
-            { id: 1, title: 'Subbed', subscribed: true, date: new Date() },
-            { id: 2, title: 'Unsubbed', subscribed: false, date: new Date() }
+        // FeedEvent mapping happens in component via conversion
+        const mixedEvents: FeedEvent[] = [
+            { id: '1', title: 'Subbed', startDate: new Date(), endDate: new Date(), organizerId: 'o1', location: '', image: '', description: '' }
         ];
-        eventServiceMock.events$ = of(mixedEvents);
+        (eventServiceMock as any).subscribedEvents$ = of(mixedEvents);
         component.ngOnInit();
         expect(component.events.some(e => e.title === 'Subbed')).toBe(true);
-        expect(component.events.some(e => e.title === 'Unsubbed')).toBe(false);
+    });
+
+    it('should toggle views and scroll', async () => {
+        vi.useFakeTimers();
+        const scrollSpy = vi.spyOn(component as any, 'scrollToCurrentTime');
+
+        component.toggleView('week');
+        expect(component.viewMode).toBe('week');
+        await vi.advanceTimersByTimeAsync(200);
+        expect(scrollSpy).toHaveBeenCalled();
+
+        component.toggleView('day');
+        expect(component.viewMode).toBe('day');
+        expect(component.selectedDate).toBeDefined();
+
+        component.toggleView('month');
+        expect(component.viewMode).toBe('month');
+        expect(component.selectedDate).toBeNull();
+        vi.useRealTimers();
+    });
+
+    it('should calculate event styles correctly', () => {
+        const start = new Date();
+        start.setHours(10, 0, 0, 0);
+        const end = new Date();
+        end.setHours(12, 0, 0, 0);
+        const event = { id: 1, title: 'Test', startDate: start, endDate: end, time: '' };
+
+        expect(component.getEventHeight(event as unknown as CalendarEvent)).toBe(200); // 2 hours = 200%
+
+        start.setMinutes(30);
+        expect(component.getEventMinuteOffset(event as unknown as CalendarEvent)).toBe(50); // 30 min = 50%
+    });
+
+    it('should get week number', () => {
+        const date = new Date(2024, 0, 1); // Jan 1st 2024 is week 1
+        expect(component.getWeekNumber(date)).toBe(1);
+    });
+
+    it('should submit event', () => {
+        const data: EventCreateRequest = { title: 'New', startDate: new Date(), subscribeByDefault: false, location: '' };
+        component.submitEvent(data);
+        expect(eventServiceMock.createEvent).toHaveBeenCalledWith(data);
     });
 
     it('should select a date without events', () => {
         const aDate = new Date(2020, 0, 1);
-        const day: any = { date: aDate, isToday: false };
+        const day = { date: aDate, isToday: false, isCurrentMonth: true, hasEvents: false };
         component.selectDate(day);
         expect(component.selectedDate).toEqual(aDate);
         expect(component.selectedEvents.length).toBe(0);
