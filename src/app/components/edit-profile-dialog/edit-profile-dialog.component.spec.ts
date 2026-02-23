@@ -52,6 +52,12 @@ describe('EditProfileDialogComponent', () => {
         expect(component.profileForm.invalid).toBe(true);
     });
 
+    it('should NOT call updateProfile on invalid submit', () => {
+        component.profileForm.patchValue({ userName: '' });
+        component.onSubmit();
+        expect(userServiceMock.updateProfile).not.toHaveBeenCalled();
+    });
+
     it('should call updateProfile and close on valid submit', () => {
         const updates = { ...mockUser, userName: 'updated' };
         component.profileForm.patchValue(updates);
