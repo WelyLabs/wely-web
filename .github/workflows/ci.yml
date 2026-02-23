@@ -72,8 +72,12 @@ jobs:
 
   release:
     name: Release
-    needs: analyze
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    needs: [test, analyze]
+    if: |
+      github.event_name == 'push' && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') &&
+      needs.test.result == 'success' &&
+      (needs.analyze.result == 'success' || needs.analyze.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -118,8 +122,8 @@ jobs:
           push: true
           tags: >-
             ${{ github.ref == 'refs/heads/main' && 
-            format('ghcr.io/{0}/wely-calendar-app:latest,ghcr.io/{0}/wely-calendar-app:{1}', steps.lower.outputs.owner, steps.version.outputs.new_release_version) ||
-            format('ghcr.io/{0}/wely-calendar-app:sha-{1}', steps.lower.outputs.owner, github.sha) }}
+            format('ghcr.io/{0}/wely-web:latest,ghcr.io/{0}/wely-web:{1}', steps.lower.outputs.owner, steps.version.outputs.new_release_version) ||
+            format('ghcr.io/{0}/wely-web:sha-{1}', steps.lower.outputs.owner, github.sha) }}
 
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main' && steps.version.outputs.new_release_published == 'true' && steps.docker.outcome == 'success'
