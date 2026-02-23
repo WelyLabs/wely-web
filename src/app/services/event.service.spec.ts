@@ -1,40 +1,63 @@
 import { TestBed } from '@angular/core/testing';
-import { Event, FeedEvent } from './event.service';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { tap, take } from 'rxjs';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { EventService, FeedEvent } from './event.service';
+import { environment } from '../../environments/environment';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('EventService', () => {
-    let service: Event;
+    let service: EventService;
+    let httpMock: HttpTestingController;
+    const apiUrl = `${environment.apiUrl}/events-service/events`;
 
     beforeEach(() => {
         TestBed.configureTestingModule({
-            providers: [Event]
+            imports: [HttpClientTestingModule],
+            providers: [EventService]
         });
-        service = TestBed.inject(Event);
+        service = TestBed.inject(EventService);
+        httpMock = TestBed.inject(HttpTestingController);
+    });
+
+    afterEach(() => {
+        httpMock.verify();
     });
 
     it('should be created', () => {
         expect(service).toBeTruthy();
     });
 
-    it('should have a list of events', () => {
-        return service.events$.pipe(
-            tap(events => {
-                expect(events.length).toBeGreaterThan(0);
-            }),
-            take(1) // Take one emission to complete the observable for the test
-        );
+    it('should load subscribed events', () => {
+        const mockEvents: FeedEvent[] = [
+            { id: '1', title: 'Test event', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'L', image: 'I', description: 'D' }
+        ];
+
+        service.subscribedEvents$.subscribe(events => {
+            if (events && events.length > 0) {
+                expect(events).toEqual(mockEvents);
+            }
+        });
+
+        // The service calls refreshEvents in constructor, so we expect two calls: one for me/subscribed, one for me/feed
+        const reqSub = httpMock.expectOne(`${apiUrl}/me/subscribed`);
+        reqSub.flush(mockEvents);
+
+        const reqFeed = httpMock.expectOne(`${apiUrl}/me/feed`);
+        reqFeed.flush([]);
     });
 
     it('should toggle subscription status', () => {
-        let events: FeedEvent[] = [];
-        service.events$.subscribe(e => events = e);
+        const mockEvent: FeedEvent = { id: '1', title: 'Test', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'L', image: 'I', description: 'D' };
 
-        const event = events[0];
-        const initialStatus = event.subscribed;
+        service.toggleSubscription(mockEvent).subscribe(res => {
+            expect(res).toEqual(mockEvent);
+        });
 
-        service.toggleSubscription(event);
+        const req = httpMock.expectOne(`${apiUrl}/${mockEvent.id}/subscribe`);
+        expect(req.request.method).toBe('POST');
+        req.flush(mockEvent);
 
-        expect(events[0].subscribed).toBe(!initialStatus);
+        // toggleSubscription also triggers refreshEvents
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
     });
 });

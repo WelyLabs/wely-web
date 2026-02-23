@@ -12,14 +12,14 @@ describe('EventFeedComponent', () => {
     let eventServiceMock: any;
     let routerMock: any;
 
-    const mockEvents: FeedEvent[] = [
-        { id: '1', title: 'Event 1', organizerId: 'Org 1', date: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false }
+    const mockEvents: any[] = [
+        { id: '1', title: 'Event 1', organizerId: 'Org 1', startDate: new Date(), endDate: new Date(), location: 'Loc 1', image: '', description: 'Desc 1' }
     ];
 
     beforeEach(async () => {
         eventServiceMock = {
-            events$: of(mockEvents),
-            toggleSubscription: vi.fn()
+            feedEvents$: of(mockEvents),
+            toggleSubscription: vi.fn().mockReturnValue(of({}))
         };
         routerMock = {
             navigate: vi.fn(),
@@ -51,10 +51,9 @@ describe('EventFeedComponent', () => {
         expect(component.events).toEqual(mockEvents);
     });
 
-    it('should toggle subscription when clicked', () => {
-        const event = mockEvents[0];
-        component.toggleSubscription(event);
-        expect(eventServiceMock.toggleSubscription).toHaveBeenCalledWith(event);
+    it('should toggle subscription when swiped right', () => {
+        component.swipeRight();
+        expect(eventServiceMock.toggleSubscription).toHaveBeenCalled();
     });
 
     it('should navigate to event details', () => {

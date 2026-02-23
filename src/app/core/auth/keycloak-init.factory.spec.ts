@@ -1,5 +1,6 @@
 import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
+import { AuthService } from './auth.service';
 import { initializeKeycloak } from './keycloak-init.factory';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -7,6 +8,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 describe('initializeKeycloak', () => {
     let keycloakMock: any;
     let userServiceMock: any;
+    let authServiceMock: any;
 
     beforeEach(() => {
         keycloakMock = {
@@ -15,26 +17,31 @@ describe('initializeKeycloak', () => {
         userServiceMock = {
             loadAndSetCurrentUser: vi.fn()
         };
+        authServiceMock = {
+            scheduleTokenRefresh: vi.fn()
+        };
     });
 
     it('should initialize keycloak and preload data if authenticated', async () => {
         keycloakMock.init.mockResolvedValue(true);
         userServiceMock.loadAndSetCurrentUser.mockReturnValue(of({}));
 
-        const initFn = initializeKeycloak(keycloakMock, userServiceMock);
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock);
         await initFn();
 
         expect(keycloakMock.init).toHaveBeenCalled();
+        expect(authServiceMock.scheduleTokenRefresh).toHaveBeenCalled();
         expect(userServiceMock.loadAndSetCurrentUser).toHaveBeenCalled();
     });
 
     it('should initialize keycloak and NOT preload data if NOT authenticated', async () => {
         keycloakMock.init.mockResolvedValue(false);
 
-        const initFn = initializeKeycloak(keycloakMock, userServiceMock);
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock);
         await initFn();
 
         expect(keycloakMock.init).toHaveBeenCalled();
+        expect(authServiceMock.scheduleTokenRefresh).not.toHaveBeenCalled();
         expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
     });
 
@@ -42,7 +49,7 @@ describe('initializeKeycloak', () => {
         keycloakMock.init.mockResolvedValue(true);
         userServiceMock.loadAndSetCurrentUser.mockReturnValue(throwError(() => new Error('API Error')));
 
-        const initFn = initializeKeycloak(keycloakMock, userServiceMock);
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock);
         await initFn();
 
         expect(keycloakMock.init).toHaveBeenCalled();
