@@ -51,7 +51,7 @@ jobs:
           name: node_modules
           path: node_modules/
       - name: Test and Coverage
-        run: npx ng test --no-watch --coverage
+        run: npm test -- --watch=false --coverage
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
