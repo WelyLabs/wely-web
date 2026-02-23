@@ -11,10 +11,11 @@ import { of } from 'rxjs';
 describe('UserService', () => {
     let service: UserService;
     let httpMock: HttpTestingController;
-    let keycloakMock: any;
+    let keycloakMock: Partial<KeycloakService>;
     const apiUrl = `${environment.apiUrl}/user-service`;
 
     beforeEach(() => {
+        TestBed.resetTestingModule();
         keycloakMock = {
             getKeycloakInstance: vi.fn().mockReturnValue({ token: 'mock-token' })
         };
@@ -39,7 +40,7 @@ describe('UserService', () => {
     });
 
     it('should get current user value', () => {
-        (service as any).currentUserSubject.next(MOCK_USER);
+        service['currentUserSubject'].next(MOCK_USER);
         expect(service.getCurrentUserValue()).toEqual(MOCK_USER);
     });
 
@@ -58,7 +59,7 @@ describe('UserService', () => {
     });
 
     it('should update current user locally', () => {
-        (service as any).currentUserSubject.next(MOCK_USER);
+        service['currentUserSubject'].next(MOCK_USER);
 
         service.updateCurrentUser({ profilePicUrl: 'new.jpg' });
 
@@ -80,11 +81,9 @@ describe('UserService', () => {
         const mockFile = new File([''], 'avatar.png', { type: 'image/png' });
         const mockUrl = 'http://avatar.com/new.jpg';
 
-        (service as any).currentUserSubject.next(MOCK_USER);
+        service['currentUserSubject'].next(MOCK_USER);
 
-        service.uploadAvatar(mockFile).subscribe(res => {
-            // The service uses as unknown as Observable<{profilePicUrl: string}> but returns the string from post
-        });
+        service.uploadAvatar(mockFile).subscribe();
 
         const req = httpMock.expectOne(`${apiUrl}/profile/picture`);
         expect(req.request.method).toBe('POST');
@@ -109,7 +108,7 @@ describe('UserService', () => {
     });
 
     it('should NOT update current user locally if NO user is currently loaded', () => {
-        (service as any).currentUserSubject.next(null);
+        service['currentUserSubject'].next(null);
         service.updateCurrentUser({ profilePicUrl: 'new.jpg' });
         expect(service.getCurrentUserValue()).toBeNull();
     });

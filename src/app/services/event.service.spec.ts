@@ -10,6 +10,7 @@ describe('EventService', () => {
     const apiUrl = `${environment.apiUrl}/events-service/events`;
 
     beforeEach(() => {
+        TestBed.resetTestingModule();
         TestBed.configureTestingModule({
             imports: [HttpClientTestingModule],
             providers: [EventService]
