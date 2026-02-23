@@ -1,9 +1,12 @@
+import 'zone.js';
+import 'zone.js/testing';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { MainLayoutComponent } from './main-layout';
 import { Router } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
+import { User } from '../../models/user.model';
 import { ChatService } from '../../services/chat.service';
 import { NotificationService } from '../../services/notification.service';
 import { of, BehaviorSubject, Subject } from 'rxjs';
@@ -16,19 +19,35 @@ import { ActivatedRoute } from '@angular/router';
 describe('MainLayoutComponent', () => {
     let component: MainLayoutComponent;
     let fixture: ComponentFixture<MainLayoutComponent>;
-    let breakpointObserverMock: any;
-    let keycloakMock: any;
-    let userServiceMock: any;
-    let chatServiceMock: any;
-    let notificationServiceMock: any;
-    let routerMock: any;
-    let userSubject: BehaviorSubject<any>;
+    let breakpointObserverMock: Partial<BreakpointObserver>;
+    let keycloakMock: Partial<KeycloakService>;
+    let userServiceMock: Partial<UserService>;
+    let chatServiceMock: Partial<ChatService>;
+    let notificationServiceMock: Partial<NotificationService>;
+    let routerMock: any; // Router 'url' is read-only, we must use 'any' to override it in tests
+    let userSubject: BehaviorSubject<User | null>;
     let chatMessagesSubject: Subject<any>;
     let breakpointSubject: Subject<any>;
     let routerEventsSubject: Subject<any>;
 
     beforeEach(async () => {
-        userSubject = new BehaviorSubject({ id: 'me', userName: 'Me', hashtag: '1234' });
+        TestBed.resetTestingModule();
+        userSubject = new BehaviorSubject<User | null>({
+            id: 'me',
+            userName: 'Me',
+            hashtag: '1234',
+            email: 'me@example.com',
+            firstName: 'Me',
+            lastName: 'Test',
+            jobTitle: '',
+            department: '',
+            location: '',
+            bio: '',
+            skills: [],
+            joinedDate: '',
+            projects: [],
+            stats: { projectsCompleted: 0, hoursLogged: 0, efficiency: 0 }
+        });
         chatMessagesSubject = new Subject();
         breakpointSubject = new Subject();
         routerEventsSubject = new Subject();

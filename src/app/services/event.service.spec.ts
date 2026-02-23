@@ -16,6 +16,12 @@ describe('EventService', () => {
         });
         service = TestBed.inject(EventService);
         httpMock = TestBed.inject(HttpTestingController);
+
+        // Flush initial requests from constructor
+        const reqSub = httpMock.expectOne(`${apiUrl}/me/subscribed`);
+        reqSub.flush([]);
+        const reqFeed = httpMock.expectOne(`${apiUrl}/me/feed`);
+        reqFeed.flush([]);
     });
 
     afterEach(() => {
@@ -31,13 +37,15 @@ describe('EventService', () => {
             { id: '1', title: 'Test event', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'L', image: 'I', description: 'D' }
         ];
 
-        service.subscribedEvents$.subscribe(events => {
+        service.subscribedEvents$.subscribe((events: FeedEvent[]) => {
             if (events && events.length > 0) {
                 expect(events).toEqual(mockEvents);
             }
         });
 
-        // The service calls refreshEvents in constructor, so we expect two calls: one for me/subscribed, one for me/feed
+        // Trigger a refresh to test loading (beyond constructor)
+        service.refreshEvents();
+
         const reqSub = httpMock.expectOne(`${apiUrl}/me/subscribed`);
         reqSub.flush(mockEvents);
 
@@ -48,7 +56,7 @@ describe('EventService', () => {
     it('should toggle subscription status', () => {
         const mockEvent: FeedEvent = { id: '1', title: 'Test', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'L', image: 'I', description: 'D' };
 
-        service.toggleSubscription(mockEvent).subscribe(res => {
+        service.toggleSubscription(mockEvent).subscribe((res: FeedEvent) => {
             expect(res).toEqual(mockEvent);
         });
 

@@ -9,15 +9,15 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 describe('EventDetailsComponent', () => {
     let component: EventDetailsComponent;
     let fixture: ComponentFixture<EventDetailsComponent>;
-    let eventServiceMock: any;
-    let routerMock: any;
-    let activatedRouteMock: any;
+    let eventServiceMock: Partial<EventService>;
+    let routerMock: Partial<Router>;
+    let activatedRouteMock: Partial<ActivatedRoute>;
 
-    const mockFeedEvent = { id: 1, title: 'Feed Event', organizerId: 'Org 1', date: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false };
+    const mockFeedEvent = { id: '1', title: 'Feed Event', organizerId: 'Org 1', startDate: new Date(), endDate: new Date(), location: 'Loc 1', image: '', description: 'Desc 1', subscribed: false };
 
     beforeEach(async () => {
         const MockIntersectionObserver = class {
-            constructor(public callback: any) { }
+            constructor(public callback: IntersectionObserverCallback) { }
             observe = vi.fn();
             unobserve = vi.fn();
             disconnect = vi.fn();
@@ -29,7 +29,8 @@ describe('EventDetailsComponent', () => {
         vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
         eventServiceMock = {
-            events$: of([mockFeedEvent])
+            feedEvents$: of([mockFeedEvent]),
+            subscribedEvents$: of([])
         };
         routerMock = {
             navigate: vi.fn(),
@@ -39,21 +40,21 @@ describe('EventDetailsComponent', () => {
         activatedRouteMock = {
             snapshot: {
                 paramMap: {
-                    get: (key: string) => key === 'id' ? '1' : 'feed'
+                    get: (key: string) => key === 'id' ? '1' : 'feed',
+                    has: (key: string) => key === 'id' || key === 'type',
+                    getAll: (key: string) => key === 'id' ? ['1'] : ['feed'],
+                    keys: ['id', 'type']
                 }
             }
-        };
+        } as unknown as Partial<ActivatedRoute>;
 
         await TestBed.configureTestingModule({
             imports: [EventDetailsComponent, NoopAnimationsModule],
-        }).overrideComponent(EventDetailsComponent, {
-            set: {
-                providers: [
-                    { provide: EventService, useValue: eventServiceMock },
-                    { provide: Router, useValue: routerMock },
-                    { provide: ActivatedRoute, useValue: activatedRouteMock }
-                ]
-            }
+            providers: [
+                { provide: EventService, useValue: eventServiceMock },
+                { provide: Router, useValue: routerMock },
+                { provide: ActivatedRoute, useValue: activatedRouteMock }
+            ]
         }).compileComponents();
 
         fixture = TestBed.createComponent(EventDetailsComponent);
@@ -72,9 +73,11 @@ describe('EventDetailsComponent', () => {
     });
 
     it('should load calendar event from history state', () => {
-        const mockCalendarEvent = { id: 2, title: 'Cal Event', time: '10:00', date: new Date(), description: '...' };
+        const mockCalendarEvent = { id: '2', title: 'Cal Event', time: '10:00', startDate: new Date(), description: '...' };
         vi.spyOn(window.history, 'state', 'get').mockReturnValue({ event: mockCalendarEvent });
-        activatedRouteMock.snapshot.paramMap.get = (key: string) => key === 'id' ? '2' : 'calendar';
+        if (activatedRouteMock.snapshot?.paramMap) {
+            (activatedRouteMock.snapshot.paramMap as any).get = (key: string) => key === 'id' ? '2' : 'calendar';
+        }
 
         fixture.detectChanges();
 

@@ -1,20 +1,18 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpRequest, HttpErrorResponse, HttpHandler } from '@angular/common/http';
+import { HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { SessionInterceptor } from './session.interceptor';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../auth/auth.service';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('SessionInterceptor', () => {
     let interceptor: SessionInterceptor;
-    let keycloakMock: any;
+    let authServiceMock: any;
     let nextMock: any;
 
     beforeEach(() => {
-        keycloakMock = {
-            isLoggedIn: vi.fn(),
-            login: vi.fn(),
-            updateToken: vi.fn()
+        authServiceMock = {
+            login: vi.fn()
         };
         nextMock = {
             handle: vi.fn()
@@ -23,7 +21,7 @@ describe('SessionInterceptor', () => {
         TestBed.configureTestingModule({
             providers: [
                 SessionInterceptor,
-                { provide: KeycloakService, useValue: keycloakMock }
+                { provide: AuthService, useValue: authServiceMock }
             ]
         });
 
@@ -43,85 +41,53 @@ describe('SessionInterceptor', () => {
         expect(nextMock.handle).toHaveBeenCalledWith(req);
     });
 
-    it('should attempt recovery on 401 and refresh token if logged in', async () => {
+    it('should attempt recovery on 401 and redirect to login', () => {
         const req = new HttpRequest('GET', '/test');
         const errorResponse = new HttpErrorResponse({ status: 401 });
 
-        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
-        keycloakMock.isLoggedIn.mockReturnValue(true);
-        keycloakMock.updateToken.mockResolvedValue(true);
-        nextMock.handle.mockReturnValueOnce(of({ success: true }));
-
-        interceptor.intercept(req, nextMock).subscribe(res => {
-            expect(keycloakMock.updateToken).toHaveBeenCalled();
-            expect(nextMock.handle).toHaveBeenCalledTimes(2);
-        });
-    });
-
-    it('should redirect to login on 401 if user is NOT logged in', async () => {
-        const req = new HttpRequest('GET', '/test');
-        const errorResponse = new HttpErrorResponse({ status: 401 });
-
-        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
-        keycloakMock.isLoggedIn.mockReturnValue(false);
+        nextMock.handle.mockReturnValue(throwError(() => errorResponse));
 
         interceptor.intercept(req, nextMock).subscribe({
-            error: () => {
-                expect(keycloakMock.login).toHaveBeenCalled();
+            error: (err) => {
+                expect(err.status).toBe(401);
+                expect(authServiceMock.login).toHaveBeenCalled();
             }
         });
     });
 
-    it('should handle 400 invalid_grant and redirect to login', async () => {
+    it('should handle 400 invalid_grant and redirect to login', () => {
         const req = new HttpRequest('GET', '/test');
         const errorResponse = new HttpErrorResponse({
             status: 400,
             error: { error: 'invalid_grant' }
         });
 
-        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
-        keycloakMock.isLoggedIn.mockReturnValue(true); // Should still redirect because of invalid_grant
+        nextMock.handle.mockReturnValue(throwError(() => errorResponse));
 
         interceptor.intercept(req, nextMock).subscribe({
             error: () => {
-                expect(keycloakMock.login).toHaveBeenCalled();
+                expect(authServiceMock.login).toHaveBeenCalled();
             }
         });
     });
 
-    it('should handle 400 with Token is not active description', async () => {
+    it('should handle 400 with Token is not active description', () => {
         const req = new HttpRequest('GET', '/test');
         const errorResponse = new HttpErrorResponse({
             status: 400,
             error: { error_description: 'Token is not active' }
         });
 
-        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
-        keycloakMock.isLoggedIn.mockReturnValue(false);
+        nextMock.handle.mockReturnValue(throwError(() => errorResponse));
 
         interceptor.intercept(req, nextMock).subscribe({
             error: () => {
-                expect(keycloakMock.login).toHaveBeenCalled();
+                expect(authServiceMock.login).toHaveBeenCalled();
             }
         });
     });
 
-    it('should handle token refresh failure and redirect to login', async () => {
-        const req = new HttpRequest('GET', '/test');
-        const errorResponse = new HttpErrorResponse({ status: 401 });
-
-        nextMock.handle.mockReturnValueOnce(throwError(() => errorResponse));
-        keycloakMock.isLoggedIn.mockReturnValue(true);
-        keycloakMock.updateToken.mockRejectedValue(new Error('Refresh failed'));
-
-        interceptor.intercept(req, nextMock).subscribe({
-            error: () => {
-                expect(keycloakMock.login).toHaveBeenCalled();
-            }
-        });
-    });
-
-    it('should rethrow non-auth errors', async () => {
+    it('should rethrow non-auth errors', () => {
         const req = new HttpRequest('GET', '/test');
         const errorResponse = new HttpErrorResponse({ status: 500 });
         nextMock.handle.mockReturnValue(throwError(() => errorResponse));
@@ -129,7 +95,7 @@ describe('SessionInterceptor', () => {
         interceptor.intercept(req, nextMock).subscribe({
             error: (err) => {
                 expect(err.status).toBe(500);
-                expect(keycloakMock.login).not.toHaveBeenCalled();
+                expect(authServiceMock.login).not.toHaveBeenCalled();
             }
         });
     });

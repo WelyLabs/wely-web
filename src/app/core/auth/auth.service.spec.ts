@@ -1,14 +1,19 @@
+import 'zone.js';
+import 'zone.js/testing';
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from './auth.service';
 import { KeycloakService } from 'keycloak-angular';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { of, throwError } from 'rxjs';
 
 describe('AuthService', () => {
     let service: AuthService;
-    let keycloakMock: any;
+    let keycloakMock: Partial<KeycloakService>;
 
     beforeEach(() => {
+        TestBed.resetTestingModule();
+        vi.useFakeTimers();
+        vi.clearAllMocks();
+
         keycloakMock = {
             getKeycloakInstance: vi.fn().mockReturnValue({
                 tokenParsed: { exp: (new Date().getTime() / 1000) + 1000 },
@@ -18,7 +23,7 @@ describe('AuthService', () => {
             isLoggedIn: vi.fn().mockReturnValue(true),
             login: vi.fn().mockReturnValue(Promise.resolve()),
             logout: vi.fn().mockReturnValue(Promise.resolve())
-        };
+        } as any; // Cast to any for the factory setup, but variable is Partial<KeycloakService>
 
         TestBed.configureTestingModule({
             providers: [
@@ -27,11 +32,12 @@ describe('AuthService', () => {
             ]
         });
         service = TestBed.inject(AuthService);
-        vi.useFakeTimers();
     });
 
     afterEach(() => {
-        service.stopTokenRefresh();
+        if (service) {
+            service.stopTokenRefresh();
+        }
         vi.restoreAllMocks();
         vi.useRealTimers();
     });
@@ -62,21 +68,20 @@ describe('AuthService', () => {
 
     it('should schedule token refresh based on exp', () => {
         const now = new Date().getTime();
-        const exp = (now + 200000) / 1000; // 200s in the future
-        
-        keycloakMock.getKeycloakInstance.mockReturnValue({
+        const exp = (now + 200000) / 1000;
+
+        (keycloakMock.getKeycloakInstance as any).mockReturnValue({
             tokenParsed: { exp: exp }
         });
 
         const consoleSpy = vi.spyOn(console, 'log');
         service.scheduleTokenRefresh();
 
-        // 200s - 70s = 130s delay
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Next refresh scheduled in 130s'));
     });
 
     it('should fallback to 60s check if no exp found', () => {
-        keycloakMock.getKeycloakInstance.mockReturnValue({
+        (keycloakMock.getKeycloakInstance as any).mockReturnValue({
             tokenParsed: {}
         });
 
@@ -87,41 +92,42 @@ describe('AuthService', () => {
     });
 
     it('should execute token update and reschedule', async () => {
+        (keycloakMock.getKeycloakInstance as any).mockClear();
+
         service.scheduleTokenRefresh();
-        
-        // Trigger the timer
-        vi.runAllTimers();
+        expect(keycloakMock.getKeycloakInstance).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersToNextTimerAsync();
 
         expect(keycloakMock.updateToken).toHaveBeenCalledWith(70);
-        // It should reconstruct the timer après le next habituel
-        // Mais comme c'est asynchrone dans le subscribe (from promise), 
-        // on doit attendre la résolution de la promise
-        await vi.runAllTimersAsync();
-        
-        // On vérifie qu'il a replanifié (on regarde si getKeycloakInstance a été rappelé)
-        expect(keycloakMock.getKeycloakInstance).toHaveBeenCalled();
+        expect(keycloakMock.getKeycloakInstance).toHaveBeenCalledTimes(2);
     });
 
     it('should retry token update later on failure', async () => {
-        keycloakMock.updateToken.mockReturnValue(Promise.reject('error'));
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        // 1. Setup failure mock
+        (keycloakMock.updateToken as any).mockReturnValue(Promise.reject('error'));
+        (keycloakMock.getKeycloakInstance as any).mockClear();
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
+        // 2. Start refresh cycle
         service.scheduleTokenRefresh();
-        vi.runAllTimers();
 
-        await vi.runAllTimersAsync();
+        // 3. Move to first update attempt (Timer 1)
+        await vi.runOnlyPendingTimersAsync();
+        expect(keycloakMock.updateToken).toHaveBeenCalledTimes(1);
         expect(consoleSpy).toHaveBeenCalled();
-        
-        // Should have scheduled a retry in 30s
-        // run 30s more
-        vi.advanceTimersByTime(30000);
+
+        // 4. Move to retry attempt (Timer 2, 30s later)
+        // We use runOnlyPendingTimersAsync to be exact
+        await vi.runOnlyPendingTimersAsync();
+
         expect(keycloakMock.updateToken).toHaveBeenCalledTimes(2);
     });
 
     it('should stop token refresh', () => {
         service.scheduleTokenRefresh();
         service.stopTokenRefresh();
-        
+
         vi.runAllTimers();
         expect(keycloakMock.updateToken).not.toHaveBeenCalled();
     });

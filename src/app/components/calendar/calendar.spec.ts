@@ -1,6 +1,8 @@
+import 'zone.js';
+import 'zone.js/testing';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { CalendarComponent } from './calendar';
-import { EventService } from '../../services/event.service';
+import { CalendarComponent, CalendarEvent } from './calendar';
+import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -9,14 +11,15 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 describe('CalendarComponent', () => {
     let component: CalendarComponent;
     let fixture: ComponentFixture<CalendarComponent>;
-    let eventServiceMock: any;
-    let routerMock: any;
+    let eventServiceMock: Partial<EventService>;
+    let routerMock: Partial<Router>;
 
-    const mockEvents = [
+    const mockEvents: FeedEvent[] = [
         { id: '101', title: 'External Event', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'Loc', image: 'img', description: '...' }
     ];
 
     beforeEach(async () => {
+        TestBed.resetTestingModule();
         eventServiceMock = {
             subscribedEvents$: of(mockEvents),
             createEvent: vi.fn().mockReturnValue(of(mockEvents[0]))
@@ -76,20 +79,21 @@ describe('CalendarComponent', () => {
 
     it('should filter out unsubscribed events', () => {
         // FeedEvent mapping happens in component via conversion
-        const mixedEvents = [
-            { id: '1', title: 'Subbed', startDate: new Date(), endDate: new Date() }
+        const mixedEvents: FeedEvent[] = [
+            { id: '1', title: 'Subbed', startDate: new Date(), endDate: new Date(), organizerId: 'o1', location: '', image: '', description: '' }
         ];
-        eventServiceMock.subscribedEvents$ = of(mixedEvents);
+        (eventServiceMock as any).subscribedEvents$ = of(mixedEvents);
         component.ngOnInit();
         expect(component.events.some(e => e.title === 'Subbed')).toBe(true);
     });
 
-    it('should toggle views and scroll', fakeAsync(() => {
+    it('should toggle views and scroll', async () => {
+        vi.useFakeTimers();
         const scrollSpy = vi.spyOn(component as any, 'scrollToCurrentTime');
 
         component.toggleView('week');
         expect(component.viewMode).toBe('week');
-        tick(200);
+        await vi.advanceTimersByTimeAsync(200);
         expect(scrollSpy).toHaveBeenCalled();
 
         component.toggleView('day');
@@ -99,7 +103,8 @@ describe('CalendarComponent', () => {
         component.toggleView('month');
         expect(component.viewMode).toBe('month');
         expect(component.selectedDate).toBeNull();
-    }));
+        vi.useRealTimers();
+    });
 
     it('should calculate event styles correctly', () => {
         const start = new Date();
@@ -108,10 +113,10 @@ describe('CalendarComponent', () => {
         end.setHours(12, 0, 0, 0);
         const event = { id: 1, title: 'Test', startDate: start, endDate: end, time: '' };
 
-        expect(component.getEventHeight(event as any)).toBe(200); // 2 hours = 200%
+        expect(component.getEventHeight(event as unknown as CalendarEvent)).toBe(200); // 2 hours = 200%
 
         start.setMinutes(30);
-        expect(component.getEventMinuteOffset(event as any)).toBe(50); // 30 min = 50%
+        expect(component.getEventMinuteOffset(event as unknown as CalendarEvent)).toBe(50); // 30 min = 50%
     });
 
     it('should get week number', () => {
@@ -120,14 +125,14 @@ describe('CalendarComponent', () => {
     });
 
     it('should submit event', () => {
-        const data = { title: 'New', startDate: new Date(), subscribeByDefault: false, location: '' };
-        component.submitEvent(data as any);
+        const data: EventCreateRequest = { title: 'New', startDate: new Date(), subscribeByDefault: false, location: '' };
+        component.submitEvent(data);
         expect(eventServiceMock.createEvent).toHaveBeenCalledWith(data);
     });
 
     it('should select a date without events', () => {
         const aDate = new Date(2020, 0, 1);
-        const day: any = { date: aDate, isToday: false };
+        const day = { date: aDate, isToday: false, isCurrentMonth: true, hasEvents: false };
         component.selectDate(day);
         expect(component.selectedDate).toEqual(aDate);
         expect(component.selectedEvents.length).toBe(0);
