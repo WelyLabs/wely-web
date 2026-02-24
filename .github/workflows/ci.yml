@@ -72,6 +72,7 @@ jobs:
 
   release:
     name: Release
+    # Standardized release logic across all services
     needs: [test, analyze]
     if: |
       always() &&
