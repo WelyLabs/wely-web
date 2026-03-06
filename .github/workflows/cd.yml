@@ -6,10 +6,19 @@ on:
         description: 'Docker image tag to deploy'
         required: true
         type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: string
+        default: 'dev'
   workflow_call:
     inputs:
       image_tag:
         description: 'Docker image tag to deploy'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
         required: true
         type: string
 
@@ -27,10 +36,8 @@ jobs:
 
       - name: Update Image Tag
         run: |
-          cd infra
-          # Replaces the image tag for wely-web in the manifest
-          # This regex looks for wely-web image and replaces its tag
-          sed -i "s|image: ghcr.io/welylabs/wely-web:.*|image: ghcr.io/welylabs/wely-web:${{ inputs.image_tag }}|g" base/wely-web.yaml
+          cd infra/overlays/${{ inputs.environment }}
+          kustomize edit set image ghcr.io/welylabs/wely-web=ghcr.io/welylabs/wely-web:${{ inputs.image_tag }}
 
       - name: Commit and Push
         run: |
@@ -38,8 +45,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           if [ -n "$(git status --porcelain)" ]; then
-            git add base/wely-web.yaml
-            git commit -m "deploy: update wely-web to ${{ inputs.image_tag }}"
+            git add overlays/${{ inputs.environment }}/kustomization.yaml
+            git commit -m "deploy(${{ inputs.environment }}): update wely-web to ${{ inputs.image_tag }}"
             git push
           else
             echo "No changes to commit"
