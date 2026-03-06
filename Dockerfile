@@ -22,4 +22,5 @@ COPY --from=build /app/dist/calendar-app/browser /usr/share/nginx/html
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Use a script to set DNS_RESOLVER from /etc/resolv.conf before starting Nginx
+CMD ["/bin/sh", "-c", "export DNS_RESOLVER=$(grep nameserver /etc/resolv.conf | awk '{print $2}' | head -n 1); echo \"Discovered DNS resolver: $DNS_RESOLVER\"; /docker-entrypoint.sh nginx -g 'daemon off;'"]
