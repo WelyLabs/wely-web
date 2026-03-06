@@ -14,8 +14,8 @@ RUN npm run build -- --configuration production
 # Stage 2: Serve
 FROM nginx:stable-alpine
 
-# Copy Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Nginx configuration as a template for envsubst
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copy build output to Nginx's serve directory
 COPY --from=build /app/dist/calendar-app/browser /usr/share/nginx/html
