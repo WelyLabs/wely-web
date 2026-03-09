@@ -8,7 +8,9 @@ export const KEYCLOAK_CONFIG = {
     /**
      * URL du serveur Keycloak
      */
-    url: environment.keycloakUrl,
+    url: (window as any)['KEYCLOAK_URL'] && !(window as any)['KEYCLOAK_URL'].startsWith('$') 
+        ? (window as any)['KEYCLOAK_URL'] 
+        : environment.keycloakUrl,
 
     /**
      * Nom du realm Keycloak

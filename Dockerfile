@@ -22,5 +22,5 @@ COPY --from=build /app/dist/calendar-app/browser /usr/share/nginx/html
 
 EXPOSE 80
 
-# Use a script to set DNS_RESOLVER from /etc/resolv.conf before starting Nginx
-CMD ["/bin/sh", "-c", "export DNS_RESOLVER=$(grep nameserver /etc/resolv.conf | awk '{print $2}' | head -n 1); echo \"Discovered DNS resolver: $DNS_RESOLVER\"; /docker-entrypoint.sh nginx -g 'daemon off;'"]
+# Use a script to set DNS_RESOLVER and replace KEYCLOAK_URL in index.html before starting Nginx
+CMD ["/bin/sh", "-c", "export DNS_RESOLVER=$(grep nameserver /etc/resolv.conf | awk '{print $2}' | head -n 1); echo \"Discovered DNS resolver: $DNS_RESOLVER\"; sed -i \"s|\\\${KEYCLOAK_URL}|$KEYCLOAK_URL|g\" /usr/share/nginx/html/index.html; /docker-entrypoint.sh nginx -g 'daemon off;'"]
