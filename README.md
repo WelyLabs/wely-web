@@ -1,4 +1,4 @@
-# calendar-app
+# wely-web
 
 Frontend de la plateforme [Wely Calendar](https://github.com/WelyLabs/wely-platform) — application Angular 21 consommant l'API REST et le flux RSocket temps réel.
 
@@ -93,7 +93,7 @@ Chaque rafraîchissement replanifie le suivant. L'utilisateur ne subit ni coupur
 
 ### Le claim `businessId`
 
-Le token émis par Keycloak porte un claim `businessId` injecté par un [mapper de protocole custom](https://github.com/banettetheo/calendar-app-identity-service-config). Le frontend n'a donc jamais à traduire un UUID Keycloak en identifiant métier : les services lisent l'identité directement dans le token.
+Le token émis par Keycloak porte un claim `businessId` injecté par un [mapper de protocole custom](https://github.com/WelyLabs/wely-identity). Le frontend n'a donc jamais à traduire un UUID Keycloak en identifiant métier : les services lisent l'identité directement dans le token.
 
 ---
 
