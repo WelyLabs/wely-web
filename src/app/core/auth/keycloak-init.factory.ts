@@ -4,26 +4,28 @@ import { UserService } from '../../services/user.service';
 import { AuthService } from './auth.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { LoggerService } from '../logging/logger.service';
 
-/**
- * Détecte la langue du navigateur et retourne le code de langue approprié pour Keycloak
- * @returns Code de langue (ex: 'fr', 'en', 'es', etc.)
- */
+const SCOPE = 'KeycloakInit';
+
+/** Locales the Keycloak theme provides; anything else falls back to French. */
+const SUPPORTED_LOCALES = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'ja', 'zh', 'ru'] as const;
+const DEFAULT_LOCALE = 'fr';
+
+/** Maps the browser language onto a locale the login theme can render. */
 function getBrowserLocale(): string {
-    // Récupère la langue du navigateur
-    const browserLang = navigator.language || (navigator as any).userLanguage;
+    const language = navigator.language ?? DEFAULT_LOCALE;
+    const code = language.split('-')[0].toLowerCase();
 
-    // Extrait le code de langue (ex: 'fr-FR' -> 'fr', 'en-US' -> 'en')
-    const langCode = browserLang.split('-')[0].toLowerCase();
-
-    // Liste des langues supportées par Keycloak (à adapter selon votre configuration)
-    const supportedLanguages = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'ja', 'zh', 'ru'];
-
-    // Retourne la langue si elle est supportée, sinon 'fr' par défaut
-    return supportedLanguages.includes(langCode) ? langCode : 'fr';
+    return (SUPPORTED_LOCALES as readonly string[]).includes(code) ? code : DEFAULT_LOCALE;
 }
 
-export function initializeKeycloak(keycloak: KeycloakService, userService: UserService, authService: AuthService) {
+export function initializeKeycloak(
+    keycloak: KeycloakService,
+    userService: UserService,
+    authService: AuthService,
+    logger: LoggerService
+) {
     return async () => {
         // Initialize Keycloak
         const authenticated = await keycloak.init({
@@ -33,8 +35,8 @@ export function initializeKeycloak(keycloak: KeycloakService, userService: UserS
                 clientId: KEYCLOAK_CONFIG.clientId
             },
             initOptions: {
-                onLoad: (environment as any).keycloakSilentCheckSso !== false ? 'check-sso' : undefined,
-                silentCheckSsoRedirectUri: (environment as any).keycloakSilentCheckSso !== false
+                onLoad: environment.keycloakSilentCheckSso ? 'check-sso' : undefined,
+                silentCheckSsoRedirectUri: environment.keycloakSilentCheckSso
                     ? window.location.origin + '/assets/silent-check-sso.html'
                     : undefined,
                 checkLoginIframe: false,
@@ -47,13 +49,13 @@ export function initializeKeycloak(keycloak: KeycloakService, userService: UserS
 
         // If user is authenticated, preload user data and start refresh timer
         if (authenticated) {
-            console.log('✅ User authenticated, preloading user data...');
+            logger.debug(SCOPE, 'user authenticated, preloading profile');
             authService.scheduleTokenRefresh();
             try {
                 await firstValueFrom(userService.loadAndSetCurrentUser());
-                console.log('✅ User data preloaded successfully');
+                logger.debug(SCOPE, 'profile preloaded');
             } catch (error) {
-                console.error('❌ Failed to preload user data:', error);
+                logger.error(SCOPE, 'failed to preload profile', error);
             }
         }
     };

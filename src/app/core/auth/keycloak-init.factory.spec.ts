@@ -1,4 +1,5 @@
 import { KeycloakService } from 'keycloak-angular';
+import { LoggerService } from '../logging/logger.service';
 import { UserService } from '../../services/user.service';
 import { AuthService } from './auth.service';
 import { initializeKeycloak } from './keycloak-init.factory';
@@ -6,6 +7,7 @@ import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('initializeKeycloak', () => {
+    const loggerMock = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as LoggerService;
     let keycloakMock: any;
     let userServiceMock: any;
     let authServiceMock: any;
@@ -26,7 +28,7 @@ describe('initializeKeycloak', () => {
         keycloakMock.init.mockResolvedValue(true);
         userServiceMock.loadAndSetCurrentUser.mockReturnValue(of({}));
 
-        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock);
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock, loggerMock);
         await initFn();
 
         expect(keycloakMock.init).toHaveBeenCalled();
@@ -37,7 +39,7 @@ describe('initializeKeycloak', () => {
     it('should initialize keycloak and NOT preload data if NOT authenticated', async () => {
         keycloakMock.init.mockResolvedValue(false);
 
-        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock);
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock, loggerMock);
         await initFn();
 
         expect(keycloakMock.init).toHaveBeenCalled();
@@ -49,7 +51,7 @@ describe('initializeKeycloak', () => {
         keycloakMock.init.mockResolvedValue(true);
         userServiceMock.loadAndSetCurrentUser.mockReturnValue(throwError(() => new Error('API Error')));
 
-        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock);
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock, loggerMock);
         await initFn();
 
         expect(keycloakMock.init).toHaveBeenCalled();

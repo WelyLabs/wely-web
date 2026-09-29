@@ -11,6 +11,7 @@ import { UserService } from './services/user.service';
 import { routes } from './app.routes';
 import { initializeKeycloak } from './core/auth/keycloak-init.factory';
 import { AuthService } from './core/auth/auth.service';
+import { LoggerService } from './core/logging/logger.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,7 +26,7 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initializeKeycloak,
       multi: true,
-      deps: [KeycloakService, UserService, AuthService]
+      deps: [KeycloakService, UserService, AuthService, LoggerService]
     },
     {
       provide: HTTP_INTERCEPTORS,
