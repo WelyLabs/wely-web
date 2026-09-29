@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +25,7 @@ import { FormsModule } from '@angular/forms';
     styleUrls: ['./avatar-upload-dialog.component.scss']
 })
 export class AvatarUploadDialogComponent {
+    private readonly logger = inject(LoggerService);
     dialogRef = inject<MatDialogRef<AvatarUploadDialogComponent>>(MatDialogRef);
     private userService = inject(UserService);
 
@@ -71,7 +73,7 @@ export class AvatarUploadDialogComponent {
                     this.dialogRef.close(this.croppedImage);
                 },
                 error: (err) => {
-                    console.error('Upload failed', err);
+                    this.logger.error('AvatarUploadDialogComponent', 'Upload failed', err);
                     this.isLoading = false;
                 }
             });

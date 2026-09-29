@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { UserWithStatusDTO } from '../../models/user.model';
 import { UserSearchComponent } from './user-search';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
@@ -9,6 +10,12 @@ import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BreakpointObserver } from '@angular/cdk/layout';
+
+// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
+// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
+// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
 
 describe('UserSearchComponent', () => {
     let component: UserSearchComponent;
@@ -25,6 +32,7 @@ describe('UserSearchComponent', () => {
         routeDataSubject = new Subject();
         socialServiceMock = {
             searchUsers: vi.fn().mockReturnValue(of([])),
+            sendFriendRequest: vi.fn().mockReturnValue(of({})),
             acceptFriend: vi.fn().mockReturnValue(of({})),
             rejectFriend: vi.fn().mockReturnValue(of({})),
             removeFriend: vi.fn().mockReturnValue(of({}))
@@ -189,10 +197,13 @@ describe('UserSearchComponent', () => {
         expect(consoleSpy).toHaveBeenCalled();
     });
 
-    it('should log on onAddFriend', () => {
-        const consoleSpy = vi.spyOn(console, 'log');
-        component.onAddFriend({ userId: 1 } as any);
-        expect(consoleSpy).toHaveBeenCalledWith('Add friend:', expect.anything());
+    it('onAddFriend ne déclenche aucune demande d’ami', () => {
+        // L'événement (addFriend) du template arrive ici, mais rien n'est envoyé :
+        // l'ajout passe en réalité par AddFriendDialogComponent, qui demande un tag.
+        // Stub non implémenté ; ce test constate l'absence d'appel réseau.
+        component.onAddFriend({ userId: 1 } as unknown as UserWithStatusDTO);
+
+        expect(socialServiceMock.sendFriendRequest).not.toHaveBeenCalled();
     });
 
     it('should accept friend and reload', () => {

@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +25,7 @@ import { MOCK_FRIENDS } from '../../models/friends.mock';
     styleUrl: './friends-list.scss'
 })
 export class FriendsListComponent implements OnInit {
+    private readonly logger = inject(LoggerService);
     friends: BusinessUser[] = [];
     filteredFriends: BusinessUser[] = [];
     searchQuery = '';
@@ -57,7 +59,7 @@ export class FriendsListComponent implements OnInit {
     }
 
     contactFriend(friend: BusinessUser) {
-        console.log('Contacting', friend.firstName);
+        this.logger.debug('FriendsListComponent', 'Contacting', friend.firstName);
     }
 
     removeFriend(friend: BusinessUser) {

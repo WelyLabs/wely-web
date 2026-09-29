@@ -74,10 +74,14 @@ describe('AuthService', () => {
             tokenParsed: { exp: exp }
         });
 
-        const consoleSpy = vi.spyOn(console, 'log');
+        const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
         service.scheduleTokenRefresh();
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Next refresh scheduled in 130s'));
+        // Le comportement testé est le délai programmé, pas le message journalisé :
+        // 200s d'expiration moins la marge de 70s.
+        const scheduledDelay = setTimeoutSpy.mock.calls.at(-1)?.[1] as number;
+        expect(scheduledDelay).toBeGreaterThan(125_000);
+        expect(scheduledDelay).toBeLessThan(135_000);
     });
 
     it('should fallback to 60s check if no exp found', () => {

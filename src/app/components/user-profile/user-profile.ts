@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +27,7 @@ import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-uplo
     styleUrl: './user-profile.scss'
 })
 export class UserProfileComponent implements OnInit {
+    private readonly logger = inject(LoggerService);
     private userService = inject(UserService);
     private dialog = inject(MatDialog);
 
@@ -42,7 +44,7 @@ export class UserProfileComponent implements OnInit {
                 }
             },
             error: (err) => {
-                console.error('Error loading profile:', err);
+                this.logger.error('UserProfileComponent', 'Error loading profile:', err);
                 this.isLoading = false;
             }
         });
@@ -55,7 +57,7 @@ export class UserProfileComponent implements OnInit {
         this.isLoading = true;
         this.userService.loadAndSetCurrentUser().subscribe({
             error: (err) => {
-                console.error('Error loading profile:', err);
+                this.logger.error('UserProfileComponent', 'Error loading profile:', err);
                 this.isLoading = false;
             }
         });

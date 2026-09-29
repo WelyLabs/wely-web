@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { LoggerService } from '../core/logging/logger.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
@@ -9,6 +10,7 @@ import { User } from '../models/user.model';
     providedIn: 'root'
 })
 export class UserService {
+    private readonly logger = inject(LoggerService);
     private http = inject(HttpClient);
     private keycloak = inject(KeycloakService);
 
@@ -73,24 +75,24 @@ export class UserService {
         const formData = new FormData();
         formData.append('file', file);
 
-        console.log('📤 Uploading avatar file:', file.name, file.type, file.size);
+        this.logger.debug('UserService', '📤 Uploading avatar file:', file.name, file.type, file.size);
 
         // Backend returns a plain string (the URL), not a JSON object
         return this.http.post(`${this.apiUrl}/profile/picture`, formData, { responseType: 'text' }).pipe(
             tap(url => {
-                console.log('✅ Upload successful, URL received:', url);
+                this.logger.debug('UserService', '✅ Upload successful, URL received:', url);
             }),
             tap(url => {
                 // Update the current user with the new avatar URL
                 this.updateCurrentUser({ profilePicUrl: url });
-                console.log('✅ User updated with new avatar URL:', url);
+                this.logger.debug('UserService', '✅ User updated with new avatar URL:', url);
             }),
             tap({
                 error: (error) => {
-                    console.error('❌ Upload failed with error:', error);
-                    console.error('Error status:', error.status);
-                    console.error('Error message:', error.message);
-                    console.error('Error body:', error.error);
+                    this.logger.error('UserService', '❌ Upload failed with error:', error);
+                    this.logger.error('UserService', 'Error status:', error.status);
+                    this.logger.error('UserService', 'Error message:', error.message);
+                    this.logger.error('UserService', 'Error body:', error.error);
                 }
             }),
             // Transform string to object

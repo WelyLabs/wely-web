@@ -11,6 +11,12 @@ import { Conversation, Message, MessageType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
+// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
+// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
+// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
+
 describe('ChatComponent', () => {
     let component: ChatComponent;
     let fixture: ComponentFixture<ChatComponent>;

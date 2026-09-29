@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, NgZone, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
 
@@ -19,6 +20,7 @@ import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
     styleUrl: './chat.scss'
 })
 export class ChatComponent implements OnInit, OnDestroy {
+    private readonly logger = inject(LoggerService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private chatService = inject(ChatService);
@@ -84,7 +86,7 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.chatService.getConversationById(convId).subscribe({
             next: (conv) => this.handleConversationResponse(conv),
             error: (err) => {
-                console.error('Error loading conversation by ID:', err);
+                this.logger.error('ChatComponent', 'Error loading conversation by ID:', err);
                 this.error = 'Discussion introuvable';
                 this.isLoading = false;
             }
@@ -92,7 +94,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
 
     private handleConversationResponse(conv: Conversation) {
-        console.log('📦 Conversation loaded:', conv);
+        this.logger.debug('ChatComponent', '📦 Conversation loaded:', conv);
         this.conversation = conv;
 
         // If title is missing, try to derive it
@@ -106,11 +108,11 @@ export class ChatComponent implements OnInit, OnDestroy {
         // CRITICAL FIX: If friendId is missing (e.g. loaded by convId), find it in participants
         if (!this.friendId && conv.participantIds) {
             this.friendId = conv.participantIds.find(id => id !== this.currentUserId) || null;
-            console.log('🎯 Detected friendId from participants:', this.friendId);
+            this.logger.debug('ChatComponent', '🎯 Detected friendId from participants:', this.friendId);
         }
 
         this.hasMoreHistory = conv.bucketIndex > 0;
-        console.log('🚩 hasMoreHistory set to:', this.hasMoreHistory, 'Bucket:', conv.bucketIndex);
+        this.logger.debug('ChatComponent', '🚩 hasMoreHistory set to:', this.hasMoreHistory, 'Bucket:', conv.bucketIndex);
 
         if (conv.messages) {
             this.messages = conv.messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -171,7 +173,7 @@ export class ChatComponent implements OnInit, OnDestroy {
                 });
             },
             error: (err) => {
-                console.error('Error loading more messages:', err);
+                this.logger.error('ChatComponent', 'Error loading more messages:', err);
                 this.isHistoryLoading = false;
             }
         });
@@ -181,20 +183,43 @@ export class ChatComponent implements OnInit, OnDestroy {
         if (!content.trim() || !this.conversation || !this.friendId) return;
 
         this.isSending = true;
-        this.chatService.sendMessage(this.conversation.id, content, this.friendId!).subscribe({
+
+        // Le flux émet deux fois : la copie optimiste, puis la version acquittée par
+        // le serveur. La seconde remplace la première au lieu de s'ajouter à côté.
+        let optimisticId: string | undefined;
+
+        this.chatService.sendMessage(this.conversation.id, content, this.friendId).subscribe({
             next: (msg) => {
-                this.messages.push(msg);
-                this.chatMessages.push({
+                const entry: ChatMessage = {
                     id: msg.id,
                     text: msg.content,
                     time: msg.timestamp,
                     isMe: true,
-                    senderName: msg.senderName
-                });
-                this.isSending = false;
+                    senderName: msg.senderName,
+                    pending: msg.pending,
+                    failed: msg.failed
+                };
+
+                const existing = optimisticId
+                    ? this.chatMessages.findIndex(m => m.id === optimisticId)
+                    : -1;
+
+                if (existing >= 0) {
+                    this.chatMessages = [
+                        ...this.chatMessages.slice(0, existing),
+                        entry,
+                        ...this.chatMessages.slice(existing + 1)
+                    ];
+                } else {
+                    this.chatMessages = [...this.chatMessages, entry];
+                    this.messages = [...this.messages, msg];
+                }
+
+                optimisticId = msg.id;
+                this.isSending = msg.pending;
             },
             error: (err) => {
-                console.error('Error sending message:', err);
+                this.logger.error('ChatComponent', 'message delivery failed', err);
                 this.error = 'Erreur lors de l\'envoi du message';
                 this.isSending = false;
             }

@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +18,7 @@ import { UserService } from '../../services/user.service';
     styleUrl: './conversations-list.scss'
 })
 export class ConversationsListComponent implements OnInit {
+    private readonly logger = inject(LoggerService);
     private chatService = inject(ChatService);
     private userService = inject(UserService);
     private router = inject(Router);
@@ -42,7 +44,7 @@ export class ConversationsListComponent implements OnInit {
                 this.isLoading = false;
             },
             error: (err) => {
-                console.error('Error loading conversations:', err);
+                this.logger.error('ConversationsListComponent', 'Error loading conversations:', err);
                 this.error = 'Impossible de charger vos conversations';
                 this.isLoading = false;
             }

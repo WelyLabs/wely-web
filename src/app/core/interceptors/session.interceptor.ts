@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { LoggerService } from '../logging/logger.service';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
@@ -6,6 +7,7 @@ import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class SessionInterceptor implements HttpInterceptor {
+    private readonly logger = inject(LoggerService);
     private authService = inject(AuthService);
 
 
@@ -19,7 +21,7 @@ export class SessionInterceptor implements HttpInterceptor {
 
                 // Si l'erreur est 401 ou 400 avec invalid_grant (token expiré ou révoqué)
                 if (isUnauthorized || isInvalidGrant) {
-                    console.error(`[SessionInterceptor] Session issue detected (${error.status}). Redirecting to login.`);
+                    this.logger.error('SessionInterceptor', `[SessionInterceptor] Session issue detected (${error.status}). Redirecting to login.`);
                     this.authService.login();
                     return throwError(() => error);
                 }

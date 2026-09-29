@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -24,6 +25,7 @@ import { finalize } from 'rxjs';
     styleUrl: './add-friend-dialog.scss'
 })
 export class AddFriendDialogComponent {
+    private readonly logger = inject(LoggerService);
     dialogRef = inject<MatDialogRef<AddFriendDialogComponent>>(MatDialogRef);
     private socialService = inject(SocialService);
 
@@ -44,7 +46,7 @@ export class AddFriendDialogComponent {
                 this.dialogRef.close(true);
             },
             error: (err) => {
-                console.error('Error sending friend request:', err);
+                this.logger.error('AddFriendDialogComponent', 'Error sending friend request:', err);
                 if (err.status === 404) {
                     this.errorMessage = "Utilisateur non trouvé.";
                 } else if (err.status === 409) {

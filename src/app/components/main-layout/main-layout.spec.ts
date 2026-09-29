@@ -16,6 +16,12 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { RouterTestingModule } from '@angular/router/testing';
 import { ActivatedRoute } from '@angular/router';
 
+// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
+// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
+// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
+
 describe('MainLayoutComponent', () => {
     let component: MainLayoutComponent;
     let fixture: ComponentFixture<MainLayoutComponent>;

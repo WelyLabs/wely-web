@@ -1,227 +1,200 @@
 import 'zone.js';
 import 'zone.js/testing';
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { ChatService } from './chat.service';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { firstValueFrom } from 'rxjs';
+import { toArray } from 'rxjs/operators';
+import { rsocketStub } from '../../testing/rsocket-core.stub';
+import { ChatService, PendingMessage } from './chat.service';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { of, firstValueFrom, Subject } from 'rxjs';
-import { RSocketClient } from 'rsocket-core';
-import { Buffer } from 'buffer';
+import { MessageType } from '../models/chat.model';
 
-// Hoisted mocks for RSocket
-const mocks = vi.hoisted(() => {
-    return {
-        connectionStatus$: null as unknown as BehaviorSubject<any>,
-        requestStream$: null as unknown as Subject<any>,
-        lastRequestStream$: null as unknown as Subject<any>,
-        mockSocket: {
-            connectionStatus: vi.fn(),
-            requestResponse: vi.fn(),
-            requestStream: vi.fn(),
-            close: vi.fn()
-        },
-        mockClient: {
-            connect: vi.fn(),
-            close: vi.fn()
-        }
-    };
-});
-import { BehaviorSubject } from 'rxjs';
+// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
+// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
+// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+vi.mock('rsocket-core', () => import('../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../testing/rsocket-websocket-client.stub'));
 
-// Mock rsocket-core
-vi.mock('rsocket-core', () => {
-    return {
-        RSocketClient: vi.fn().mockImplementation(function () { return mocks.mockClient; }),
-        JsonSerializer: {
-            serialize: vi.fn().mockImplementation(data => Buffer.from(JSON.stringify(data))),
-            deserialize: vi.fn().mockImplementation(data => JSON.parse(data.toString()))
-        },
-        IdentitySerializer: {},
-        BufferEncoders: {},
-        MESSAGE_RSOCKET_ROUTING: { string: 'routing' },
-        MESSAGE_RSOCKET_AUTHENTICATION: { string: 'auth' },
-        MESSAGE_RSOCKET_COMPOSITE_METADATA: { string: 'composite' },
-        encodeCompositeMetadata: vi.fn().mockReturnValue((globalThis as typeof globalThis & { Buffer: any }).Buffer?.from('metadata') || {}),
-        encodeRoute: vi.fn().mockReturnValue((globalThis as typeof globalThis & { Buffer: any }).Buffer?.from('route') || {}),
-        encodeAndAddWellKnownAuthMetadata: vi.fn()
-    };
-});
-
-// Mock rsocket-websocket-client
-vi.mock('rsocket-websocket-client', () => {
-    return {
-        default: vi.fn().mockImplementation(function () { return {}; })
-    };
-});
-
+/**
+ * These tests drive the public surface only.
+ *
+ * <p>An earlier version reached into private fields by name — `service['isReconnecting']`
+ * — so renaming an internal broke the suite without any behaviour changing. It also
+ * asserted that the constructor opened a connection, which is precisely what no longer
+ * happens: a root-provided service connecting at construction fires for signed-out
+ * visitors and leaked reconnect timers between test files.
+ *
+ * <p>The RSocket modules are replaced by the shared stub in src/testing, so this file
+ * drives {@link rsocketStub} to shape connection, delivery and stream behaviour.
+ */
 describe('ChatService', () => {
-    let service: ChatService;
-    let httpMock: HttpTestingController;
-    let userServiceMock: any;
-    const apiUrl = `${environment.apiUrl}/chat-service`;
+  let service: ChatService;
+  let httpMock: HttpTestingController;
+  let userService: {
+    getAccessToken: ReturnType<typeof vi.fn>;
+    getCurrentUserValue: ReturnType<typeof vi.fn>;
+  };
+  const apiUrl = `${environment.apiUrl}/chat-service`;
 
-    beforeEach(() => {
-        vi.useFakeTimers();
-        vi.clearAllMocks();
+  beforeEach(() => {
+    rsocketStub.reset();
 
-        // 1. Setup global mocks before TestBed
-        mocks.connectionStatus$ = new BehaviorSubject({ kind: 'CONNECTED' });
-        mocks.requestStream$ = new Subject();
+    userService = {
+      getAccessToken: vi.fn().mockReturnValue('mock-token'),
+      getCurrentUserValue: vi.fn().mockReturnValue({ id: 'user1', userName: 'theo' }),
+    };
 
-        mocks.mockSocket.connectionStatus.mockReturnValue(mocks.connectionStatus$.asObservable());
-        mocks.mockSocket.requestResponse.mockReturnValue({
-            subscribe: (callbacks: any) => {
-                const sub = of({ data: {} }).subscribe({
-                    next: (val: unknown) => callbacks.onNext && callbacks.onNext(val),
-                    complete: () => callbacks.onComplete && callbacks.onComplete()
-                });
-                return { unsubscribe: () => sub.unsubscribe() };
-            }
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        ChatService,
+        { provide: UserService, useValue: userService },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    });
+
+    service = TestBed.inject(ChatService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    service.ngOnDestroy();
+    httpMock.verify();
+  });
+
+  // --- connexion paresseuse ----------------------------------------------
+
+  it('ne se connecte pas à la construction', () => {
+    expect(rsocketStub.connectAttempts).toBe(0);
+  });
+
+  it('se connecte au premier usage, une seule fois', () => {
+    service.initializeStream();
+    service.initializeStream();
+
+    expect(rsocketStub.connectAttempts).toBe(1);
+  });
+
+  // --- HTTP ---------------------------------------------------------------
+
+  it('liste les conversations de l’utilisateur', async () => {
+    const pending = firstValueFrom(service.getAllConversations());
+
+    const request = httpMock.expectOne(`${apiUrl}/conversations/all`);
+    expect(request.request.method).toBe('GET');
+    request.flush([]);
+
+    await expect(pending).resolves.toEqual([]);
+  });
+
+  it('récupère ou crée une conversation à partir de l’ami visé', async () => {
+    const pending = firstValueFrom(service.getConversation('friend-1'));
+
+    const request = httpMock.expectOne((r) => r.url === `${apiUrl}/conversations`);
+    expect(request.request.params.get('friendId')).toBe('friend-1');
+    request.flush({ id: 'conv-1' });
+
+    await pending;
+  });
+
+  it('pagine l’historique par index de bucket', async () => {
+    const pending = firstValueFrom(service.getMessages('conv-1', 3));
+
+    const request = httpMock.expectOne(
+      (r) => r.url === `${apiUrl}/conversations/conv-1/loadMessages`,
+    );
+    expect(request.request.params.get('bucketIndex')).toBe('3');
+    request.flush({ conversationId: 'conv-1', bucketIndex: 3, messages: [] });
+
+    await pending;
+  });
+
+  // --- envoi ---------------------------------------------------------------
+
+  it('émet d’abord une copie optimiste, puis la version acquittée', async () => {
+    const emissions = (await firstValueFrom(
+      service.sendMessage('conv-1', 'hello', 'friend-1').pipe(toArray()),
+    )) as PendingMessage[];
+
+    expect(emissions).toHaveLength(2);
+
+    expect(emissions[0].pending).toBe(true);
+    expect(emissions[0].content).toBe('hello');
+    expect(emissions[0].senderId).toBe('user1');
+    expect(emissions[0].type).toBe(MessageType.TEXT);
+
+    // L'identifiant local est remplacé par celui du serveur à l'acquittement.
+    expect(emissions[1].pending).toBe(false);
+    expect(emissions[1].id).toBe('server-id-1');
+  });
+
+  it('signale un échec de livraison au lieu de le passer sous silence', async () => {
+    rsocketStub.responseBehaviour = 'failure';
+    const seen: PendingMessage[] = [];
+
+    await expect(
+      new Promise<void>((resolve, reject) => {
+        service.sendMessage('conv-1', 'hello', 'friend-1').subscribe({
+          next: (message) => seen.push(message),
+          error: reject,
+          complete: resolve,
         });
-        mocks.mockSocket.requestStream.mockImplementation(() => {
-            const s = new Subject<any>();
-            mocks.lastRequestStream$ = s;
-            return {
-                subscribe: (callbacks: any) => {
-                    const sub = s.subscribe({
-                        next: (val: unknown) => callbacks.onNext && callbacks.onNext(val),
-                        error: (err: Error) => callbacks.onError && callbacks.onError(err),
-                        complete: () => callbacks.onComplete && callbacks.onComplete()
-                    });
-                    return { cancel: () => sub.unsubscribe() };
-                }
-            };
-        });
+      }),
+    ).rejects.toThrow('delivery refused');
 
-        mocks.mockClient.connect.mockReturnValue({
-            subscribe: (callbacks: any) => {
-                if (callbacks.onComplete) setTimeout(() => callbacks.onComplete(mocks.mockSocket), 0);
-                return { unsubscribe: () => { } };
-            }
-        });
+    // Avant, le flux était complété avant la réponse serveur : l'erreur qui suivait
+    // était ignorée par RxJS et le message restait affiché comme envoyé.
+    expect(seen.at(-1)?.failed).toBe(true);
+  });
 
-        userServiceMock = {
-            getAccessToken: vi.fn().mockReturnValue('mock-token'),
-            getCurrentUserValue: vi.fn().mockReturnValue({ id: 'user1', userName: 'test' }),
-            currentUser$: of({ id: 'user1', userName: 'test' })
-        };
+  it('refuse d’envoyer si aucun utilisateur n’est chargé', async () => {
+    userService.getCurrentUserValue.mockReturnValue(null);
 
-        // 2. Ensure TestBed is clean
-        TestBed.resetTestingModule();
+    await expect(firstValueFrom(service.sendMessage('conv-1', 'hi', 'friend-1'))).rejects.toThrow(
+      /signed out/,
+    );
+  });
 
-        TestBed.configureTestingModule({
-            imports: [HttpClientTestingModule],
-            providers: [
-                ChatService,
-                { provide: UserService, useValue: userServiceMock }
-            ]
-        });
+  // --- flux entrant -------------------------------------------------------
 
-        service = TestBed.inject(ChatService);
-        httpMock = TestBed.inject(HttpTestingController);
+  it('pousse les messages reçus sur messages$', () => {
+    const received: unknown[] = [];
+    service.messages$.subscribe((message) => received.push(message));
 
-        // Advance timers to let constructor's connect() finish
-        vi.advanceTimersByTime(10);
-    });
+    service.initializeStream();
+    rsocketStub.emit({ id: 'm-1', content: 'hi' });
 
-    afterEach(() => {
-        if (service) {
-            service.ngOnDestroy();
-        }
-        if (httpMock) {
-            try {
-                httpMock.verify();
-            } catch (e) { }
-        }
-        vi.useRealTimers();
-    });
+    expect(received).toEqual([{ id: 'm-1', content: 'hi' }]);
+  });
 
-    it('should be created', () => {
-        expect(service).toBeTruthy();
-    });
+  it('demande une quantité bornée plutôt que tout le flux', () => {
+    service.initializeStream();
 
-    it('should initialize RSocket client on creation', () => {
-        expect(RSocketClient).toHaveBeenCalled();
-        expect(mocks.mockClient.connect).toHaveBeenCalled();
-    });
+    // Integer.MAX_VALUE réclamerait tout d'un coup et abandonnerait la contre-pression
+    // que RSocket existe précisément pour fournir.
+    expect(rsocketStub.requestedDemand[0]).toBeGreaterThan(0);
+    expect(rsocketStub.requestedDemand[0]).toBeLessThan(1_000);
+  });
 
-    it('should test RSocket serializers', () => {
-        const config = vi.mocked(RSocketClient).mock.calls[0][0];
-        const data = { test: 'val' };
+  it('renouvelle la demande à mesure que les messages sont consommés', () => {
+    service.initializeStream();
+    const initial = rsocketStub.requestedDemand.length;
 
-        // Mocking the behavior of serializers to avoid Buffer issues in tests
-        const serialized = config.serializers.data.serialize(data);
-        expect(serialized).toBeDefined();
+    for (let i = 0; i < 40; i++) {
+      rsocketStub.emit({ id: `m-${i}` });
+    }
 
-        const deserialized = config.serializers.data.deserialize(serialized);
-        expect(deserialized).toEqual(data);
-    });
+    expect(rsocketStub.requestedDemand.length).toBeGreaterThan(initial);
+  });
 
-    it('should get all conversations via HTTP', () => {
-        service.getAllConversations().subscribe();
-        const req = httpMock.expectOne(`${apiUrl}/conversations/all`);
-        req.flush([]);
-    });
+  it('ferme le client à la destruction', () => {
+    service.initializeStream();
+    service.ngOnDestroy();
 
-    it('should send a message optimistically', async () => {
-        const res = await firstValueFrom(service.sendMessage('c1', 'hello', 'u2'));
-        expect(res.content).toBe('hello');
-        expect(mocks.mockSocket.requestResponse).toHaveBeenCalled();
-    });
-
-    it('should initialize stream and receive messages', async () => {
-        service.initializeStream();
-
-        const mockMsg = { id: 'm1', content: 'test' };
-        const promise = firstValueFrom(service.messages$);
-
-        mocks.lastRequestStream$.next({ data: mockMsg });
-
-        const msg = await promise;
-        expect(msg).toEqual(mockMsg);
-    });
-
-    it('should retry stream on error', async () => {
-        service.initializeStream();
-
-        const promise = firstValueFrom(service.messages$);
-
-        // First attempt fails
-        const firstStream = mocks.lastRequestStream$;
-        firstStream.error(new Error('fail'));
-
-        // Wait for retry
-        await vi.advanceTimersByTimeAsync(2500);
-
-        // Second attempt succeeds (mockImplementation created a new Subject)
-        mocks.lastRequestStream$.next({ data: { id: 'retry-msg' } });
-
-        const msg = await promise;
-        expect(msg.id).toBe('retry-msg');
-    });
-
-    it('should handle disconnection and reconnect after 5s', async () => {
-        vi.mocked(RSocketClient).mockClear();
-        service['isReconnecting'] = false;
-
-        // Trigger CLOSED status
-        mocks.connectionStatus$.next({ kind: 'CLOSED' });
-
-        expect(service['isReconnecting']).toBe(true);
-
-        // Reset status so the NEW connection doesn't immediately fail
-        mocks.connectionStatus$.next({ kind: 'CONNECTED' });
-
-        await vi.advanceTimersByTimeAsync(5500);
-
-        expect(RSocketClient).toHaveBeenCalled();
-        expect(service['isReconnecting']).toBe(false);
-    });
-
-    it('should close RSocket client on destroy', () => {
-        service.ngOnDestroy();
-        expect(mocks.mockClient.close).toHaveBeenCalled();
-    });
+    expect(rsocketStub.closeCalls).toBeGreaterThan(0);
+  });
 });

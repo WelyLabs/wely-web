@@ -1,4 +1,5 @@
 import { Component, ViewChild, OnInit, OnDestroy, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 
 import { Router, RouterModule } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
@@ -31,6 +32,7 @@ import { NavigationEnd } from '@angular/router';
   styleUrl: './main-layout.scss'
 })
 export class MainLayoutComponent implements OnInit, OnDestroy {
+    private readonly logger = inject(LoggerService);
   private breakpointObserver = inject(BreakpointObserver);
   private keycloak = inject(KeycloakService);
   private userService = inject(UserService);
@@ -75,7 +77,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
       next: (user) => {
         this.userProfile = user;
       },
-      error: (err: any) => console.error('Error loading profile in layout:', err)
+      error: (err: any) => this.logger.error('MainLayoutComponent', 'Error loading profile in layout:', err)
     });
 
     // User data is already preloaded by APP_INITIALIZER

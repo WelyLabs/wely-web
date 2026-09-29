@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,6 +36,7 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
     styleUrl: './user-search.scss'
 })
 export class UserSearchComponent implements OnInit {
+    private readonly logger = inject(LoggerService);
     private userService = inject(UserService);
     private socialService = inject(SocialService);
     private chatService = inject(ChatService);
@@ -129,7 +131,7 @@ export class UserSearchComponent implements OnInit {
                 this.isLoading = false;
             },
             error: (err) => {
-                console.error('Error loading users:', err);
+                this.logger.error('UserSearchComponent', 'Error loading users:', err);
                 this.error = 'Impossible de charger les utilisateurs';
                 this.isLoading = false;
             }
@@ -153,7 +155,7 @@ export class UserSearchComponent implements OnInit {
 
     onAddFriend(user: UserWithStatusDTO) {
         // To be implemented later
-        console.log('Add friend:', user);
+        this.logger.debug('UserSearchComponent', 'Add friend:', user);
     }
 
     onAcceptFriend(user: UserWithStatusDTO) {
@@ -163,7 +165,7 @@ export class UserSearchComponent implements OnInit {
                 this.loadUsers();
             },
             error: (err: any) => {
-                console.error('Error accepting friend request:', err);
+                this.logger.error('UserSearchComponent', 'Error accepting friend request:', err);
                 this.isLoading = false;
                 this.error = 'Impossible d\'accepter la demande';
             }
@@ -177,7 +179,7 @@ export class UserSearchComponent implements OnInit {
                 this.loadUsers();
             },
             error: (err: any) => {
-                console.error('Error declining friend request:', err);
+                this.logger.error('UserSearchComponent', 'Error declining friend request:', err);
                 this.isLoading = false;
                 this.error = 'Impossible de refuser la demande';
             }
@@ -205,7 +207,7 @@ export class UserSearchComponent implements OnInit {
                         this.loadUsers();
                     },
                     error: (err: any) => {
-                        console.error('Error removing friend:', err);
+                        this.logger.error('UserSearchComponent', 'Error removing friend:', err);
                         this.isLoading = false;
                         this.error = 'Impossible de supprimer l\'ami';
                     }
@@ -221,7 +223,7 @@ export class UserSearchComponent implements OnInit {
                 this.router.navigate(['/chat', conv.id]);
             },
             error: (err: any) => {
-                console.error('Error getting conversation:', err);
+                this.logger.error('UserSearchComponent', 'Error getting conversation:', err);
                 this.isLoading = false;
                 this.error = 'Impossible d\'ouvrir la discussion';
             }

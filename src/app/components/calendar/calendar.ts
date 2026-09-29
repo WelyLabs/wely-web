@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ElementRef, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +35,7 @@ import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-p
   styleUrl: './calendar.scss',
 })
 export class CalendarComponent implements OnInit, OnDestroy {
+    private readonly logger = inject(LoggerService);
   private eventService = inject(EventService);
   private router = inject(Router);
   private el = inject(ElementRef);
@@ -782,7 +784,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         this.selectionEndHour = null;
         this.generateCalendar();
       },
-      error: (err) => console.error('Error creating event:', err)
+      error: (err) => this.logger.error('CalendarComponent', 'Error creating event:', err)
     });
   }
 

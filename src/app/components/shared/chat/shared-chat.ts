@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, AfterViewChecked, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, NgZone, inject } from '@angular/core';
+import { LoggerService } from '../../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +14,10 @@ export interface ChatMessage {
     isMe: boolean;
     senderName?: string;
     animationDelay?: string;
+    /** Envoyé, pas encore acquitté par le serveur. */
+    pending?: boolean;
+    /** Le serveur a refusé ou la connexion a échoué. */
+    failed?: boolean;
 }
 
 @Component({
@@ -23,6 +28,7 @@ export interface ChatMessage {
     styleUrl: './shared-chat.scss'
 })
 export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterViewInit, OnDestroy {
+    private readonly logger = inject(LoggerService);
     private ngZone = inject(NgZone);
 
     @Input() messages: ChatMessage[] = [];
@@ -61,7 +67,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
         this.observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && this.allowTrigger && this.hasMore && !this.historyLoading) {
-                    console.log('🚀 [SharedChat] Sentinel visible - Triggering LOAD MORE');
+                    this.logger.debug('SharedChatComponent', '🚀 [SharedChat] Sentinel visible - Triggering LOAD MORE');
                     this.onLoadMore.emit();
                     this.allowTrigger = false; // Lock immediately
                 }
@@ -82,7 +88,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
             // Wait a bit after loading finishes before re-arming to prevent rapid-fire
             setTimeout(() => {
                 this.allowTrigger = true;
-                console.log('✅ [SharedChat] History load cool-down finished - Unlock trigger');
+                this.logger.debug('SharedChatComponent', '✅ [SharedChat] History load cool-down finished - Unlock trigger');
             }, 600);
         }
 
@@ -134,7 +140,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
             // Force layout/repaint
             void element.offsetHeight;
 
-            console.log('⚓ [SharedChat] Scroll adjustment:', {
+            this.logger.debug('SharedChatComponent', '⚓ [SharedChat] Scroll adjustment:', {
                 target: targetScrollTop,
                 actual: element.scrollTop,
                 heightDiff

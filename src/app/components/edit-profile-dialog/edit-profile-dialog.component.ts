@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { LoggerService } from '../../core/logging/logger.service';
 
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +25,7 @@ import { User } from '../../models/user.model';
     styleUrl: './edit-profile-dialog.component.scss'
 })
 export class EditProfileDialogComponent {
+    private readonly logger = inject(LoggerService);
     private fb = inject(FormBuilder);
     private userService = inject(UserService);
     private dialogRef = inject<MatDialogRef<EditProfileDialogComponent>>(MatDialogRef);
@@ -67,7 +69,7 @@ export class EditProfileDialogComponent {
             error: (err) => {
                 this.isLoading = false;
                 this.errorMessage = 'Erreur lors de la mise à jour du profil. Veuillez réessayer.';
-                console.error('Error updating profile:', err);
+                this.logger.error('EditProfileDialogComponent', 'Error updating profile:', err);
             }
         });
     }
