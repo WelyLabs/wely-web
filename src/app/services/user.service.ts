@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
@@ -9,6 +9,9 @@ import { User } from '../models/user.model';
     providedIn: 'root'
 })
 export class UserService {
+    private http = inject(HttpClient);
+    private keycloak = inject(KeycloakService);
+
     private apiUrl = `${environment.apiUrl}/user-service`;
 
     // BehaviorSubject to hold the current user state
@@ -16,11 +19,6 @@ export class UserService {
 
     // Observable that components can subscribe to
     public currentUser$ = this.currentUserSubject.asObservable();
-
-    constructor(
-        private http: HttpClient,
-        private keycloak: KeycloakService
-    ) { }
 
     /**
      * Load user data and update the BehaviorSubject

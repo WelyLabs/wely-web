@@ -1,66 +1,75 @@
 <div class="conv-page-container">
-    <header class="page-header">
-        <div class="title-group">
-            <h1>Messages</h1>
-            <p class="subtitle">Discutez avec votre équipe et vos amis</p>
-        </div>
-        <button mat-flat-button class="new-conv-btn" routerLink="/users">
-            <mat-icon>add</mat-icon>
-            <span>Nouveau</span>
-        </button>
-    </header>
-
-    <div class="content-area">
-        <!-- Loading State -->
-        <div class="loading-state" *ngIf="isLoading">
-            <div class="loader-ring"></div>
-            <p>Chargement des messages...</p>
-        </div>
-
-        <!-- Error State -->
-        <div class="error-state" *ngIf="!isLoading && error">
-            <div class="error-icon">
-                <mat-icon>error_outline</mat-icon>
-            </div>
-            <p>{{ error }}</p>
-            <button mat-stroked-button (click)="loadConversations()">Réessayer</button>
-        </div>
-
-        <!-- Empty State -->
-        <div class="empty-state" *ngIf="!isLoading && !error && conversations.length === 0">
-            <div class="empty-icon">
-                <mat-icon>chat_bubble_outline</mat-icon>
-            </div>
-            <h2>Aucune discussion</h2>
-            <p>Lancez votre première conversation avec un ami !</p>
-            <button mat-flat-button class="find-friends-btn" routerLink="/friends">Trouver des amis</button>
-        </div>
-
-        <!-- Conversation List -->
-        <div class="conversations-grid" *ngIf="!isLoading && !error && conversations.length > 0">
-            <div class="conv-item" *ngFor="let conv of conversations; let i = index"
-                [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)">
-
-                <div class="avatar-wrapper">
-                    <div class="avatar-gradient">
-                        {{ getAvatarInitial(conv.title) }}
-                    </div>
-                    <div class="status-indicator online"></div>
-                </div>
-
-                <div class="conv-details">
-                    <div class="details-top">
-                        <h3 class="name">{{ conv.title }}</h3>
-                        <span class="timestamp">{{ conv.updatedAt | date:'HH:mm' }}</span>
-                    </div>
-                    <div class="details-bottom">
-                        <p class="preview">{{ getLastMessageContent(conv) }}</p>
-                        <div class="unread-badge" *ngIf="false">1</div>
-                    </div>
-                </div>
-
-                <mat-icon class="chevron">chevron_right</mat-icon>
-            </div>
-        </div>
+  <header class="page-header">
+    <div class="title-group">
+      <h1>Messages</h1>
+      <p class="subtitle">Discutez avec votre équipe et vos amis</p>
     </div>
+    <button mat-flat-button class="new-conv-btn" routerLink="/users">
+      <mat-icon>add</mat-icon>
+      <span>Nouveau</span>
+    </button>
+  </header>
+
+  <div class="content-area">
+    <!-- Loading State -->
+    @if (isLoading) {
+      <div class="loading-state">
+        <div class="loader-ring"></div>
+        <p>Chargement des messages...</p>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (!isLoading && error) {
+      <div class="error-state">
+        <div class="error-icon">
+          <mat-icon>error_outline</mat-icon>
+        </div>
+        <p>{{ error }}</p>
+        <button mat-stroked-button (click)="loadConversations()">Réessayer</button>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (!isLoading && !error && conversations.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">
+          <mat-icon>chat_bubble_outline</mat-icon>
+        </div>
+        <h2>Aucune discussion</h2>
+        <p>Lancez votre première conversation avec un ami !</p>
+        <button mat-flat-button class="find-friends-btn" routerLink="/friends">Trouver des amis</button>
+      </div>
+    }
+
+    <!-- Conversation List -->
+    @if (!isLoading && !error && conversations.length > 0) {
+      <div class="conversations-grid">
+        @for (conv of conversations; track conv; let i = $index) {
+          <div class="conv-item"
+            [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)">
+            <div class="avatar-wrapper">
+              <div class="avatar-gradient">
+                {{ getAvatarInitial(conv.title) }}
+              </div>
+              <div class="status-indicator online"></div>
+            </div>
+            <div class="conv-details">
+              <div class="details-top">
+                <h3 class="name">{{ conv.title }}</h3>
+                <span class="timestamp">{{ conv.updatedAt | date:'HH:mm' }}</span>
+              </div>
+              <div class="details-bottom">
+                <p class="preview">{{ getLastMessageContent(conv) }}</p>
+                @if (false) {
+                  <div class="unread-badge">1</div>
+                }
+              </div>
+            </div>
+            <mat-icon class="chevron">chevron_right</mat-icon>
+          </div>
+        }
+      </div>
+    }
+  </div>
 </div>

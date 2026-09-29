@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, from, throwError, Subject, BehaviorSubject, of, timer } from 'rxjs';
 import { switchMap, catchError, retry, tap, delayWhen, takeUntil, filter } from 'rxjs/operators';
@@ -13,6 +13,9 @@ import { Buffer } from 'buffer';
     providedIn: 'root'
 })
 export class ChatService implements OnDestroy {
+    private http = inject(HttpClient);
+    private userService = inject(UserService);
+
     private apiUrl = `${environment.apiUrl}/chat-service`;
     private client: any | undefined;
     private socketSubject = new BehaviorSubject<any>(null);
@@ -20,10 +23,7 @@ export class ChatService implements OnDestroy {
     private messagesSubject = new Subject<any>();
     public messages$ = this.messagesSubject.asObservable();
 
-    constructor(
-        private http: HttpClient,
-        private userService: UserService
-    ) {
+    constructor() {
         this.connect();
     }
 
@@ -101,7 +101,7 @@ export class ChatService implements OnDestroy {
      * Get or create a conversation with a specific friend (HTTP)
      */
     getConversation(friendId: string): Observable<Conversation> {
-        let params = new HttpParams().set('friendId', friendId);
+        const params = new HttpParams().set('friendId', friendId);
         return this.http.get<Conversation>(`${this.apiUrl}/conversations`, { params });
     }
 
@@ -123,7 +123,7 @@ export class ChatService implements OnDestroy {
      * Get a bucket of messages for a conversation (HTTP)
      */
     getMessages(conversationId: string, bucketIndex: number): Observable<MessageBucket> {
-        let params = new HttpParams().set('bucketIndex', bucketIndex.toString());
+        const params = new HttpParams().set('bucketIndex', bucketIndex.toString());
         return this.http.get<MessageBucket>(`${this.apiUrl}/conversations/${conversationId}/loadMessages`, { params });
     }
 

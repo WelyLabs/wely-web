@@ -19,7 +19,7 @@ export interface Message {
     content: string;
     type: MessageType;
     timestamp: string; // LocalDateTime from backend -> ISO string in frontend
-    reactions: { [key: string]: number };
+    reactions: Record<string, number>;
 }
 
 export interface Conversation {

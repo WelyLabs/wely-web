@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -8,7 +8,7 @@ import { UserWithStatusDTO } from '../../models/user.model';
 @Component({
     selector: 'app-user-card',
     standalone: true,
-    imports: [CommonModule, MatIconModule, MatButtonModule, MatMenuModule],
+    imports: [MatIconModule, MatButtonModule, MatMenuModule],
     templateUrl: './user-card.html',
     styleUrl: './user-card.scss'
 })

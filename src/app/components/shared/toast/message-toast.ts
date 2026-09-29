@@ -1,4 +1,4 @@
-import { Component, Inject, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,10 +14,10 @@ import { Router } from '@angular/router';
     styleUrl: './message-toast.scss'
 })
 export class MessageToastComponent {
+    data = inject<Message>(MAT_SNACK_BAR_DATA);
+
     snackBarRef = inject(MatSnackBarRef);
     private router = inject(Router);
-
-    constructor(@Inject(MAT_SNACK_BAR_DATA) public data: Message) { }
 
     navigateToConversation(): void {
         this.router.navigate(['/chat', this.data.conversationId]);

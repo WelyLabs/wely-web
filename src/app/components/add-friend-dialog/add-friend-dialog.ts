@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -13,26 +13,23 @@ import { finalize } from 'rxjs';
     selector: 'app-add-friend-dialog',
     standalone: true,
     imports: [
-        CommonModule,
-        MatDialogModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatButtonModule,
-        MatIconModule,
-        FormsModule
-    ],
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    FormsModule
+],
     templateUrl: './add-friend-dialog.html',
     styleUrl: './add-friend-dialog.scss'
 })
 export class AddFriendDialogComponent {
-    userTag: string = '';
-    isLoading: boolean = false;
-    errorMessage: string | null = null;
+    dialogRef = inject<MatDialogRef<AddFriendDialogComponent>>(MatDialogRef);
+    private socialService = inject(SocialService);
 
-    constructor(
-        public dialogRef: MatDialogRef<AddFriendDialogComponent>,
-        private socialService: SocialService
-    ) { }
+    userTag = '';
+    isLoading = false;
+    errorMessage: string | null = null;
 
     onAdd() {
         if (!this.userTag) return;

@@ -1,5 +1,5 @@
-import { Component, Inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,29 +13,26 @@ import { FormsModule } from '@angular/forms';
     selector: 'app-avatar-upload-dialog',
     standalone: true,
     imports: [
-        CommonModule,
-        FormsModule,
-        MatDialogModule,
-        MatButtonModule,
-        MatIconModule,
-        MatSliderModule,
-        ImageCropperComponent
-    ],
+    FormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSliderModule,
+    ImageCropperComponent
+],
     templateUrl: './avatar-upload-dialog.component.html',
     styleUrls: ['./avatar-upload-dialog.component.scss']
 })
 export class AvatarUploadDialogComponent {
+    dialogRef = inject<MatDialogRef<AvatarUploadDialogComponent>>(MatDialogRef);
+    private userService = inject(UserService);
+
     imageChangedEvent: any = '';
-    croppedImage: string = '';
+    croppedImage = '';
     blob: Blob | null = null;
     scale = 1;
     isDragging = false;
     isLoading = false;
-
-    constructor(
-        public dialogRef: MatDialogRef<AvatarUploadDialogComponent>,
-        private userService: UserService
-    ) { }
 
     fileChangeEvent(event: any): void {
         this.imageChangedEvent = event;

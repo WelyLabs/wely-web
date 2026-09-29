@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, AfterViewChecked, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, AfterViewChecked, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,26 +23,26 @@ export interface ChatMessage {
     styleUrl: './shared-chat.scss'
 })
 export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterViewInit, OnDestroy {
+    private ngZone = inject(NgZone);
+
     @Input() messages: ChatMessage[] = [];
-    @Input() placeholder: string = 'Type a message...';
-    @Input() loading: boolean = false;
-    @Input() historyLoading: boolean = false;
-    @Input() hasMore: boolean = true;
+    @Input() placeholder = 'Type a message...';
+    @Input() loading = false;
+    @Input() historyLoading = false;
+    @Input() hasMore = true;
     @Output() onSend = new EventEmitter<string>();
     @Output() onLoadMore = new EventEmitter<void>();
 
     @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
     @ViewChild('topSentinel') private topSentinel!: ElementRef;
 
-    newMessage: string = '';
+    newMessage = '';
     private shouldScrollToBottom = false;
     private shouldPreserveScroll = false;
     private previousScrollHeight = 0;
     private previousScrollTop = 0;
     private allowTrigger = true;
     private observer?: IntersectionObserver;
-
-    constructor(private ngZone: NgZone) { }
 
     ngAfterViewInit() {
         this.setupIntersectionObserver();

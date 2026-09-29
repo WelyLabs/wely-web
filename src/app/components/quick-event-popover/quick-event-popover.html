@@ -5,7 +5,7 @@
     (click)="$event.stopPropagation()">
     <div class="popover-content">
         <div class="form-group title-group">
-            <input type="text" [(ngModel)]="data.title" placeholder="Titre de l'événement" autofocus
+            <input type="text" [(ngModel)]="data.title" placeholder="Titre de l'événement"
                 (keyup.enter)="onSave()">
         </div>
 

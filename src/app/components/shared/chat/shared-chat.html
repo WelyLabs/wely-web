@@ -1,50 +1,60 @@
 <div class="shared-chat-container">
-    <div class="messages-viewport" #scrollContainer>
-        <div #topSentinel style="height: 1px; width: 100%;"></div>
+  <div class="messages-viewport" #scrollContainer>
+    <div #topSentinel style="height: 1px; width: 100%;"></div>
 
-        <!-- History Loading -->
-        <div class="history-loader" *ngIf="historyLoading">
-            <div class="mini-spinner"></div>
-            <span>Chargement de l'historique...</span>
+    <!-- History Loading -->
+    @if (historyLoading) {
+      <div class="history-loader">
+        <div class="mini-spinner"></div>
+        <span>Chargement de l'historique...</span>
+      </div>
+    }
+
+    <!-- History End -->
+    @if (!hasMore && messages.length > 0) {
+      <div class="history-end-marker">
+        <div class="marker-content">
+          <mat-icon>verified_user</mat-icon>
+          <span>Début de votre conversation sécurisée</span>
         </div>
+      </div>
+    }
 
-        <!-- History End -->
-        <div class="history-end-marker" *ngIf="!hasMore && messages.length > 0">
-            <div class="marker-content">
-                <mat-icon>verified_user</mat-icon>
-                <span>Début de votre conversation sécurisée</span>
-            </div>
+    <!-- Empty State -->
+    @if (!loading && messages.length === 0) {
+      <div class="chat-empty-state">
+        <div class="empty-icon">
+          <mat-icon>forum</mat-icon>
         </div>
+        <p>Aucun message encore. Envoyez le premier !</p>
+      </div>
+    }
 
-        <!-- Empty State -->
-        <div class="chat-empty-state" *ngIf="!loading && messages.length === 0">
-            <div class="empty-icon">
-                <mat-icon>forum</mat-icon>
-            </div>
-            <p>Aucun message encore. Envoyez le premier !</p>
+    <!-- Message Bubbles -->
+    @for (msg of messages; track trackByMessage(index, msg); let index = $index) {
+      <div class="message-row"
+        [class.me]="msg.isMe">
+        <div class="message-bubble">
+          @if (!msg.isMe) {
+            <div class="sender-name">{{ msg.senderName }}</div>
+          }
+          <div class="message-text">{{ msg.text }}</div>
+          <div class="message-time">{{ msg.time | date:'HH:mm' }}</div>
         </div>
+      </div>
+    }
+  </div>
 
-        <!-- Message Bubbles -->
-        <div *ngFor="let msg of messages; let index = index; trackBy: trackByMessage" class="message-row"
-            [class.me]="msg.isMe">
-
-            <div class="message-bubble">
-                <div class="sender-name" *ngIf="!msg.isMe">{{ msg.senderName }}</div>
-                <div class="message-text">{{ msg.text }}</div>
-                <div class="message-time">{{ msg.time | date:'HH:mm' }}</div>
-            </div>
-        </div>
+  <!-- Input Bar -->
+  @if (!loading || messages.length > 0) {
+    <div class="chat-input-bar">
+      <div class="input-glass-container">
+        <input type="text" [(ngModel)]="newMessage" [placeholder]="placeholder" (keyup.enter)="sendMessage()"
+          [disabled]="loading" class="modern-input">
+        <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage.trim() || loading">
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
     </div>
-
-    <!-- Input Bar -->
-    <div class="chat-input-bar" *ngIf="!loading || messages.length > 0">
-        <div class="input-glass-container">
-            <input type="text" [(ngModel)]="newMessage" [placeholder]="placeholder" (keyup.enter)="sendMessage()"
-                [disabled]="loading" class="modern-input">
-
-            <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage.trim() || loading">
-                <mat-icon>send</mat-icon>
-            </button>
-        </div>
-    </div>
+  }
 </div>

@@ -26,13 +26,11 @@ import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-uplo
     styleUrl: './user-profile.scss'
 })
 export class UserProfileComponent implements OnInit {
+    private userService = inject(UserService);
+    private dialog = inject(MatDialog);
+
     user!: User;
     isLoading = true;
-
-    constructor(
-        private userService: UserService,
-        private dialog: MatDialog
-    ) { }
 
     ngOnInit() {
         // Subscribe to the reactive user stream

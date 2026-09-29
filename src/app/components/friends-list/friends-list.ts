@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -13,21 +13,20 @@ import { MOCK_FRIENDS } from '../../models/friends.mock';
     selector: 'app-friends-list',
     standalone: true,
     imports: [
-        CommonModule,
-        MatIconModule,
-        MatButtonModule,
-        MatInputModule,
-        MatFormFieldModule,
-        MatMenuModule,
-        FormsModule
-    ],
+    MatIconModule,
+    MatButtonModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatMenuModule,
+    FormsModule
+],
     templateUrl: './friends-list.html',
     styleUrl: './friends-list.scss'
 })
 export class FriendsListComponent implements OnInit {
     friends: BusinessUser[] = [];
     filteredFriends: BusinessUser[] = [];
-    searchQuery: string = '';
+    searchQuery = '';
     isLoading = true;
 
     ngOnInit() {

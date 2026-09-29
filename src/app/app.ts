@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { KeycloakService, KeycloakEventType } from 'keycloak-angular';
 import { UserService } from './services/user.service';
@@ -11,13 +11,11 @@ import { Subscription, from } from 'rxjs';
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
+  private readonly keycloakService = inject(KeycloakService);
+  private readonly userService = inject(UserService);
+
   protected readonly title = signal('calendar-app');
   private subscription = new Subscription();
-
-  constructor(
-    private readonly keycloakService: KeycloakService,
-    private readonly userService: UserService
-  ) { }
 
   ngOnInit() {
     // Listener for Keycloak events

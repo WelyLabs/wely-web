@@ -1,5 +1,5 @@
-import { Component, Inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,28 +13,29 @@ import { User } from '../../models/user.model';
     selector: 'app-edit-profile-dialog',
     standalone: true,
     imports: [
-        CommonModule,
-        MatDialogModule,
-        MatButtonModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatIconModule,
-        ReactiveFormsModule
-    ],
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatIconModule,
+    ReactiveFormsModule
+],
     templateUrl: './edit-profile-dialog.component.html',
     styleUrl: './edit-profile-dialog.component.scss'
 })
 export class EditProfileDialogComponent {
+    private fb = inject(FormBuilder);
+    private userService = inject(UserService);
+    private dialogRef = inject<MatDialogRef<EditProfileDialogComponent>>(MatDialogRef);
+    data = inject<User>(MAT_DIALOG_DATA);
+
     profileForm: FormGroup;
     isLoading = false;
     errorMessage = '';
 
-    constructor(
-        private fb: FormBuilder,
-        private userService: UserService,
-        private dialogRef: MatDialogRef<EditProfileDialogComponent>,
-        @Inject(MAT_DIALOG_DATA) public data: User
-    ) {
+    constructor() {
+        const data = this.data;
+
         this.profileForm = this.fb.group({
             userName: [data.userName, [
                 Validators.required,

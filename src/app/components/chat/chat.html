@@ -1,45 +1,51 @@
 <div class="chat-page-container">
-    <div class="chat-window-glass">
-        <!-- Header -->
-        <header class="chat-header">
-            <button mat-icon-button class="back-btn" (click)="goBack()">
-                <mat-icon>arrow_back</mat-icon>
-            </button>
-            <div class="user-info">
-                <div class="avatar-sm">
-                    {{ conversation ? getAvatarInitial(conversation.title) : '?' }}
-                </div>
-                <div class="text-info">
-                    <h2 class="chat-title">{{ conversation ? conversation.title : 'Chargement...' }}</h2>
-                    <span class="status-text">En ligne</span>
-                </div>
-            </div>
-            <div class="header-actions">
-                <button mat-icon-button><mat-icon>videocam</mat-icon></button>
-                <button mat-icon-button><mat-icon>call</mat-icon></button>
-            </div>
-        </header>
-
-        <!-- Chat Content -->
-        <div class="chat-content-area">
-            <div class="loading-state" *ngIf="isLoading">
-                <div class="loader-ring"></div>
-                <p>Chargement du chat...</p>
-            </div>
-
-            <div class="error-state" *ngIf="error">
-                <mat-icon>error_outline</mat-icon>
-                <p>{{ error }}</p>
-                <button mat-flat-button class="retry-btn"
-                    (click)="convId && loadConversationById(convId)">Réessayer</button>
-            </div>
-
-            <div class="chat-shared-wrapper" *ngIf="!isLoading && !error">
-                <app-shared-chat [messages]="chatMessages" [loading]="isSending" [historyLoading]="isHistoryLoading"
-                    [hasMore]="hasMoreHistory" [placeholder]="placeholder" (onSend)="onSendMessage($event)"
-                    (onLoadMore)="onLoadMoreMessages()">
-                </app-shared-chat>
-            </div>
+  <div class="chat-window-glass">
+    <!-- Header -->
+    <header class="chat-header">
+      <button mat-icon-button class="back-btn" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="user-info">
+        <div class="avatar-sm">
+          {{ conversation ? getAvatarInitial(conversation.title) : '?' }}
         </div>
+        <div class="text-info">
+          <h2 class="chat-title">{{ conversation ? conversation.title : 'Chargement...' }}</h2>
+          <span class="status-text">En ligne</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button mat-icon-button><mat-icon>videocam</mat-icon></button>
+        <button mat-icon-button><mat-icon>call</mat-icon></button>
+      </div>
+    </header>
+
+    <!-- Chat Content -->
+    <div class="chat-content-area">
+      @if (isLoading) {
+        <div class="loading-state">
+          <div class="loader-ring"></div>
+          <p>Chargement du chat...</p>
+        </div>
+      }
+
+      @if (error) {
+        <div class="error-state">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ error }}</p>
+          <button mat-flat-button class="retry-btn"
+          (click)="convId && loadConversationById(convId)">Réessayer</button>
+        </div>
+      }
+
+      @if (!isLoading && !error) {
+        <div class="chat-shared-wrapper">
+          <app-shared-chat [messages]="chatMessages" [loading]="isSending" [historyLoading]="isHistoryLoading"
+            [hasMore]="hasMoreHistory" [placeholder]="placeholder" (onSend)="onSendMessage($event)"
+            (onLoadMore)="onLoadMoreMessages()">
+          </app-shared-chat>
+        </div>
+      }
     </div>
+  </div>
 </div>

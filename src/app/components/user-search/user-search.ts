@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
+
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,20 +22,27 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
     selector: 'app-user-search',
     standalone: true,
     imports: [
-        CommonModule,
-        MatIconModule,
-        MatButtonModule,
-        MatInputModule,
-        MatFormFieldModule,
-        MatTabsModule,
-        MatDialogModule,
-        FormsModule,
-        UserCardComponent
-    ],
+    MatIconModule,
+    MatButtonModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatTabsModule,
+    MatDialogModule,
+    FormsModule,
+    UserCardComponent
+],
     templateUrl: './user-search.html',
     styleUrl: './user-search.scss'
 })
 export class UserSearchComponent implements OnInit {
+    private userService = inject(UserService);
+    private socialService = inject(SocialService);
+    private chatService = inject(ChatService);
+    private route = inject(ActivatedRoute);
+    private breakpointObserver = inject(BreakpointObserver);
+    private dialog = inject(MatDialog);
+    private router = inject(Router);
+
     users: UserWithStatusDTO[] = [];
     filteredUsers: UserWithStatusDTO[] = [];
     searchQuery = '';
@@ -45,16 +52,6 @@ export class UserSearchComponent implements OnInit {
     activeTabIndex = 0;
     isMobile = false;
     tabLabels = ['Amis', 'Demandes envoyées', 'Demandes reçues'];
-
-    constructor(
-        private userService: UserService,
-        private socialService: SocialService,
-        private chatService: ChatService,
-        private route: ActivatedRoute,
-        private breakpointObserver: BreakpointObserver,
-        private dialog: MatDialog,
-        private router: Router
-    ) { }
 
     ngOnInit() {
         this.breakpointObserver.observe([Breakpoints.Handset]).subscribe(result => {

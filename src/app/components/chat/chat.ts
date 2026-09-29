@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,11 +14,18 @@ import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 @Component({
     selector: 'app-chat',
     standalone: true,
-    imports: [CommonModule, MatButtonModule, MatIconModule, SharedChatComponent],
+    imports: [MatButtonModule, MatIconModule, SharedChatComponent],
     templateUrl: './chat.html',
     styleUrl: './chat.scss'
 })
 export class ChatComponent implements OnInit, OnDestroy {
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
+    private chatService = inject(ChatService);
+    private userService = inject(UserService);
+    private ngZone = inject(NgZone);
+    private navigationService = inject(NavigationService);
+
     private messagesSubscription?: Subscription;
     private routeSubscription?: Subscription;
     conversation: Conversation | null = null;
@@ -33,15 +40,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     isHistoryLoading = false;
     hasMoreHistory = false;
     placeholder = 'Écrivez votre message...';
-
-    constructor(
-        private route: ActivatedRoute,
-        private router: Router,
-        private chatService: ChatService,
-        private userService: UserService,
-        private ngZone: NgZone,
-        private navigationService: NavigationService
-    ) { }
 
     ngOnInit() {
         const currentUser = this.userService.getCurrentUserValue();

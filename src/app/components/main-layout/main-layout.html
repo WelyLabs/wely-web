@@ -6,20 +6,26 @@
     </div>
 
     <div class="nav-list">
-      <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" class="nav-item">
-        <mat-icon>{{ item.icon }}</mat-icon>
-        <span class="label">{{ item.label }}</span>
-      </a>
+      @for (item of navItems; track item) {
+        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span class="label">{{ item.label }}</span>
+        </a>
+      }
     </div>
 
     <div class="user-profile" (mouseenter)="showUserMenu = true" (mouseleave)="showUserMenu = false">
       <div class="avatar" [class.has-image]="userProfile?.profilePicUrl">
-        <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
-          [alt]="'Photo de profil de ' + userProfile?.firstName" class="avatar-image">
-        <span *ngIf="!userProfile?.profilePicUrl" aria-hidden="true">{{ userProfile?.firstName?.[0] || 'U' }}{{
-          userProfile?.lastName?.[0]
-          ||
+        @if (userProfile?.profilePicUrl) {
+          <img [src]="userProfile?.profilePicUrl"
+            [alt]="'Photo de profil de ' + userProfile?.firstName" class="avatar-image">
+        }
+        @if (!userProfile?.profilePicUrl) {
+          <span aria-hidden="true">{{ userProfile?.firstName?.[0] || 'U' }}{{
+            userProfile?.lastName?.[0]
+            ||
           '' }}</span>
+        }
       </div>
       <div class="info">
         <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>
@@ -58,36 +64,50 @@
   <mat-sidenav-content class="content-area">
     <div class="page-container">
       <!-- Mobile Profile Trigger -->
-      <div class="mobile-profile-trigger" *ngIf="isMobile && !isChatPage" (click)="toggleMobileMenu()"
-        [class.active]="showMobileMenu">
-        <div class="avatar-ring">
-          <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
-            [alt]="'Photo de profil de ' + userProfile?.firstName">
-          <span *ngIf="!userProfile?.profilePicUrl">{{ userProfile?.firstName?.[0] || 'U' }}</span>
+      @if (isMobile && !isChatPage) {
+        <div class="mobile-profile-trigger" (click)="toggleMobileMenu()"
+          [class.active]="showMobileMenu">
+          <div class="avatar-ring">
+            @if (userProfile?.profilePicUrl) {
+              <img [src]="userProfile?.profilePicUrl"
+                [alt]="'Photo de profil de ' + userProfile?.firstName">
+            }
+            @if (!userProfile?.profilePicUrl) {
+              <span>{{ userProfile?.firstName?.[0] || 'U' }}</span>
+            }
+          </div>
         </div>
-      </div>
+      }
 
       <router-outlet></router-outlet>
     </div>
 
     <!-- Mobile Bottom Navigation -->
-    <div class="bottom-nav" *ngIf="isMobile">
-      <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" class="nav-item">
-        <mat-icon>{{ item.icon }}</mat-icon>
-        <span class="label">{{ item.label }}</span>
-      </a>
-    </div>
+    @if (isMobile) {
+      <div class="bottom-nav">
+        @for (item of navItems; track item) {
+          <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span class="label">{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
 
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu-overlay" [class.show]="showMobileMenu" (click)="closeMobileMenu()">
       <div class="mobile-menu-content" (click)="$event.stopPropagation()">
         <div class="mobile-user-header">
           <div class="avatar-large">
-            <img *ngIf="userProfile?.profilePicUrl" [src]="userProfile?.profilePicUrl"
-              [alt]="'Photo de profil de ' + userProfile?.firstName">
-            <span *ngIf="!userProfile?.profilePicUrl" aria-hidden="true">
-              {{ userProfile?.firstName?.[0] }}{{ userProfile?.lastName?.[0] }}
-            </span>
+            @if (userProfile?.profilePicUrl) {
+              <img [src]="userProfile?.profilePicUrl"
+                [alt]="'Photo de profil de ' + userProfile?.firstName">
+            }
+            @if (!userProfile?.profilePicUrl) {
+              <span aria-hidden="true">
+                {{ userProfile?.firstName?.[0] }}{{ userProfile?.lastName?.[0] }}
+              </span>
+            }
           </div>
           <div class="user-details">
             <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>

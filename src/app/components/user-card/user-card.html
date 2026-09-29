@@ -1,65 +1,79 @@
 <div class="user-card-inner">
-    <!-- Options for existing friends -->
-    <div class="card-options" *ngIf="user.relationStatus === 'FRIENDS'">
-        <button mat-icon-button [matMenuTriggerFor]="cardMenu" class="options-btn">
-            <mat-icon>more_horiz</mat-icon>
+  <!-- Options for existing friends -->
+  @if (user.relationStatus === 'FRIENDS') {
+    <div class="card-options">
+      <button mat-icon-button [matMenuTriggerFor]="cardMenu" class="options-btn">
+        <mat-icon>more_horiz</mat-icon>
+      </button>
+      <mat-menu #cardMenu="matMenu" class="glass-menu">
+        <button mat-menu-item (click)="onChatClick()">
+          <mat-icon>chat</mat-icon>
+          <span>Chatter</span>
         </button>
-        <mat-menu #cardMenu="matMenu" class="glass-menu">
-            <button mat-menu-item (click)="onChatClick()">
-                <mat-icon>chat</mat-icon>
-                <span>Chatter</span>
-            </button>
-            <button mat-menu-item (click)="onRemoveFriendClick()" class="destructive-item">
-                <mat-icon>person_remove</mat-icon>
-                <span>Supprimer</span>
-            </button>
-        </mat-menu>
-    </div>
-
-    <div class="avatar-container">
-        <div class="avatar-gradient">
-            <img *ngIf="user.profilePicUrl" [src]="user.profilePicUrl" [alt]="user.userName">
-            <span *ngIf="!user.profilePicUrl" class="initials">{{ getInitials(user) }}</span>
-        </div>
-        <div class="status-dot" [class.online]="true"></div>
-    </div>
-
-    <div class="user-details">
-        <h3 class="name">{{ user.userName }}</h3>
-    </div>
-
-    <div class="actions">
-        <!-- Not friends yet -->
-        <button *ngIf="user.relationStatus === 'NONE'" mat-flat-button class="add-btn" (click)="onAddClick()">
-            <mat-icon>person_add</mat-icon>
-            <span>Ajouter</span>
+        <button mat-menu-item (click)="onRemoveFriendClick()" class="destructive-item">
+          <mat-icon>person_remove</mat-icon>
+          <span>Supprimer</span>
         </button>
-
-        <!-- Already friends -->
-        <div *ngIf="user.relationStatus === 'FRIENDS'" class="friends-actions">
-            <button mat-button class="msg-btn" (click)="onChatClick()">
-                <mat-icon>chat_bubble_outline</mat-icon>
-                <span>Message</span>
-            </button>
-        </div>
-
-        <!-- Outgoing request -->
-        <div *ngIf="user.relationStatus === 'SENT_BY_ME'" class="pending-badge">
-            <mat-icon>schedule</mat-icon>
-            <span>Demande envoyée</span>
-        </div>
-
-        <!-- Incoming request -->
-        <div *ngIf="user.relationStatus === 'SENT_BY_THEM' || user.relationStatus === 'PENDING_INCOMING'"
-            class="request-buttons">
-            <button mat-button class="decline-btn" (click)="onDeclineClick()">
-                <mat-icon>close</mat-icon>
-                <span>Refuser</span>
-            </button>
-            <button mat-flat-button class="accept-btn" (click)="onAcceptClick()">
-                <mat-icon>check</mat-icon>
-                <span>Accepter</span>
-            </button>
-        </div>
+      </mat-menu>
     </div>
+  }
+
+  <div class="avatar-container">
+    <div class="avatar-gradient">
+      @if (user.profilePicUrl) {
+        <img [src]="user.profilePicUrl" [alt]="user.userName">
+      }
+      @if (!user.profilePicUrl) {
+        <span class="initials">{{ getInitials(user) }}</span>
+      }
+    </div>
+    <div class="status-dot" [class.online]="true"></div>
+  </div>
+
+  <div class="user-details">
+    <h3 class="name">{{ user.userName }}</h3>
+  </div>
+
+  <div class="actions">
+    <!-- Not friends yet -->
+    @if (user.relationStatus === 'NONE') {
+      <button mat-flat-button class="add-btn" (click)="onAddClick()">
+        <mat-icon>person_add</mat-icon>
+        <span>Ajouter</span>
+      </button>
+    }
+
+    <!-- Already friends -->
+    @if (user.relationStatus === 'FRIENDS') {
+      <div class="friends-actions">
+        <button mat-button class="msg-btn" (click)="onChatClick()">
+          <mat-icon>chat_bubble_outline</mat-icon>
+          <span>Message</span>
+        </button>
+      </div>
+    }
+
+    <!-- Outgoing request -->
+    @if (user.relationStatus === 'SENT_BY_ME') {
+      <div class="pending-badge">
+        <mat-icon>schedule</mat-icon>
+        <span>Demande envoyée</span>
+      </div>
+    }
+
+    <!-- Incoming request -->
+    @if (user.relationStatus === 'SENT_BY_THEM' || user.relationStatus === 'PENDING_INCOMING') {
+      <div
+        class="request-buttons">
+        <button mat-button class="decline-btn" (click)="onDeclineClick()">
+          <mat-icon>close</mat-icon>
+          <span>Refuser</span>
+        </button>
+        <button mat-flat-button class="accept-btn" (click)="onAcceptClick()">
+          <mat-icon>check</mat-icon>
+          <span>Accepter</span>
+        </button>
+      </div>
+    }
+  </div>
 </div>

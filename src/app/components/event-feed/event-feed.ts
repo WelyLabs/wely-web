@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +15,9 @@ import { Subscription } from 'rxjs';
   styleUrl: './event-feed.scss',
 })
 export class EventFeedComponent implements OnInit, OnDestroy {
+  private eventService = inject(EventService);
+  private router = inject(Router);
+
   events: FeedEvent[] = [];
   currentEvents: FeedEvent[] = [];
   private subscription?: Subscription;
@@ -28,8 +31,6 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
   leftOverlayOpacity = 0;
   rightOverlayOpacity = 0;
-
-  constructor(private eventService: EventService, private router: Router) { }
 
   ngOnInit() {
     this.subscription = this.eventService.feedEvents$.subscribe(events => {

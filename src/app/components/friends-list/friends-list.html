@@ -1,83 +1,88 @@
 <div class="friends-container">
-    <div class="friends-header">
-        <div class="title-group">
-            <h1>Mes Amis</h1>
-            <span class="count-badge">{{ filteredFriends.length }}</span>
-        </div>
-
-        <div class="header-actions">
-            <div class="search-box">
-                <mat-icon>search</mat-icon>
-                <input type="text" placeholder="Rechercher..." [(ngModel)]="searchQuery"
-                    (ngModelChange)="filterFriends()">
-            </div>
-
-            <button mat-flat-button class="add-btn">
-                <mat-icon>person_add</mat-icon>
-                <span>Inviter</span>
-            </button>
-        </div>
+  <div class="friends-header">
+    <div class="title-group">
+      <h1>Mes Amis</h1>
+      <span class="count-badge">{{ filteredFriends.length }}</span>
     </div>
 
-    <div class="friends-content" *ngIf="!isLoading">
-        <div class="friends-grid" *ngIf="filteredFriends.length > 0">
-            <div class="friend-card" *ngFor="let friend of filteredFriends; let i = index"
-                [style.animation-delay]="(i * 0.05) + 's'">
-                <div class="card-inner">
-                    <div class="avatar-wrapper">
-                        <div class="avatar-gradient">
-                            <div class="avatar-text">{{ getInitials(friend) }}</div>
-                        </div>
-                        <div class="status-indicator online"></div>
-                    </div>
+    <div class="header-actions">
+      <div class="search-box">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Rechercher..." [(ngModel)]="searchQuery"
+          (ngModelChange)="filterFriends()">
+      </div>
 
-                    <div class="friend-info">
-                        <h3>{{ friend.firstName }} {{ friend.lastName }}</h3>
-                        <span class="job">{{ friend.jobTitle }}</span>
-                        <div class="location">
-                            <mat-icon>location_on</mat-icon>
-                            <span>{{ friend.location }}</span>
-                        </div>
-                    </div>
+      <button mat-flat-button class="add-btn">
+        <mat-icon>person_add</mat-icon>
+        <span>Inviter</span>
+      </button>
+    </div>
+  </div>
 
-                    <div class="card-actions">
-                        <button mat-button class="msg-btn" (click)="contactFriend(friend)">
-                            <mat-icon>chat_bubble_outline</mat-icon>
-                            <span>Message</span>
-                        </button>
-
-                        <button mat-icon-button class="more-btn" [matMenuTriggerFor]="menu">
-                            <mat-icon>more_horiz</mat-icon>
-                        </button>
-
-                        <mat-menu #menu="matMenu" class="glass-menu">
-                            <button mat-menu-item>
-                                <mat-icon>person</mat-icon>
-                                <span>Voir le profil</span>
-                            </button>
-                            <button mat-menu-item class="destructive-item" (click)="removeFriend(friend)">
-                                <mat-icon>person_remove</mat-icon>
-                                <span>Retirer</span>
-                            </button>
-                        </mat-menu>
-                    </div>
+  @if (!isLoading) {
+    <div class="friends-content">
+      @if (filteredFriends.length > 0) {
+        <div class="friends-grid">
+          @for (friend of filteredFriends; track friend; let i = $index) {
+            <div class="friend-card"
+              [style.animation-delay]="(i * 0.05) + 's'">
+              <div class="card-inner">
+                <div class="avatar-wrapper">
+                  <div class="avatar-gradient">
+                    <div class="avatar-text">{{ getInitials(friend) }}</div>
+                  </div>
+                  <div class="status-indicator online"></div>
                 </div>
+                <div class="friend-info">
+                  <h3>{{ friend.firstName }} {{ friend.lastName }}</h3>
+                  <span class="job">{{ friend.jobTitle }}</span>
+                  <div class="location">
+                    <mat-icon>location_on</mat-icon>
+                    <span>{{ friend.location }}</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button mat-button class="msg-btn" (click)="contactFriend(friend)">
+                    <mat-icon>chat_bubble_outline</mat-icon>
+                    <span>Message</span>
+                  </button>
+                  <button mat-icon-button class="more-btn" [matMenuTriggerFor]="menu">
+                    <mat-icon>more_horiz</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu" class="glass-menu">
+                    <button mat-menu-item>
+                      <mat-icon>person</mat-icon>
+                      <span>Voir le profil</span>
+                    </button>
+                    <button mat-menu-item class="destructive-item" (click)="removeFriend(friend)">
+                      <mat-icon>person_remove</mat-icon>
+                      <span>Retirer</span>
+                    </button>
+                  </mat-menu>
+                </div>
+              </div>
             </div>
+          }
         </div>
-
-        <!-- Empty State -->
-        <div class="empty-state" *ngIf="filteredFriends.length === 0">
-            <div class="empty-icon">
-                <mat-icon>group_off</mat-icon>
-            </div>
-            <h3>Aucun résultat</h3>
-            <p>Nous n'avons trouvé aucun ami correspondant à "{{ searchQuery }}"</p>
-            <button mat-stroked-button (click)="searchQuery = ''; filterFriends()">Voir tous mes amis</button>
+      }
+      <!-- Empty State -->
+      @if (filteredFriends.length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">
+            <mat-icon>group_off</mat-icon>
+          </div>
+          <h3>Aucun résultat</h3>
+          <p>Nous n'avons trouvé aucun ami correspondant à "{{ searchQuery }}"</p>
+          <button mat-stroked-button (click)="searchQuery = ''; filterFriends()">Voir tous mes amis</button>
         </div>
+      }
     </div>
+  }
 
-    <!-- Loading State -->
-    <div class="loading-state" *ngIf="isLoading">
-        <div class="loader-ring"></div>
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="loader-ring"></div>
     </div>
+  }
 </div>

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, map, Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -28,6 +28,8 @@ export interface FeedEvent {
   providedIn: 'root',
 })
 export class EventService {
+  private http = inject(HttpClient);
+
   private subscribedEventsSubject = new BehaviorSubject<FeedEvent[]>([]);
   subscribedEvents$ = this.subscribedEventsSubject.asObservable();
 
@@ -36,7 +38,7 @@ export class EventService {
 
   private readonly API_URL = `${environment.apiUrl}/events-service/events`;
 
-  constructor(private http: HttpClient) {
+  constructor() {
     this.refreshEvents();
   }
 

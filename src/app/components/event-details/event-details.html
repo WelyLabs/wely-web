@@ -1,84 +1,88 @@
-<div class="details-container" *ngIf="event">
+@if (event) {
+  <div class="details-container">
     <div class="details-card glass-panel">
-        <div class="header">
-            <button mat-icon-button (click)="goBack()" class="back-button">
-                <mat-icon>arrow_back</mat-icon>
-            </button>
-            <h1>{{ event.title }}</h1>
-        </div>
-
-        <mat-tab-group animationDuration="0ms" class="custom-tabs">
-            <!-- Information Tab -->
-            <mat-tab label="Informations">
-                <div class="tab-content">
-                    <div class="event-image" *ngIf="getImage()">
-                        <img [src]="getImage()" [alt]="event.title">
-                    </div>
-
-                    <div class="event-info">
-                        <div class="info-row">
-                            <mat-icon>event</mat-icon>
-                            <div class="info-content">
-                                <span class="label">Date</span>
-                                <span class="value">{{ formatDate(event.startDate) }}</span>
-                            </div>
-                        </div>
-
-                        <div class="info-row" *ngIf="getTime()">
-                            <mat-icon>schedule</mat-icon>
-                            <div class="info-content">
-                                <span class="label">Heure</span>
-                                <span class="value">{{ getTime() }}</span>
-                            </div>
-                        </div>
-
-                        <div class="info-row" *ngIf="getLocation()">
-                            <mat-icon>location_on</mat-icon>
-                            <div class="info-content">
-                                <span class="label">Lieu</span>
-                                <span class="value">{{ getLocation() }}</span>
-                            </div>
-                        </div>
-
-                        <div class="info-row" *ngIf="getOrganizer()">
-                            <mat-icon>person</mat-icon>
-                            <div class="info-content">
-                                <span class="label">Organisateur</span>
-                                <span class="value">{{ getOrganizer() }}</span>
-                            </div>
-                        </div>
-
-                        <div class="description-section">
-                            <h2>Description</h2>
-                            <p>{{ event.description }}</p>
-                        </div>
-                    </div>
-
-                    <div class="actions">
-                        <button mat-flat-button color="primary" class="gradient-button">
-                            <mat-icon>add_to_calendar</mat-icon>
-                            Ajouter au calendrier
-                        </button>
-                    </div>
+      <div class="header">
+        <button mat-icon-button (click)="goBack()" class="back-button">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <h1>{{ event.title }}</h1>
+      </div>
+      <mat-tab-group animationDuration="0ms" class="custom-tabs">
+        <!-- Information Tab -->
+        <mat-tab label="Informations">
+          <div class="tab-content">
+            @if (getImage()) {
+              <div class="event-image">
+                <img [src]="getImage()" [alt]="event.title">
+              </div>
+            }
+            <div class="event-info">
+              <div class="info-row">
+                <mat-icon>event</mat-icon>
+                <div class="info-content">
+                  <span class="label">Date</span>
+                  <span class="value">{{ formatDate(event.startDate) }}</span>
                 </div>
-            </mat-tab>
-
-            <!-- Chat Tab -->
-            <mat-tab label="Chat">
-                <div class="chat-container">
-                    <app-shared-chat [messages]="chatMessages" [placeholder]="'Type a message...'"
-                        (onSend)="onSendMessage($event)">
-                    </app-shared-chat>
+              </div>
+              @if (getTime()) {
+                <div class="info-row">
+                  <mat-icon>schedule</mat-icon>
+                  <div class="info-content">
+                    <span class="label">Heure</span>
+                    <span class="value">{{ getTime() }}</span>
+                  </div>
                 </div>
-            </mat-tab>
-        </mat-tab-group>
+              }
+              @if (getLocation()) {
+                <div class="info-row">
+                  <mat-icon>location_on</mat-icon>
+                  <div class="info-content">
+                    <span class="label">Lieu</span>
+                    <span class="value">{{ getLocation() }}</span>
+                  </div>
+                </div>
+              }
+              @if (getOrganizer()) {
+                <div class="info-row">
+                  <mat-icon>person</mat-icon>
+                  <div class="info-content">
+                    <span class="label">Organisateur</span>
+                    <span class="value">{{ getOrganizer() }}</span>
+                  </div>
+                </div>
+              }
+              <div class="description-section">
+                <h2>Description</h2>
+                <p>{{ event.description }}</p>
+              </div>
+            </div>
+            <div class="actions">
+              <button mat-flat-button color="primary" class="gradient-button">
+                <mat-icon>add_to_calendar</mat-icon>
+                Ajouter au calendrier
+              </button>
+            </div>
+          </div>
+        </mat-tab>
+        <!-- Chat Tab -->
+        <mat-tab label="Chat">
+          <div class="chat-container">
+            <app-shared-chat [messages]="chatMessages" [placeholder]="'Type a message...'"
+              (onSend)="onSendMessage($event)">
+            </app-shared-chat>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
     </div>
-</div>
+  </div>
+}
 
-<div class="not-found" *ngIf="!event">
+@if (!event) {
+  <div class="not-found">
     <mat-icon>event_busy</mat-icon>
     <h2>Événement introuvable</h2>
     <button mat-flat-button color="primary" (click)="goBack()">
-        Retour au calendrier
+      Retour au calendrier
     </button>
-</div>
+  </div>
+}

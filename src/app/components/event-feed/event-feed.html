@@ -1,70 +1,75 @@
 <div class="feed-container">
-    <div class="feed-header">
-        <h1>Discover Events</h1>
-        <p>Swipe right to add to your calendar, left to skip.</p>
-    </div>
+  <div class="feed-header">
+    <h1>Discover Events</h1>
+    <p>Swipe right to add to your calendar, left to skip.</p>
+  </div>
 
-    <!-- Algorithm/Suggestions Placeholder -->
-    <div class="suggestions-container">
-        <h3>Suggestions for you</h3>
-        <p class="future-algo-hint">(Future algorithm placeholder - matched to your interests)</p>
-    </div>
+  <!-- Algorithm/Suggestions Placeholder -->
+  <div class="suggestions-container">
+    <h3>Suggestions for you</h3>
+    <p class="future-algo-hint">(Future algorithm placeholder - matched to your interests)</p>
+  </div>
 
-    <div class="swipe-container" *ngIf="currentEvents.length > 0">
-        <!-- Stack of cards (show max 3) -->
-        <div *ngFor="let event of currentEvents; let i = index" class="event-card" [class.top-card]="i === 0"
-            [style.z-index]="currentEvents.length - i"
-            [style.transform]="i === 0 ? cardTransform : getStackTransform(i)"
-            [style.transition]="i === 0 ? cardTransition : ''" (touchstart)="i === 0 ? onCardTouchStart($event) : null"
-            (touchmove)="i === 0 ? onCardTouchMove($event) : null" (touchend)="i === 0 ? onCardTouchEnd($event) : null"
-            (mousedown)="i === 0 ? onCardMouseDown($event) : null"
-            (mousemove)="i === 0 ? onCardMouseMove($event) : null" (mouseup)="i === 0 ? onCardMouseUp($event) : null"
-            (mouseleave)="i === 0 ? onCardMouseUp($event) : null">
-
-            <!-- Swipe Overlays -->
-            <div class="swipe-overlay swipe-overlay-left" [style.opacity]="i === 0 ? leftOverlayOpacity : 0">
-                <mat-icon>close</mat-icon>
-                <span>Skip</span>
-            </div>
-            <div class="swipe-overlay swipe-overlay-right" [style.opacity]="i === 0 ? rightOverlayOpacity : 0">
-                <mat-icon>favorite</mat-icon>
-                <span>Add to Calendar</span>
-            </div>
-
-            <div class="card-image" [style.background-image]="'url(' + event.image + ')'"
-                [attr.aria-label]="'Image pour ' + event.title" role="img">
-                <div class="date-badge">
-                    <span class="month">{{ event.startDate | date:'MMM' }}</span>
-                    <span class="day">{{ event.startDate | date:'dd' }}</span>
-                </div>
-            </div>
-
-            <div class="card-content">
-                <div class="organizer">{{ event.organizerId }}</div>
-                <h2>{{ event.title }}</h2>
-                <div class="location">
-                    <mat-icon>location_on</mat-icon>
-                    {{ event.location }}
-                </div>
-                <p class="description">{{ event.description }}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="action-buttons" *ngIf="currentEvents.length > 0">
-        <button mat-fab color="warn" (click)="swipeLeft()" aria-label="Skip event">
+  @if (currentEvents.length > 0) {
+    <div class="swipe-container">
+      <!-- Stack of cards (show max 3) -->
+      @for (event of currentEvents; track event; let i = $index) {
+        <div class="event-card" [class.top-card]="i === 0"
+          [style.z-index]="currentEvents.length - i"
+          [style.transform]="i === 0 ? cardTransform : getStackTransform(i)"
+          [style.transition]="i === 0 ? cardTransition : ''" (touchstart)="i === 0 ? onCardTouchStart($event) : null"
+          (touchmove)="i === 0 ? onCardTouchMove($event) : null" (touchend)="i === 0 ? onCardTouchEnd($event) : null"
+          (mousedown)="i === 0 ? onCardMouseDown($event) : null"
+          (mousemove)="i === 0 ? onCardMouseMove($event) : null" (mouseup)="i === 0 ? onCardMouseUp($event) : null"
+          (mouseleave)="i === 0 ? onCardMouseUp($event) : null">
+          <!-- Swipe Overlays -->
+          <div class="swipe-overlay swipe-overlay-left" [style.opacity]="i === 0 ? leftOverlayOpacity : 0">
             <mat-icon>close</mat-icon>
-        </button>
-        <button mat-fab class="add-button" (click)="swipeRight()" aria-label="Add to calendar">
+            <span>Skip</span>
+          </div>
+          <div class="swipe-overlay swipe-overlay-right" [style.opacity]="i === 0 ? rightOverlayOpacity : 0">
             <mat-icon>favorite</mat-icon>
-        </button>
+            <span>Add to Calendar</span>
+          </div>
+          <div class="card-image" [style.background-image]="'url(' + event.image + ')'"
+            [attr.aria-label]="'Image pour ' + event.title" role="img">
+            <div class="date-badge">
+              <span class="month">{{ event.startDate | date:'MMM' }}</span>
+              <span class="day">{{ event.startDate | date:'dd' }}</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="organizer">{{ event.organizerId }}</div>
+            <h2>{{ event.title }}</h2>
+            <div class="location">
+              <mat-icon>location_on</mat-icon>
+              {{ event.location }}
+            </div>
+            <p class="description">{{ event.description }}</p>
+          </div>
+        </div>
+      }
     </div>
+  }
 
-    <!-- Empty State -->
-    <div class="empty-state" *ngIf="currentEvents.length === 0">
-        <mat-icon>event_available</mat-icon>
-        <h2>No more events!</h2>
-        <p>You've reviewed all available events. Check back later for more.</p>
+  <!-- Action Buttons -->
+  @if (currentEvents.length > 0) {
+    <div class="action-buttons">
+      <button mat-fab color="warn" (click)="swipeLeft()" aria-label="Skip event">
+        <mat-icon>close</mat-icon>
+      </button>
+      <button mat-fab class="add-button" (click)="swipeRight()" aria-label="Add to calendar">
+        <mat-icon>favorite</mat-icon>
+      </button>
     </div>
+  }
+
+  <!-- Empty State -->
+  @if (currentEvents.length === 0) {
+    <div class="empty-state">
+      <mat-icon>event_available</mat-icon>
+      <h2>No more events!</h2>
+      <p>You've reviewed all available events. Check back later for more.</p>
+    </div>
+  }
 </div>

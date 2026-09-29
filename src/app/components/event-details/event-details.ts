@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,25 +21,22 @@ import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
   selector: 'app-event-details',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
     SharedChatComponent
-  ],
+],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
 })
 export class EventDetailsComponent implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private eventService = inject(EventService);
+
   event: FeedEvent | CalendarEvent | null = null;
   isFeedEvent = false;
   private subscription?: Subscription;
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private eventService: EventService
-  ) { }
 
   ngOnInit() {
     const eventId = this.route.snapshot.paramMap.get('id');

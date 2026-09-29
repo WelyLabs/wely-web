@@ -1,161 +1,188 @@
 <div class="calendar-container" [class.split-view]="isDetailsOpen && viewMode === 'month'"
-    [class.week-mode]="viewMode === 'week'" [class.day-mode]="viewMode === 'day'">
+  [class.week-mode]="viewMode === 'week'" [class.day-mode]="viewMode === 'day'">
 
-    <div class="details-backdrop" [class.visible]="isDetailsOpen && viewMode === 'month'" (click)="closeDetails()">
-    </div>
+  <div class="details-backdrop" [class.visible]="isDetailsOpen && viewMode === 'month'" (click)="closeDetails()">
+  </div>
 
-    <!-- Calendar Section -->
-    <div class="calendar-section">
-        <div class="calendar-header">
-            <div class="title-group">
-                <h2 class="current-month">
-                    <ng-container *ngIf="viewMode === 'month'">{{ currentDate | date: 'MMMM yyyy' }}</ng-container>
-                    <ng-container *ngIf="viewMode === 'week'">Semaine {{ getWeekNumber(currentDate) }}, {{ currentDate |
-                        date: 'yyyy' }}</ng-container>
-                    <ng-container *ngIf="viewMode === 'day'">{{ currentDate | date: 'MMM d, yyyy' }}</ng-container>
-                </h2>
-            </div>
+  <!-- Calendar Section -->
+  <div class="calendar-section">
+    <div class="calendar-header">
+      <div class="title-group">
+        <h2 class="current-month">
+          @if (viewMode === 'month') {
+            {{ currentDate | date: 'MMMM yyyy' }}
+          }
+          @if (viewMode === 'week') {
+            Semaine {{ getWeekNumber(currentDate) }}, {{ currentDate |
+            date: 'yyyy' }}
+          }
+          @if (viewMode === 'day') {
+            {{ currentDate | date: 'MMM d, yyyy' }}
+          }
+        </h2>
+      </div>
 
-            <div class="header-controls">
-                <div class="view-toggle">
-                    <button [class.active]="viewMode === 'month'" (click)="toggleView('month')">Month</button>
-                    <button [class.active]="viewMode === 'week'" (click)="toggleView('week')">Week</button>
-                    <button [class.active]="viewMode === 'day'" (click)="toggleView('day')">Day</button>
-                </div>
-
-                <div class="nav-buttons">
-                    <button (click)="navigate(-1)" aria-label="Previous">
-                        <mat-icon>chevron_left</mat-icon>
-                    </button>
-                    <button (click)="navigate(1)" aria-label="Next">
-                        <mat-icon>chevron_right</mat-icon>
-                    </button>
-                </div>
-            </div>
+      <div class="header-controls">
+        <div class="view-toggle">
+          <button [class.active]="viewMode === 'month'" (click)="toggleView('month')">Month</button>
+          <button [class.active]="viewMode === 'week'" (click)="toggleView('week')">Week</button>
+          <button [class.active]="viewMode === 'day'" (click)="toggleView('day')">Day</button>
         </div>
 
-        <!-- Month View Layout -->
-        <ng-container *ngIf="viewMode === 'month'">
-            <div class="weekdays">
-                <div *ngFor="let day of weekDays" class="weekday-name">{{ day }}</div>
-            </div>
-
-            <div class="days-grid month-grid" [class.selection-active]="selectedDate">
-                <div *ngFor="let day of days; let i = index" class="day-cell" [class.other-month]="!day.isCurrentMonth"
-                    [class.today]="day.isToday" [class.selected]="selectedDate && isSameDate(day.date, selectedDate)"
-                    (click)="selectDate(day)" (mousedown)="onMonthDayMouseDown($event, day)"
-                    (touchstart)="onMonthDayMouseDown($event, day)" (mouseup)="onMonthDayMouseUp()"
-                    (touchend)="onMonthDayMouseUp()">
-
-                    <div class="day-content">
-                        <span class="day-number">{{ day.date | date:'d' }}</span>
-                        <div class="event-dots" *ngIf="day.hasEvents">
-                            <span class="dot"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </ng-container>
-
-        <!-- Week/Day View Layout (Apple Style Schedule) -->
-        <ng-container *ngIf="viewMode === 'week' || viewMode === 'day'">
-            <div class="week-schedule-container" [class.day-mode]="viewMode === 'day'"
-                (mouseup)="onTimeMouseUp($event)">
-                <!-- Time Axis -->
-                <div class="time-axis">
-                    <div class="axis-header"></div>
-                    <div *ngFor="let hour of hours" class="hour-slot">
-                        {{ hour | number:'2.0' }}:00
-                    </div>
-                </div>
-
-                <!-- Day Columns -->
-                <div class="day-columns">
-                    <div *ngFor="let day of days" class="day-column" [class.today]="day.isToday">
-                        <div class="column-header">
-                            <span class="day-label">{{ day.date | date:'EEE' }}</span>
-                            <span class="date-label">{{ day.date | date:'d' }}</span>
-                        </div>
-
-                        <!-- Full Day Events Section -->
-                        <div class="full-day-events" *ngIf="getAllDayEvents(day.date).length > 0">
-                            <div *ngFor="let event of getAllDayEvents(day.date)" class="full-day-card"
-                                (click)="viewEventDetails(event)">
-                                <span class="event-title">{{ event.title }}</span>
-                            </div>
-                        </div>
-
-                        <div class="hour-slots">
-                            <!-- Timeline Indicator -->
-                            <div class="timeline-indicator" [class.vivid]="isToday(day.date)"
-                                [style.top.%]="currentTimePosition">
-                                <div class="dot" *ngIf="isToday(day.date)"></div>
-                                <div class="line"></div>
-                            </div>
-
-                            <!-- Selection Overlay -->
-                            <div class="selection-overlay" [ngStyle]="getSelectionStyle(day.date)">
-                                <div class="selection-box">
-                                    <span class="selection-time">New Event</span>
-                                </div>
-                            </div>
-
-                            <div class="hours-container" (mouseup)="onTimeMouseUp($event)"
-                                (touchend)="onTimeMouseUp($event)" (touchmove)="onTouchMove($event)">
-                                <div *ngFor="let hour of hours" class="hour-cell" [attr.data-hour]="hour"
-                                    (mousedown)="onTimeMouseDown($event, day.date, hour)"
-                                    (touchstart)="onTimeMouseDown($event, day.date, hour)"
-                                    (mouseenter)="onTimeMouseEnter(hour)">
-                                    <div class="event-container">
-                                        <div *ngFor="let event of getEventsForHour(day.date, hour)"
-                                            class="inline-event-card" [style.top.%]="getEventMinuteOffset(event)"
-                                            [style.height.%]="getEventHeight(event)" (click)="viewEventDetails(event)">
-                                            <div class="event-accent"></div>
-                                            <span class="event-title">{{ event.title }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </ng-container>
+        <div class="nav-buttons">
+          <button (click)="navigate(-1)" aria-label="Previous">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <button (click)="navigate(1)" aria-label="Next">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Details Section (Month View Only) -->
-    <div class="details-section" [class.visible]="isDetailsOpen && viewMode === 'month'"
-        (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
-        (touchend)="onDetailsTouchEnd($event)">
-        <div class="details-header">
-            <h3>{{ selectedDate | date:'EEEE, d MMMM yyyy' }}</h3>
-            <button (click)="closeDetails()">
-                <mat-icon>close</mat-icon>
-            </button>
-        </div>
-
-        <div class="events-list">
-            <div *ngIf="selectedEvents.length === 0" class="no-events">
-                <p>Aucun événement pour ce jour</p>
-            </div>
-
-            <div *ngFor="let event of selectedEvents" class="event-card" (click)="viewEventDetails(event)">
-                <div class="event-accent"></div>
-                <div class="event-time">{{ event.time }}</div>
-                <div class="event-info">
-                    <h4>{{ event.title }}</h4>
-                    <p>{{ event.description }}</p>
+    <!-- Month View Layout -->
+    @if (viewMode === 'month') {
+      <div class="weekdays">
+        @for (day of weekDays; track day) {
+          <div class="weekday-name">{{ day }}</div>
+        }
+      </div>
+      <div class="days-grid month-grid" [class.selection-active]="selectedDate">
+        @for (day of days; track day; let i = $index) {
+          <div class="day-cell" [class.other-month]="!day.isCurrentMonth"
+            [class.today]="day.isToday" [class.selected]="selectedDate && isSameDate(day.date, selectedDate)"
+            (click)="selectDate(day)" (mousedown)="onMonthDayMouseDown($event, day)"
+            (touchstart)="onMonthDayMouseDown($event, day)" (mouseup)="onMonthDayMouseUp()"
+            (touchend)="onMonthDayMouseUp()">
+            <div class="day-content">
+              <span class="day-number">{{ day.date | date:'d' }}</span>
+              @if (day.hasEvents) {
+                <div class="event-dots">
+                  <span class="dot"></span>
                 </div>
-                <mat-icon class="arrow-icon">chevron_right</mat-icon>
+              }
             </div>
+          </div>
+        }
+      </div>
+    }
 
+    <!-- Week/Day View Layout (Apple Style Schedule) -->
+    @if (viewMode === 'week' || viewMode === 'day') {
+      <div class="week-schedule-container" [class.day-mode]="viewMode === 'day'"
+        (mouseup)="onTimeMouseUp($event)">
+        <!-- Time Axis -->
+        <div class="time-axis">
+          <div class="axis-header"></div>
+          @for (hour of hours; track hour) {
+            <div class="hour-slot">
+              {{ hour | number:'2.0' }}:00
+            </div>
+          }
         </div>
+        <!-- Day Columns -->
+        <div class="day-columns">
+          @for (day of days; track day) {
+            <div class="day-column" [class.today]="day.isToday">
+              <div class="column-header">
+                <span class="day-label">{{ day.date | date:'EEE' }}</span>
+                <span class="date-label">{{ day.date | date:'d' }}</span>
+              </div>
+              <!-- Full Day Events Section -->
+              @if (getAllDayEvents(day.date).length > 0) {
+                <div class="full-day-events">
+                  @for (event of getAllDayEvents(day.date); track event) {
+                    <div class="full-day-card"
+                      (click)="viewEventDetails(event)">
+                      <span class="event-title">{{ event.title }}</span>
+                    </div>
+                  }
+                </div>
+              }
+              <div class="hour-slots">
+                <!-- Timeline Indicator -->
+                <div class="timeline-indicator" [class.vivid]="isToday(day.date)"
+                  [style.top.%]="currentTimePosition">
+                  @if (isToday(day.date)) {
+                    <div class="dot"></div>
+                  }
+                  <div class="line"></div>
+                </div>
+                <!-- Selection Overlay -->
+                <div class="selection-overlay" [ngStyle]="getSelectionStyle(day.date)">
+                  <div class="selection-box">
+                    <span class="selection-time">New Event</span>
+                  </div>
+                </div>
+                <div class="hours-container" (mouseup)="onTimeMouseUp($event)"
+                  (touchend)="onTimeMouseUp($event)" (touchmove)="onTouchMove($event)">
+                  @for (hour of hours; track hour) {
+                    <div class="hour-cell" [attr.data-hour]="hour"
+                      (mousedown)="onTimeMouseDown($event, day.date, hour)"
+                      (touchstart)="onTimeMouseDown($event, day.date, hour)"
+                      (mouseenter)="onTimeMouseEnter(hour)">
+                      <div class="event-container">
+                        @for (event of getEventsForHour(day.date, hour); track event) {
+                          <div
+                            class="inline-event-card" [style.top.%]="getEventMinuteOffset(event)"
+                            [style.height.%]="getEventHeight(event)" (click)="viewEventDetails(event)">
+                            <div class="event-accent"></div>
+                            <span class="event-title">{{ event.title }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Details Section (Month View Only) -->
+  <div class="details-section" [class.visible]="isDetailsOpen && viewMode === 'month'"
+    (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
+    (touchend)="onDetailsTouchEnd($event)">
+    <div class="details-header">
+      <h3>{{ selectedDate | date:'EEEE, d MMMM yyyy' }}</h3>
+      <button (click)="closeDetails()">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
 
-    <!-- Quick Event Popover (Apple Style) -->
-    <div class="popover-backdrop" *ngIf="isPopoverVisible" (click)="cancelCreatingEvent()"></div>
-    <app-quick-event-popover *ngIf="isPopoverVisible" [data]="popoverData" [position]="popoverPosition"
-        [arrowOffset]="arrowOffset" [isMobile]="isMobilePopover" (save)="submitEvent($event)"
-        (cancel)="cancelCreatingEvent()">
+    <div class="events-list">
+      @if (selectedEvents.length === 0) {
+        <div class="no-events">
+          <p>Aucun événement pour ce jour</p>
+        </div>
+      }
+
+      @for (event of selectedEvents; track event) {
+        <div class="event-card" (click)="viewEventDetails(event)">
+          <div class="event-accent"></div>
+          <div class="event-time">{{ event.time }}</div>
+          <div class="event-info">
+            <h4>{{ event.title }}</h4>
+            <p>{{ event.description }}</p>
+          </div>
+          <mat-icon class="arrow-icon">chevron_right</mat-icon>
+        </div>
+      }
+
+    </div>
+  </div>
+
+  <!-- Quick Event Popover (Apple Style) -->
+  @if (isPopoverVisible) {
+    <div class="popover-backdrop" (click)="cancelCreatingEvent()"></div>
+  }
+  @if (isPopoverVisible) {
+    <app-quick-event-popover [data]="popoverData" [position]="popoverPosition"
+      [arrowOffset]="arrowOffset" [isMobile]="isMobilePopover" (save)="submitEvent($event)"
+      (cancel)="cancelCreatingEvent()">
     </app-quick-event-popover>
+  }
 </div>

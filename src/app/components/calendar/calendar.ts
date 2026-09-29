@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +34,10 @@ import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-p
   styleUrl: './calendar.scss',
 })
 export class CalendarComponent implements OnInit, OnDestroy {
+  private eventService = inject(EventService);
+  private router = inject(Router);
+  private el = inject(ElementRef);
+
   currentDate = new Date();
   days: CalendarDay[] = [];
   weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -106,12 +110,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private touchStartY = 0;
   private touchCurrentY = 0;
   private isDragging = false;
-
-  constructor(
-    private eventService: EventService,
-    private router: Router,
-    private el: ElementRef
-  ) { }
 
   ngOnInit() {
     this.subscription = this.eventService.subscribedEvents$.subscribe((feedEvents: FeedEvent[]) => {

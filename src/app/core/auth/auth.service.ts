@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { KeycloakService } from 'keycloak-angular';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
 import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
@@ -7,9 +7,9 @@ import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
     providedIn: 'root'
 })
 export class AuthService {
-    private refreshTimer: any;
+    private keycloak = inject(KeycloakService);
 
-    constructor(private keycloak: KeycloakService) { }
+    private refreshTimer: any;
 
     /**
      * Planifie le prochain rafraîchissement du token de manière dynamique.

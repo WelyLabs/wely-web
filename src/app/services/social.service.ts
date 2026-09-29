@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
@@ -8,9 +8,9 @@ import { UserWithStatusDTO } from '../models/user.model';
     providedIn: 'root'
 })
 export class SocialService {
-    private apiUrl = `${environment.apiUrl}/social-service`;
+    private http = inject(HttpClient);
 
-    constructor(private http: HttpClient) { }
+    private apiUrl = `${environment.apiUrl}/social-service`;
 
     /**
      * Search users or fetch friends based on relation status

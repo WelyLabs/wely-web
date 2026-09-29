@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,16 +17,14 @@ import { UserService } from '../../services/user.service';
     styleUrl: './conversations-list.scss'
 })
 export class ConversationsListComponent implements OnInit {
+    private chatService = inject(ChatService);
+    private userService = inject(UserService);
+    private router = inject(Router);
+
     conversations: ConversationSummary[] = [];
     isLoading = true;
     error: string | null = null;
     currentUserId: string | null = null;
-
-    constructor(
-        private chatService: ChatService,
-        private userService: UserService,
-        private router: Router
-    ) { }
 
     ngOnInit() {
         const currentUser = this.userService.getCurrentUserValue();

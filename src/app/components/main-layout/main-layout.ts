@@ -1,5 +1,5 @@
-import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ViewChild, OnInit, OnDestroy, inject } from '@angular/core';
+
 import { Router, RouterModule } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -20,18 +20,24 @@ import { NavigationEnd } from '@angular/router';
   selector: 'app-main-layout',
   standalone: true,
   imports: [
-    CommonModule,
     RouterModule,
     MatSidenavModule,
     MatListModule,
     MatIconModule,
     MatButtonModule,
     MatToolbarModule
-  ],
+],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss'
 })
 export class MainLayoutComponent implements OnInit, OnDestroy {
+  private breakpointObserver = inject(BreakpointObserver);
+  private keycloak = inject(KeycloakService);
+  private userService = inject(UserService);
+  private chatService = inject(ChatService);
+  private notificationService = inject(NotificationService);
+  private router = inject(Router);
+
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
   navItems = [
@@ -49,15 +55,6 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   isChatPage = false;
   private chatSubscription?: Subscription;
   private routerSubscription?: Subscription;
-
-  constructor(
-    private breakpointObserver: BreakpointObserver,
-    private keycloak: KeycloakService,
-    private userService: UserService,
-    private chatService: ChatService,
-    private notificationService: NotificationService,
-    private router: Router
-  ) { }
 
   ngOnInit() {
     this.breakpointObserver.observe(['(max-width: 1023px)'])
