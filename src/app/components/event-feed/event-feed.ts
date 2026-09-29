@@ -33,6 +33,10 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   rightOverlayOpacity = 0;
 
   ngOnInit() {
+    // Le chargement était déclenché par le constructeur du service, root-provided :
+    // les deux requêtes partaient au bootstrap, y compris pour un visiteur déconnecté
+    // sur la landing page, où elles ne pouvaient que revenir en 401.
+    this.eventService.refreshEvents();
     this.subscription = this.eventService.feedEvents$.subscribe(events => {
       this.events = events;
       this.updateCurrentEvents();

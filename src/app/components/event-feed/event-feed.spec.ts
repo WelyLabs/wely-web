@@ -20,6 +20,7 @@ describe('EventFeedComponent', () => {
         ];
 
         eventServiceMock = {
+            refreshEvents: vi.fn(),
             feedEvents$: of(currentMockEvents),
             toggleSubscription: vi.fn().mockReturnValue(of({}))
         };

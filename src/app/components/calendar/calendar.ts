@@ -114,6 +114,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private isDragging = false;
 
   ngOnInit() {
+    // Le chargement était déclenché par le constructeur du service, root-provided :
+    // les deux requêtes partaient au bootstrap, y compris pour un visiteur déconnecté
+    // sur la landing page, où elles ne pouvaient que revenir en 401.
+    this.eventService.refreshEvents();
     this.subscription = this.eventService.subscribedEvents$.subscribe((feedEvents: FeedEvent[]) => {
       // Merge personal events with subscribed feed events
       const subscribedEvents = feedEvents.map((e: FeedEvent) => this.convertFeedEventToCalendarEvent(e));

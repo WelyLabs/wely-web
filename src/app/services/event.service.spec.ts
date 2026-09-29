@@ -17,12 +17,6 @@ describe('EventService', () => {
         });
         service = TestBed.inject(EventService);
         httpMock = TestBed.inject(HttpTestingController);
-
-        // Flush initial requests from constructor
-        const reqSub = httpMock.expectOne(`${apiUrl}/me/subscribed`);
-        reqSub.flush([]);
-        const reqFeed = httpMock.expectOne(`${apiUrl}/me/feed`);
-        reqFeed.flush([]);
     });
 
     afterEach(() => {
@@ -31,6 +25,21 @@ describe('EventService', () => {
 
     it('should be created', () => {
         expect(service).toBeTruthy();
+    });
+
+    it('ne charge rien à la construction', () => {
+        // Le service est root-provided : charger dans le constructeur déclenchait les
+        // deux requêtes au bootstrap, y compris pour un visiteur déconnecté sur la
+        // landing page, où elles ne pouvaient que revenir en 401.
+        httpMock.expectNone(`${apiUrl}/me/subscribed`);
+        httpMock.expectNone(`${apiUrl}/me/feed`);
+    });
+
+    it('charge les deux listes sur refreshEvents', () => {
+        service.refreshEvents();
+
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
     });
 
     it('should load subscribed events', () => {

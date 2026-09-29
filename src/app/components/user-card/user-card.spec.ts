@@ -10,7 +10,7 @@ describe('UserCardComponent', () => {
     let component: UserCardComponent;
     let fixture: ComponentFixture<UserCardComponent>;
     const mockUser: UserWithStatusDTO = {
-        userId: 1,
+        userId: 'user-1',
         userName: 'testuser',
         profilePicUrl: '',
         relationStatus: 'NONE'

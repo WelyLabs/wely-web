@@ -39,6 +39,10 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private subscription?: Subscription;
 
   ngOnInit() {
+    // Le chargement était déclenché par le constructeur du service, root-provided :
+    // les deux requêtes partaient au bootstrap, y compris pour un visiteur déconnecté
+    // sur la landing page, où elles ne pouvaient que revenir en 401.
+    this.eventService.refreshEvents();
     const eventId = this.route.snapshot.paramMap.get('id');
     const eventType = this.route.snapshot.paramMap.get('type');
 

@@ -1,53 +1,46 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
-import { UserWithStatusDTO } from '../models/user.model';
+import { environment } from '../../environments/environment';
+import { RelationStatus, UserNodeDTO, UserWithStatusDTO } from '../models/user.model';
 
-@Injectable({
-    providedIn: 'root'
-})
+/** Filters the social service accepts on its user listing. */
+export type FriendshipFilter = 'FRIENDS' | 'PENDING_INCOMING' | 'PENDING_OUTGOING';
+
+@Injectable({ providedIn: 'root' })
 export class SocialService {
-    private http = inject(HttpClient);
-
-    private apiUrl = `${environment.apiUrl}/social-service`;
+    private readonly http = inject(HttpClient);
+    private readonly apiUrl = `${environment.apiUrl}/social-service`;
 
     /**
-     * Search users or fetch friends based on relation status
+     * Lists users. Without a filter, every user with the caller's relationship status
+     * to each of them; with one, only that subset.
      */
-    searchUsers(relationStatus?: string): Observable<UserWithStatusDTO[]> {
+    searchUsers(friendshipStatus?: FriendshipFilter): Observable<UserWithStatusDTO[]> {
         let params = new HttpParams();
-        if (relationStatus) {
-            params = params.set('friendshipStatus', relationStatus);
+        if (friendshipStatus) {
+            params = params.set('friendshipStatus', friendshipStatus);
         }
         return this.http.get<UserWithStatusDTO[]>(`${this.apiUrl}/users`, { params });
     }
 
-    /**
-     * Send a friend request using the user's tag (Name#Hashtag)
-     */
-    sendFriendRequest(userTag: string): Observable<any> {
-        return this.http.post(`${this.apiUrl}/relationships/request`, { userTag });
+    /** Sends a friend request by public tag, `Name#1234`. */
+    sendFriendRequest(userTag: string): Observable<UserNodeDTO> {
+        return this.http.post<UserNodeDTO>(`${this.apiUrl}/relationships/request`, { userTag });
     }
 
-    /**
-     * Accept an incoming friend request
-     */
-    acceptFriend(userId: number): Observable<any> {
-        return this.http.put(`${this.apiUrl}/relationships/accept/${userId}`, {});
+    /** Accepts an incoming request. The backend answers 204. */
+    acceptFriend(userId: string): Observable<void> {
+        return this.http.put<void>(`${this.apiUrl}/relationships/accept/${userId}`, {});
     }
 
-    /**
-     * Reject an incoming friend request
-     */
-    rejectFriend(userId: number): Observable<any> {
-        return this.http.put(`${this.apiUrl}/relationships/reject/${userId}`, {});
+    rejectFriend(userId: string): Observable<void> {
+        return this.http.put<void>(`${this.apiUrl}/relationships/reject/${userId}`, {});
     }
 
-    /**
-     * Remove a friend
-     */
-    removeFriend(userId: number): Observable<any> {
-        return this.http.delete(`${this.apiUrl}/relationships/${userId}`);
+    removeFriend(userId: string): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/relationships/${userId}`);
     }
 }
+
+export type { RelationStatus };

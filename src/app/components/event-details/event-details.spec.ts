@@ -29,6 +29,7 @@ describe('EventDetailsComponent', () => {
         vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
         eventServiceMock = {
+            refreshEvents: vi.fn(),
             feedEvents$: of([mockFeedEvent]),
             subscribedEvents$: of([])
         };

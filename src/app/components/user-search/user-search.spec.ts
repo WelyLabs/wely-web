@@ -87,7 +87,7 @@ describe('UserSearchComponent', () => {
     it('should load users on init and search mode', () => {
         routeDataSubject.next({ mode: 'search' });
         expect(socialServiceMock.searchUsers).toHaveBeenCalled();
-        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
         expect(component.users.length).toBe(1);
         expect(component.users[0].relationStatus).toBeUndefined();
@@ -95,8 +95,8 @@ describe('UserSearchComponent', () => {
 
     it('should search users and filter locally', () => {
         component.users = [
-            { userId: 1, userName: 'Alice' } as any,
-            { userId: 2, userName: 'Bob' } as any
+            { userId: 'user-1', userName: 'Alice' } as any,
+            { userId: 'user-2', userName: 'Bob' } as any
         ];
         component.searchQuery = 'ali';
         component.onSearchChange();
@@ -105,16 +105,16 @@ describe('UserSearchComponent', () => {
     });
 
     it('should search users and reset filter when query is empty', () => {
-        component.users = [{ userId: 1, userName: 'Alice' } as any];
+        component.users = [{ userId: 'user-1', userName: 'Alice' } as any];
         component.searchQuery = '';
         component.onSearchChange();
         expect(component.filteredUsers).toEqual(component.users);
     });
 
     it('should navigate to chat when onChat is called', () => {
-        const user = { userId: 123, userName: 'Bob' } as any;
+        const user = { userId: 'user-123', userName: 'Bob' } as any;
         component.onChat(user);
-        expect(chatServiceMock.getConversation).toHaveBeenCalledWith('123');
+        expect(chatServiceMock.getConversation).toHaveBeenCalledWith('user-123');
         expect(routerMock.navigate).toHaveBeenCalledWith(['/chat', 'conv1']);
     });
 
@@ -123,7 +123,7 @@ describe('UserSearchComponent', () => {
         component.onTabChange(1);
         expect(component.activeTabIndex).toBe(1);
         expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_OUTGOING');
-        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
         expect(component.users[0].relationStatus).toBe('PENDING_OUTGOING');
     });
@@ -133,23 +133,23 @@ describe('UserSearchComponent', () => {
         component.onTabChange(2);
         expect(component.activeTabIndex).toBe(2);
         expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_INCOMING');
-        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 1, userName: 'Alice' }]));
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
         expect(component.users[0].relationStatus).toBe('PENDING_INCOMING');
     });
 
     it('should NOT remove friend if dialog is cancelled', () => {
         dialogMock.open.mockReturnValue({ afterClosed: () => of(false) });
-        const user = { userId: 1, userName: 'Alice' } as any;
+        const user = { userId: 'user-1', userName: 'Alice' } as any;
         component.onRemoveFriend(user);
         expect(socialServiceMock.removeFriend).not.toHaveBeenCalled();
     });
 
     it('should open dialog and reload on confirm remove friend', () => {
-        const user = { userId: 1, userName: 'Alice' } as any;
+        const user = { userId: 'user-1', userName: 'Alice' } as any;
         component.onRemoveFriend(user);
         expect(dialogMock.open).toHaveBeenCalled();
-        expect(socialServiceMock.removeFriend).toHaveBeenCalledWith(1);
+        expect(socialServiceMock.removeFriend).toHaveBeenCalledWith('user-1');
     });
 
     it('should handle mobile breakpoint', () => {
@@ -201,15 +201,15 @@ describe('UserSearchComponent', () => {
         // L'événement (addFriend) du template arrive ici, mais rien n'est envoyé :
         // l'ajout passe en réalité par AddFriendDialogComponent, qui demande un tag.
         // Stub non implémenté ; ce test constate l'absence d'appel réseau.
-        component.onAddFriend({ userId: 1 } as unknown as UserWithStatusDTO);
+        component.onAddFriend({ userId: 'user-1' } as unknown as UserWithStatusDTO);
 
         expect(socialServiceMock.sendFriendRequest).not.toHaveBeenCalled();
     });
 
     it('should accept friend and reload', () => {
         const spy = vi.spyOn(component, 'loadUsers');
-        component.onAcceptFriend({ userId: 1 } as any);
-        expect(socialServiceMock.acceptFriend).toHaveBeenCalledWith(1);
+        component.onAcceptFriend({ userId: 'user-1' } as any);
+        expect(socialServiceMock.acceptFriend).toHaveBeenCalledWith('user-1');
         expect(spy).toHaveBeenCalled();
     });
 
@@ -217,22 +217,22 @@ describe('UserSearchComponent', () => {
         socialServiceMock.acceptFriend.mockReturnValue(new Subject().asObservable());
         const errorSubject = new Subject();
         socialServiceMock.acceptFriend.mockReturnValue(errorSubject.asObservable());
-        component.onAcceptFriend({ userId: 1 } as any);
+        component.onAcceptFriend({ userId: 'user-1' } as any);
         errorSubject.error('err');
         expect(component.error).toBe('Impossible d\'accepter la demande');
     });
 
     it('should decline friend and reload', () => {
         const spy = vi.spyOn(component, 'loadUsers');
-        component.onDeclineFriend({ userId: 1 } as any);
-        expect(socialServiceMock.rejectFriend).toHaveBeenCalledWith(1);
+        component.onDeclineFriend({ userId: 'user-1' } as any);
+        expect(socialServiceMock.rejectFriend).toHaveBeenCalledWith('user-1');
         expect(spy).toHaveBeenCalled();
     });
 
     it('should handle error when declining friend', () => {
         const errorSubject = new Subject();
         socialServiceMock.rejectFriend.mockReturnValue(errorSubject.asObservable());
-        component.onDeclineFriend({ userId: 1 } as any);
+        component.onDeclineFriend({ userId: 'user-1' } as any);
         errorSubject.error('err');
         expect(component.error).toBe('Impossible de refuser la demande');
     });
@@ -241,7 +241,7 @@ describe('UserSearchComponent', () => {
         dialogMock.open.mockReturnValue({ afterClosed: () => of(true) });
         const errorSubject = new Subject();
         socialServiceMock.removeFriend.mockReturnValue(errorSubject.asObservable());
-        component.onRemoveFriend({ userId: 1 } as any);
+        component.onRemoveFriend({ userId: 'user-1' } as any);
         errorSubject.error('err');
         expect(component.error).toBe('Impossible de supprimer l\'ami');
     });
@@ -249,7 +249,7 @@ describe('UserSearchComponent', () => {
     it('should handle error when opening chat', () => {
         const errorSubject = new Subject();
         chatServiceMock.getConversation.mockReturnValue(errorSubject.asObservable());
-        component.onChat({ userId: 1 } as any);
+        component.onChat({ userId: 'user-1' } as any);
         errorSubject.error('err');
         expect(component.error).toBe('Impossible d\'ouvrir la discussion');
     });

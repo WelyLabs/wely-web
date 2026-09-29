@@ -21,6 +21,7 @@ describe('CalendarComponent', () => {
     beforeEach(async () => {
         TestBed.resetTestingModule();
         eventServiceMock = {
+            refreshEvents: vi.fn(),
             subscribedEvents$: of(mockEvents),
             createEvent: vi.fn().mockReturnValue(of(mockEvents[0]))
         };

@@ -11,7 +11,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { SocialService } from '../../services/social.service';
+import { FriendshipFilter, SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
 import { UserWithStatusDTO } from '../../models/user.model';
 import { Conversation } from '../../models/chat.model';
@@ -96,6 +96,13 @@ export class UserSearchComponent implements OnInit {
         this.loadUsers();
     }
 
+    /** Onglets : Amis, Demandes envoyées, Demandes reçues. */
+    private filterForActiveTab(): FriendshipFilter {
+        if (this.activeTabIndex === 1) return 'PENDING_OUTGOING';
+        if (this.activeTabIndex === 2) return 'PENDING_INCOMING';
+        return 'FRIENDS';
+    }
+
     loadUsers() {
         this.isLoading = true;
         this.error = null;
@@ -103,10 +110,7 @@ export class UserSearchComponent implements OnInit {
         let request$;
 
         if (this.isFriendsMode) {
-            let status = 'FRIENDS';
-            if (this.activeTabIndex === 1) status = 'PENDING_OUTGOING';
-            if (this.activeTabIndex === 2) status = 'PENDING_INCOMING';
-            request$ = this.socialService.searchUsers(status);
+            request$ = this.socialService.searchUsers(this.filterForActiveTab());
         } else {
             request$ = this.socialService.searchUsers();
         }
@@ -115,9 +119,7 @@ export class UserSearchComponent implements OnInit {
             next: (users) => {
                 // If in friends mode, manually inject the status as the API doesn't return it
                 if (this.isFriendsMode) {
-                    let inferredStatus: 'FRIENDS' | 'PENDING_OUTGOING' | 'PENDING_INCOMING' = 'FRIENDS';
-                    if (this.activeTabIndex === 1) inferredStatus = 'PENDING_OUTGOING';
-                    if (this.activeTabIndex === 2) inferredStatus = 'PENDING_INCOMING';
+                    const inferredStatus: FriendshipFilter = this.filterForActiveTab();
 
                     this.users = users.map(user => ({
                         ...user,

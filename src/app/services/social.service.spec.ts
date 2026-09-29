@@ -63,7 +63,7 @@ describe('SocialService', () => {
     });
 
     it('should accept friend request', () => {
-        const userId = 123;
+        const userId = '550e8400-e29b-41d4-a716-446655440000';
         service.acceptFriend(userId).subscribe();
 
         const req = httpMock.expectOne(`${apiUrl}/relationships/accept/${userId}`);
@@ -72,7 +72,7 @@ describe('SocialService', () => {
     });
 
     it('should reject friend request', () => {
-        const userId = 123;
+        const userId = '550e8400-e29b-41d4-a716-446655440000';
         service.rejectFriend(userId).subscribe();
 
         const req = httpMock.expectOne(`${apiUrl}/relationships/reject/${userId}`);
@@ -81,7 +81,7 @@ describe('SocialService', () => {
     });
 
     it('should remove friend', () => {
-        const userId = 123;
+        const userId = '550e8400-e29b-41d4-a716-446655440000';
         service.removeFriend(userId).subscribe();
 
         const req = httpMock.expectOne(`${apiUrl}/relationships/${userId}`);
