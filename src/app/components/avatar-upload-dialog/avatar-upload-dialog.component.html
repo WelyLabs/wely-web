@@ -9,7 +9,8 @@
   <div class="content">
     @if (!imageChangedEvent) {
       <div class="upload-area">
-        <div class="upload-placeholder" (click)="fileInput.click()">
+        <div class="upload-placeholder" role="button" tabindex="0" (click)="fileInput.click()"
+             (keydown.enter)="fileInput.click()" (keydown.space)="fileInput.click()">
           <mat-icon>add_a_photo</mat-icon>
           <span>Choisir une image</span>
         </div>

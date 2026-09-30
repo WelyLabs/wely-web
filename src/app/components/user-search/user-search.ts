@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
@@ -166,7 +166,7 @@ export class UserSearchComponent implements OnInit {
             next: () => {
                 this.loadUsers();
             },
-            error: (err: any) => {
+            error: (err: unknown) => {
                 this.logger.error('UserSearchComponent', 'Error accepting friend request:', err);
                 this.isLoading = false;
                 this.error = 'Impossible d\'accepter la demande';
@@ -180,7 +180,7 @@ export class UserSearchComponent implements OnInit {
             next: () => {
                 this.loadUsers();
             },
-            error: (err: any) => {
+            error: (err: unknown) => {
                 this.logger.error('UserSearchComponent', 'Error declining friend request:', err);
                 this.isLoading = false;
                 this.error = 'Impossible de refuser la demande';
@@ -208,7 +208,7 @@ export class UserSearchComponent implements OnInit {
                     next: () => {
                         this.loadUsers();
                     },
-                    error: (err: any) => {
+                    error: (err: unknown) => {
                         this.logger.error('UserSearchComponent', 'Error removing friend:', err);
                         this.isLoading = false;
                         this.error = 'Impossible de supprimer l\'ami';
@@ -224,7 +224,7 @@ export class UserSearchComponent implements OnInit {
             next: (conv: Conversation) => {
                 this.router.navigate(['/chat', conv.id]);
             },
-            error: (err: any) => {
+            error: (err: unknown) => {
                 this.logger.error('UserSearchComponent', 'Error getting conversation:', err);
                 this.isLoading = false;
                 this.error = 'Impossible d\'ouvrir la discussion';

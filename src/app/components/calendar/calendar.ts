@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, inject, HostListener } from '@angular/core';
 import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -24,7 +24,6 @@ export interface CalendarEvent {
   endDate: Date;
 }
 
-import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-popover';
 
 @Component({
@@ -45,7 +44,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   hours = Array.from({ length: 24 }, (_, i) => i);
   currentTimePosition = 0;
-  private timeUpdateInterval?: any;
+  private timeUpdateInterval?: ReturnType<typeof setInterval>;
   viewMode: 'month' | 'week' | 'day' = 'month';
 
   selectedDate: Date | null = null;
@@ -105,7 +104,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   selectionStartHour: number | null = null;
   selectionEndHour: number | null = null;
   selectionDate: Date | null = null;
-  private selectionTimeout?: any;
+  private selectionTimeout?: ReturnType<typeof setTimeout>;
   private readonly SELECTION_DELAY = 400; // ms
 
   // Touch event tracking for swipe-to-dismiss
@@ -455,7 +454,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   onMonthDayMouseUp() {
     if (this.selectionTimeout) {
       clearTimeout(this.selectionTimeout);
-      this.selectionTimeout = null;
+      this.selectionTimeout = undefined;
     }
   }
 
@@ -515,7 +514,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       if (moveDistance > 10) {
         // User moved too much, they likely want to scroll, cancel the hold
         clearTimeout(this.selectionTimeout);
-        this.selectionTimeout = null;
+        this.selectionTimeout = undefined;
       }
       return;
     }
@@ -546,7 +545,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   onTimeMouseUp(event: MouseEvent | TouchEvent) {
     if (this.selectionTimeout) {
       clearTimeout(this.selectionTimeout);
-      this.selectionTimeout = null;
+      this.selectionTimeout = undefined;
     }
 
     if (!this.isSelectingRange) return;
@@ -601,6 +600,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
       height: `${height}px`
     };
   }
+  /**
+   * Escape closes the panel.
+   *
+   * <p>The backdrop is click-to-dismiss, but a div cannot take focus, so it can never
+   * receive a key event: keyboard dismissal has to live on the component.
+   */
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.isDetailsOpen) {
+      this.closeDetails();
+    }
+  }
+
 
   closeDetails() {
     this.selectedDate = null;

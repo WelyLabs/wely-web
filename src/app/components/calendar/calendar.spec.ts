@@ -1,6 +1,6 @@
 import 'zone.js';
 import 'zone.js/testing';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent, CalendarEvent } from './calendar';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';

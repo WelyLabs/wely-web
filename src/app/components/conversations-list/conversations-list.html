@@ -46,8 +46,9 @@
     @if (!isLoading && !error && conversations.length > 0) {
       <div class="conversations-grid">
         @for (conv of conversations; track conv; let i = $index) {
-          <div class="conv-item"
-            [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)">
+          <div class="conv-item" role="button" tabindex="0"
+            [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)"
+            (keydown.enter)="openConversation(conv)" (keydown.space)="openConversation(conv)">
             <div class="avatar-wrapper">
               <div class="avatar-gradient">
                 {{ getAvatarInitial(conv.title) }}

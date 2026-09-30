@@ -7,7 +7,7 @@ import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
 import { NavigationService } from '../../services/navigation.service';
 import { of, BehaviorSubject, Subject } from 'rxjs';
-import { Conversation, Message, MessageType } from '../../models/chat.model';
+import { Conversation, MessageType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 

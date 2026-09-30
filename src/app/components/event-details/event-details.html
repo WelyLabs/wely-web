@@ -68,7 +68,7 @@
         <mat-tab label="Chat">
           <div class="chat-container">
             <app-shared-chat [messages]="chatMessages" [placeholder]="'Type a message...'"
-              (onSend)="onSendMessage($event)">
+              (send)="onSendMessage($event)">
             </app-shared-chat>
           </div>
         </mat-tab>

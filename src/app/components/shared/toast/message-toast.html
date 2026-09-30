@@ -1,4 +1,5 @@
-<div class="message-toast-container" (click)="navigateToConversation()">
+<div class="message-toast-container" role="button" tabindex="0" (click)="navigateToConversation()"
+     (keydown.enter)="navigateToConversation()" (keydown.space)="navigateToConversation()">
     <div class="toast-icon">
         <mat-icon>chat_bubble_outline</mat-icon>
     </div>

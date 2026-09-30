@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from '../logging/logger.service';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, from } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class SessionInterceptor implements HttpInterceptor {
     private authService = inject(AuthService);
 
 
-    intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
         return next.handle(request).pipe(
             catchError((error: HttpErrorResponse) => {
                 const isUnauthorized = error.status === 401;

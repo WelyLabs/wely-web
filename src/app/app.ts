@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { LoggerService } from './core/logging/logger.service';
 import { RouterOutlet } from '@angular/router';
-import { KeycloakService, KeycloakEventType } from 'keycloak-angular';
+import { KeycloakService, KeycloakEventTypeLegacy } from 'keycloak-angular';
 import { UserService } from './services/user.service';
-import { Subscription, from } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -24,14 +24,17 @@ export class App implements OnInit, OnDestroy {
     this.subscription.add(
       this.keycloakService.keycloakEvents$.subscribe({
         next: (event) => {
-          const type = event.type as any;
-          if (type === KeycloakEventType.TokenExpired) {
+          // keycloakEvents$ emits KeycloakEventTypeLegacy, not KeycloakEventType. The
+          // comparisons here used to cast event.type to any and compare against the new
+          // enum, whose members have different names — so neither branch ever ran, and
+          // this fallback was dead. Proactive refresh in AuthService covered for it.
+          if (event.type === KeycloakEventTypeLegacy.OnTokenExpired) {
             this.keycloakService.updateToken(20).catch(() => {
               this.keycloakService.login();
             });
           }
 
-          if (type === KeycloakEventType.AuthRefreshError) {
+          if (event.type === KeycloakEventTypeLegacy.OnAuthRefreshError) {
             this.keycloakService.login();
           }
         }

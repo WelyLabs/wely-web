@@ -96,7 +96,7 @@ export class EventFeedComponent implements OnInit, OnDestroy {
     });
   }
 
-  onCardTouchEnd(event: TouchEvent) {
+  onCardTouchEnd(_event: TouchEvent) {
     if (!this.isDragging) return;
 
     // Cancel any pending animation frame
@@ -164,7 +164,7 @@ export class EventFeedComponent implements OnInit, OnDestroy {
     });
   }
 
-  onCardMouseUp(event: MouseEvent) {
+  onCardMouseUp(_event: MouseEvent) {
     if (!this.isDragging) return;
 
     // Cancel any pending animation frame

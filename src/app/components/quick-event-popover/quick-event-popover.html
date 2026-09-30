@@ -1,3 +1,6 @@
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+     Not a control: the click handler exists only to stop the event reaching the
+     backdrop behind it. The popover's own buttons carry the actions. -->
 <div class="popover-container" [style.left.px]="isMobile ? 0 : position.x" [style.top.px]="isMobile ? 0 : position.y"
     [class.arrow-left]="!isMobile && position.arrowSide === 'left'"
     [class.arrow-right]="!isMobile && position.arrowSide === 'right'"

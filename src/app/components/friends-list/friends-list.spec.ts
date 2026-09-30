@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FriendsListComponent } from './friends-list';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BusinessUser } from '../../models/business-user.model';

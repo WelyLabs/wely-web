@@ -1,17 +1,16 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { SharedChatComponent, ChatMessage } from './shared-chat';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SharedChatComponent } from './shared-chat';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('SharedChatComponent', () => {
     let component: SharedChatComponent;
     let fixture: ComponentFixture<SharedChatComponent>;
-    let intersectionObserverMock: any;
 
     beforeEach(async () => {
         const MockIntersectionObserver = class {
@@ -48,7 +47,7 @@ describe('SharedChatComponent', () => {
     });
 
     it('should emit onSend when sendMessage is called with content', () => {
-        const emitSpy = vi.spyOn(component.onSend, 'emit');
+        const emitSpy = vi.spyOn(component.send, 'emit');
         component.newMessage = 'Hello world';
         component.sendMessage();
         expect(emitSpy).toHaveBeenCalledWith('Hello world');
@@ -56,7 +55,7 @@ describe('SharedChatComponent', () => {
     });
 
     it('should not emit onSend when sendMessage is called with empty content', () => {
-        const emitSpy = vi.spyOn(component.onSend, 'emit');
+        const emitSpy = vi.spyOn(component.send, 'emit');
         component.newMessage = '  ';
         component.sendMessage();
         expect(emitSpy).not.toHaveBeenCalled();
@@ -78,7 +77,7 @@ describe('SharedChatComponent', () => {
     });
 
     it('should preserve scroll when messages are prepended', () => {
-        const preserveSpy = vi.spyOn(component as any, 'preserveScroll').mockImplementation(() => { });
+        const preserveSpy = vi.spyOn(component as any, 'preserveScroll').mockImplementation(() => undefined);
         const oldMsgs = [{ text: 'old', isMe: false, time: new Date() }];
         const newMsgs = [{ text: 'new', isMe: false, time: new Date() }, ...oldMsgs];
 

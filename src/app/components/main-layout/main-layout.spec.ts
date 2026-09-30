@@ -1,9 +1,9 @@
 import 'zone.js';
 import 'zone.js/testing';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MainLayoutComponent } from './main-layout';
 import { Router } from '@angular/router';
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';

@@ -36,8 +36,8 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
     @Input() loading = false;
     @Input() historyLoading = false;
     @Input() hasMore = true;
-    @Output() onSend = new EventEmitter<string>();
-    @Output() onLoadMore = new EventEmitter<void>();
+    @Output() send = new EventEmitter<string>();
+    @Output() loadMore = new EventEmitter<void>();
 
     @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
     @ViewChild('topSentinel') private topSentinel!: ElementRef;
@@ -68,7 +68,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
             entries.forEach(entry => {
                 if (entry.isIntersecting && this.allowTrigger && this.hasMore && !this.historyLoading) {
                     this.logger.debug('SharedChatComponent', '🚀 [SharedChat] Sentinel visible - Triggering LOAD MORE');
-                    this.onLoadMore.emit();
+                    this.loadMore.emit();
                     this.allowTrigger = false; // Lock immediately
                 }
             });
@@ -161,18 +161,21 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
         try {
             const element = this.scrollContainer.nativeElement;
             element.scrollTop = element.scrollHeight;
-        } catch (err) { }
+        } catch {
+            // The container is not in the DOM yet — the view has not rendered, or the
+            // component is being torn down. Scrolling is cosmetic; nothing to recover.
+        }
     }
 
     sendMessage() {
         if (this.newMessage.trim()) {
-            this.onSend.emit(this.newMessage);
+            this.send.emit(this.newMessage);
             this.newMessage = '';
             this.shouldScrollToBottom = true;
         }
     }
 
-    trackByMessage(index: number, message: ChatMessage): any {
-        return message.id || index;
+    trackByMessage(index: number, message: ChatMessage): string | number {
+        return message.id ?? index;
     }
 }

@@ -3,7 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { SocialService } from './social.service';
 import { environment } from '../../environments/environment';
 import { UserWithStatusDTO } from '../models/user.model';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 describe('SocialService', () => {
     let service: SocialService;

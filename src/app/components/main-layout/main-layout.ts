@@ -1,4 +1,4 @@
-import { Component, ViewChild, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, ViewChild, OnInit, OnDestroy, inject, HostListener } from '@angular/core';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { Router, RouterModule } from '@angular/router';
@@ -7,7 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
@@ -77,7 +77,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
       next: (user) => {
         this.userProfile = user;
       },
-      error: (err: any) => this.logger.error('MainLayoutComponent', 'Error loading profile in layout:', err)
+      error: (err: unknown) => this.logger.error('MainLayoutComponent', 'Error loading profile in layout:', err)
     });
 
     // User data is already preloaded by APP_INITIALIZER
@@ -98,8 +98,9 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     // Track route changes to hide mobile avatar on chat page
     this.isChatPage = this.router.url.includes('/chat/');
     this.routerSubscription = this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: any) => {
+      // Le prédicat de type porte l'information : plus besoin de caster ensuite.
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd)
+    ).subscribe((event) => {
       this.isChatPage = event.urlAfterRedirects.includes('/chat/');
     });
   }
@@ -111,6 +112,14 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   toggleMobileMenu() {
     this.showMobileMenu = !this.showMobileMenu;
   }
+  /** Escape closes the mobile menu; its backdrop cannot take focus. */
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.showMobileMenu) {
+      this.closeMobileMenu();
+    }
+  }
+
 
   closeMobileMenu() {
     this.showMobileMenu = false;

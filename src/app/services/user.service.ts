@@ -96,7 +96,6 @@ export class UserService {
                 }
             }),
             // Transform string to object
-            tap(() => { }), // placeholder to maintain chain
         ) as unknown as Observable<{ profilePicUrl: string }>;
     }
 }

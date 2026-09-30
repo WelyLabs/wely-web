@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LandingPageComponent } from './landing-page';
 import { Router } from '@angular/router';
 import { KeycloakService } from 'keycloak-angular';

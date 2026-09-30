@@ -41,8 +41,8 @@
       @if (!isLoading && !error) {
         <div class="chat-shared-wrapper">
           <app-shared-chat [messages]="chatMessages" [loading]="isSending" [historyLoading]="isHistoryLoading"
-            [hasMore]="hasMoreHistory" [placeholder]="placeholder" (onSend)="onSendMessage($event)"
-            (onLoadMore)="onLoadMoreMessages()">
+            [hasMore]="hasMoreHistory" [placeholder]="placeholder" (send)="onSendMessage($event)"
+            (loadMore)="onLoadMoreMessages()">
           </app-shared-chat>
         </div>
       }

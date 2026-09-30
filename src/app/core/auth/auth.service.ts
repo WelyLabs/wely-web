@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from '../logging/logger.service';
 import { KeycloakService } from 'keycloak-angular';
-import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
-import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
+import { from } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -11,7 +10,8 @@ export class AuthService {
     private readonly logger = inject(LoggerService);
     private keycloak = inject(KeycloakService);
 
-    private refreshTimer: any;
+    /** Browser timer handle; `number` in the DOM, not NodeJS.Timeout. */
+    private refreshTimer?: ReturnType<typeof setTimeout>;
 
     /**
      * Planifie le prochain rafraîchissement du token de manière dynamique.
@@ -63,7 +63,7 @@ export class AuthService {
     stopTokenRefresh() {
         if (this.refreshTimer) {
             clearTimeout(this.refreshTimer);
-            this.refreshTimer = null;
+            this.refreshTimer = undefined;
         }
     }
 

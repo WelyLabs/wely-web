@@ -42,7 +42,7 @@ try {
         platformBrowserDynamicTesting()
     );
     console.log('🚀 [TestSetup] Test Environment initialized.');
-} catch (e) {
+} catch {
     // Environment might already be initialized by another worker or test run
     // console.log('⚠️ [TestSetup] Test Environment already initialized.');
 }

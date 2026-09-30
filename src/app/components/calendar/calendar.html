@@ -1,6 +1,9 @@
 <div class="calendar-container" [class.split-view]="isDetailsOpen && viewMode === 'month'"
   [class.week-mode]="viewMode === 'week'" [class.day-mode]="viewMode === 'day'">
 
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+       Presentational dismiss target: it is not a control and cannot take focus. Keyboard
+       dismissal is handled by the component's Escape listener. -->
   <div class="details-backdrop" [class.visible]="isDetailsOpen && viewMode === 'month'" (click)="closeDetails()">
   </div>
 
@@ -49,9 +52,10 @@
       </div>
       <div class="days-grid month-grid" [class.selection-active]="selectedDate">
         @for (day of days; track day; let i = $index) {
-          <div class="day-cell" [class.other-month]="!day.isCurrentMonth"
+          <div class="day-cell" role="button" tabindex="0" [class.other-month]="!day.isCurrentMonth"
             [class.today]="day.isToday" [class.selected]="selectedDate && isSameDate(day.date, selectedDate)"
-            (click)="selectDate(day)" (mousedown)="onMonthDayMouseDown($event, day)"
+            (click)="selectDate(day)" (keydown.enter)="selectDate(day)" (keydown.space)="selectDate(day)"
+            (mousedown)="onMonthDayMouseDown($event, day)"
             (touchstart)="onMonthDayMouseDown($event, day)" (mouseup)="onMonthDayMouseUp()"
             (touchend)="onMonthDayMouseUp()">
             <div class="day-content">
@@ -92,8 +96,9 @@
               @if (getAllDayEvents(day.date).length > 0) {
                 <div class="full-day-events">
                   @for (event of getAllDayEvents(day.date); track event) {
-                    <div class="full-day-card"
-                      (click)="viewEventDetails(event)">
+                    <div class="full-day-card" role="button" tabindex="0"
+                      (click)="viewEventDetails(event)" (keydown.enter)="viewEventDetails(event)"
+                      (keydown.space)="viewEventDetails(event)">
                       <span class="event-title">{{ event.title }}</span>
                     </div>
                   }
@@ -124,8 +129,11 @@
                       <div class="event-container">
                         @for (event of getEventsForHour(day.date, hour); track event) {
                           <div
-                            class="inline-event-card" [style.top.%]="getEventMinuteOffset(event)"
-                            [style.height.%]="getEventHeight(event)" (click)="viewEventDetails(event)">
+                            class="inline-event-card" role="button" tabindex="0"
+                            [style.top.%]="getEventMinuteOffset(event)"
+                            [style.height.%]="getEventHeight(event)" (click)="viewEventDetails(event)"
+                            (keydown.enter)="viewEventDetails(event)"
+                            (keydown.space)="viewEventDetails(event)">
                             <div class="event-accent"></div>
                             <span class="event-title">{{ event.title }}</span>
                           </div>
@@ -161,7 +169,8 @@
       }
 
       @for (event of selectedEvents; track event) {
-        <div class="event-card" (click)="viewEventDetails(event)">
+        <div class="event-card" role="button" tabindex="0" (click)="viewEventDetails(event)"
+                  (keydown.enter)="viewEventDetails(event)" (keydown.space)="viewEventDetails(event)">
           <div class="event-accent"></div>
           <div class="event-time">{{ event.time }}</div>
           <div class="event-info">
@@ -177,12 +186,15 @@
 
   <!-- Quick Event Popover (Apple Style) -->
   @if (isPopoverVisible) {
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+         Presentational dismiss target: it is not a control and cannot take focus. Keyboard
+         dismissal is handled by the component's Escape listener. -->
     <div class="popover-backdrop" (click)="cancelCreatingEvent()"></div>
   }
   @if (isPopoverVisible) {
     <app-quick-event-popover [data]="popoverData" [position]="popoverPosition"
       [arrowOffset]="arrowOffset" [isMobile]="isMobilePopover" (save)="submitEvent($event)"
-      (cancel)="cancelCreatingEvent()">
+      (dismissed)="cancelCreatingEvent()">
     </app-quick-event-popover>
   }
 </div>

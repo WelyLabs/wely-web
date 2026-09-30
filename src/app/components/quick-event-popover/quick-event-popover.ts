@@ -26,7 +26,9 @@ export class QuickEventPopoverComponent {
     @Input() isMobile = false;
 
     @Output() save = new EventEmitter<EventCreateRequest>();
-    @Output() cancel = new EventEmitter<void>();
+    // Named dismissed rather than cancel: cancel is a native DOM event, and an output
+    // shadowing one is ambiguous at the call site.
+    @Output() dismissed = new EventEmitter<void>();
 
     onSave() {
         if (this.data.title) {
@@ -35,6 +37,6 @@ export class QuickEventPopoverComponent {
     }
 
     onCancel() {
-        this.cancel.emit();
+        this.dismissed.emit();
     }
 }

@@ -89,7 +89,7 @@ declare module 'rsocket-core' {
 
   export function encodeRoute(route: string): Buffer;
   export function encodeCompositeMetadata(
-    entries: Array<[WellKnownMimeType | string, Buffer]>,
+    entries: [WellKnownMimeType | string, Buffer][],
   ): Buffer;
   export function encodeAndAddWellKnownAuthMetadata(
     buffer: Buffer,

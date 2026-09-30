@@ -66,7 +66,7 @@ describe('ChatService', () => {
     httpMock.verify();
   });
 
-  // --- connexion paresseuse ----------------------------------------------
+  // --- lazy connection ---------------------------------------------------
 
   it('ne se connecte pas à la construction', () => {
     expect(rsocketStub.connectAttempts).toBe(0);
@@ -113,7 +113,7 @@ describe('ChatService', () => {
     await pending;
   });
 
-  // --- envoi ---------------------------------------------------------------
+  // --- sending -------------------------------------------------------------
 
   it('émet d’abord une copie optimiste, puis la version acquittée', async () => {
     const emissions = (await firstValueFrom(
@@ -146,8 +146,8 @@ describe('ChatService', () => {
       }),
     ).rejects.toThrow('delivery refused');
 
-    // Avant, le flux était complété avant la réponse serveur : l'erreur qui suivait
-    // était ignorée par RxJS et le message restait affiché comme envoyé.
+    // The stream used to be completed before the server answered, so the error that
+    // followed was ignored by RxJS and the message stayed shown as sent.
     expect(seen.at(-1)?.failed).toBe(true);
   });
 
@@ -159,7 +159,7 @@ describe('ChatService', () => {
     );
   });
 
-  // --- flux entrant -------------------------------------------------------
+  // --- incoming stream ----------------------------------------------------
 
   it('pousse les messages reçus sur messages$', () => {
     const received: unknown[] = [];

@@ -65,7 +65,8 @@
     <div class="page-container">
       <!-- Mobile Profile Trigger -->
       @if (isMobile && !isChatPage) {
-        <div class="mobile-profile-trigger" (click)="toggleMobileMenu()"
+        <div class="mobile-profile-trigger" role="button" tabindex="0" (click)="toggleMobileMenu()"
+             (keydown.enter)="toggleMobileMenu()" (keydown.space)="toggleMobileMenu()"
           [class.active]="showMobileMenu">
           <div class="avatar-ring">
             @if (userProfile?.profilePicUrl) {
@@ -95,7 +96,13 @@
     }
 
     <!-- Mobile Menu Overlay -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+         Presentational dismiss target: it is not a control and cannot take focus. Keyboard
+         dismissal is handled by the component's Escape listener. -->
     <div class="mobile-menu-overlay" [class.show]="showMobileMenu" (click)="closeMobileMenu()">
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+           Not a control: the click handler exists only to stop the event reaching the
+           backdrop behind it. -->
       <div class="mobile-menu-content" (click)="$event.stopPropagation()">
         <div class="mobile-user-header">
           <div class="avatar-large">

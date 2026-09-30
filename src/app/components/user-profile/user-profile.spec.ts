@@ -25,7 +25,7 @@ describe('UserProfileComponent', () => {
         dialogMock = {
             open: vi.fn().mockImplementation(() => ({
                 afterClosed: () => of(true),
-                close: () => { }
+                close: () => undefined
             }))
         };
 
@@ -74,7 +74,7 @@ describe('UserProfileComponent', () => {
         expect(userServiceMock.updateCurrentUser).toHaveBeenCalledWith(editResult);
     });
     it('should handle profile loading error', () => {
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         userServiceMock.loadAndSetCurrentUser.mockReturnValue(throwError(() => new Error('API Error')));
 
         component.reloadUserProfile();
@@ -84,7 +84,7 @@ describe('UserProfileComponent', () => {
     });
 
     it('should handle subscription error', () => {
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         const errorSubject = new Subject();
         userServiceMock.currentUser$ = errorSubject.asObservable();
 

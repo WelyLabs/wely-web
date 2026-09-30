@@ -14,8 +14,9 @@ export class NavigationService {
 
     constructor() {
         this.router.events
-            .pipe(filter(event => event instanceof NavigationEnd))
-            .subscribe((event: any) => {
+            // Le prédicat de type porte l'information : plus besoin de caster ensuite.
+            .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+            .subscribe((event) => {
                 const url = event.urlAfterRedirects;
                 if (this.history[this.history.length - 1] !== url) {
                     this.history.push(url);

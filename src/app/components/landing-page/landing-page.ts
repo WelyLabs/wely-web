@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
 
 import { Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -57,6 +57,14 @@ export class LandingPageComponent {
     toggleMenu() {
         this.showMobileMenu = !this.showMobileMenu;
     }
+    /** Escape closes the mobile menu; its backdrop cannot take focus. */
+    @HostListener('document:keydown.escape')
+    onEscape() {
+        if (this.showMobileMenu) {
+            this.closeMenu();
+        }
+    }
+
 
     closeMenu() {
         this.showMobileMenu = false;

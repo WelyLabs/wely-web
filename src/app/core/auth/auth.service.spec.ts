@@ -111,7 +111,7 @@ describe('AuthService', () => {
         // 1. Setup failure mock
         (keycloakMock.updateToken as any).mockReturnValue(Promise.reject('error'));
         (keycloakMock.getKeycloakInstance as any).mockClear();
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
         // 2. Start refresh cycle
         service.scheduleTokenRefresh();

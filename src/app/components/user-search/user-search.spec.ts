@@ -47,7 +47,7 @@ describe('UserSearchComponent', () => {
         dialogMock = {
             open: vi.fn().mockImplementation(() => ({
                 afterClosed: () => of(true),
-                close: () => { }
+                close: () => undefined
             }))
         };
         breakpointObserverMock = {
@@ -183,7 +183,7 @@ describe('UserSearchComponent', () => {
     });
 
     it('should handle error when loading users', () => {
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         socialServiceMock.searchUsers.mockReturnValue(new Subject().asObservable()); // Stuck loading
         component.loadUsers();
         expect(component.isLoading).toBe(true);

@@ -3,10 +3,8 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { UserService } from './user.service';
 import { KeycloakService } from 'keycloak-angular';
 import { environment } from '../../environments/environment';
-import { User } from '../models/user.model';
 import { MOCK_USER } from '../models/user.mock';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { of } from 'rxjs';
 
 describe('UserService', () => {
     let service: UserService;
@@ -94,7 +92,7 @@ describe('UserService', () => {
     });
     it('should handle upload avatar failure', () => {
         const mockFile = new File([''], 'avatar.png', { type: 'image/png' });
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
         service.uploadAvatar(mockFile).subscribe({
             error: (err) => {

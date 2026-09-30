@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatRippleModule } from '@angular/material/core';
 import { ChatService } from '../../services/chat.service';
-import { ConversationSummary, ConversationType } from '../../models/chat.model';
+import { ConversationSummary } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 
 @Component({

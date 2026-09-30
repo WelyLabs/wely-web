@@ -1,7 +1,4 @@
-import { KeycloakService } from 'keycloak-angular';
 import { LoggerService } from '../logging/logger.service';
-import { UserService } from '../../services/user.service';
-import { AuthService } from './auth.service';
 import { initializeKeycloak } from './keycloak-init.factory';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';

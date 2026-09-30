@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { LoggerService } from '../../core/logging/logger.service';
 
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
@@ -29,14 +29,15 @@ export class AvatarUploadDialogComponent {
     dialogRef = inject<MatDialogRef<AvatarUploadDialogComponent>>(MatDialogRef);
     private userService = inject(UserService);
 
-    imageChangedEvent: any = '';
+    /** Handed straight to ngx-image-cropper, which reads the file input's own event. */
+    imageChangedEvent: Event | '' = '';
     croppedImage = '';
     blob: Blob | null = null;
     scale = 1;
     isDragging = false;
     isLoading = false;
 
-    fileChangeEvent(event: any): void {
+    fileChangeEvent(event: Event): void {
         this.imageChangedEvent = event;
     }
 
@@ -47,20 +48,24 @@ export class AvatarUploadDialogComponent {
         }
     }
 
-    imageLoaded(image: LoadedImage) {
-        // show cropper
+    // ngx-image-cropper requires these three outputs to be bound, and there is nothing
+    // to do on any of them: the cropper shows itself, and a failed load is already
+    // visible to the user. Kept as no-ops rather than removed, because unbinding them
+    // in the template would make the cropper log a warning.
+    imageLoaded(_image: LoadedImage) {
+        // Nothing to do: the cropper reveals itself.
     }
 
     cropperReady() {
-        // cropper ready
+        // Nothing to do.
     }
 
     loadImageFailed() {
-        // show message
+        // Nothing to do: the cropper renders its own failure state.
     }
 
-    onZoomChange(event: any) {
-        this.scale = event.value;
+    onZoomChange(event: { value: number | null }) {
+        this.scale = event.value ?? 1;
     }
 
     save() {

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
-import { KeycloakService, KeycloakEventType } from 'keycloak-angular';
+import { KeycloakService, KeycloakEventTypeLegacy } from 'keycloak-angular';
 import { UserService } from './services/user.service';
 import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -43,7 +43,11 @@ describe('App', () => {
 
     await app.ngOnInit();
 
-    eventsSubject.next({ type: KeycloakEventType.TokenExpired });
+    // keycloakEvents$ emits KeycloakEventTypeLegacy. This test used to emit a member of
+    // the newer KeycloakEventType enum, which the component compared against after an
+    // `as any` cast — so the test matched while production never did, and the handler
+    // was dead.
+    eventsSubject.next({ type: KeycloakEventTypeLegacy.OnTokenExpired });
     expect(keycloakMock.updateToken).toHaveBeenCalledWith(20);
   });
 
@@ -55,7 +59,7 @@ describe('App', () => {
 
     await app.ngOnInit();
 
-    eventsSubject.next({ type: KeycloakEventType.AuthRefreshError });
+    eventsSubject.next({ type: KeycloakEventTypeLegacy.OnAuthRefreshError });
     expect(keycloakMock.login).toHaveBeenCalled();
   });
 

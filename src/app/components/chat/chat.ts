@@ -1,6 +1,5 @@
 import { Component, OnInit, OnDestroy, NgZone, inject } from '@angular/core';
 import { LoggerService } from '../../core/logging/logger.service';
-import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
 
 import { ActivatedRoute, Router } from '@angular/router';

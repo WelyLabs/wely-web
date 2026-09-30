@@ -12,7 +12,6 @@ describe('AvatarUploadDialogComponent', () => {
     let fixture: ComponentFixture<AvatarUploadDialogComponent>;
     let dialogRefMock: any;
     let userServiceMock: any;
-    let sanitizerMock: any;
 
     beforeEach(async () => {
         dialogRefMock = {

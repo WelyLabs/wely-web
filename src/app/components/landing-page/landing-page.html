@@ -18,7 +18,13 @@
     </nav>
 
     <!-- Mobile Menu Overlay -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+         Presentational dismiss target: it is not a control and cannot take focus. Keyboard
+         dismissal is handled by the component's Escape listener. -->
     <div class="mobile-menu-overlay" [class.active]="showMobileMenu" (click)="closeMenu()">
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
+             Not a control: the click handler exists only to stop the event reaching the
+             backdrop behind it. -->
         <div class="mobile-menu-content" (click)="$event.stopPropagation()">
             <div class="mobile-logo">
                 <span class="highlight">Wely</span>
