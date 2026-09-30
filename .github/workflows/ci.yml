@@ -117,6 +117,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The bundle is built here, natively, rather than inside the image. Building it in the
+      # Dockerfile meant buildx compiled it once per platform, and the linux/arm64 pass ran
+      # under QEMU — an emulated Angular production build that took hours and hung the job.
+      # See the Dockerfile for the full reasoning.
+      - name: Build the Angular bundle
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build -- --configuration production
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
