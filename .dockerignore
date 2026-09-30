@@ -1,5 +1,8 @@
+# dist/ is deliberately NOT ignored: the workflow builds the Angular bundle natively and the
+# image only copies it, because compiling inside a multi-arch build meant emulating the whole
+# TypeScript and esbuild pass on arm64. Excluding it here empties the build context and the
+# COPY fails with "/dist/calendar-app/browser: not found".
 node_modules
-dist
 .angular
 .git
 .github
