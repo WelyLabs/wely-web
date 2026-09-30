@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent, CalendarEvent } from './calendar';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -94,7 +94,8 @@ describe('CalendarComponent', () => {
         // timer actually renders the week view, and the real method calls Element.scrollTo —
         // which the test DOM does not implement. What this asserts is that the scroll was
         // requested when the view changed.
-        const scrollSpy = vi.spyOn(component as never, 'scrollToCurrentTime')
+        const scrollable = component as unknown as { scrollToCurrentTime: () => void };
+        const scrollSpy = vi.spyOn(scrollable, 'scrollToCurrentTime')
             .mockImplementation(() => undefined);
 
         component.toggleView('week');
@@ -163,13 +164,24 @@ describe('CalendarComponent', () => {
         clearSpy.mockRestore();
     });
 
-    it('should start exactly one now-line interval however often events arrive', () => {
-        const setSpy = vi.spyOn(globalThis, 'setInterval');
+    it('should keep the same now-line interval however often events arrive', () => {
+        // The bug this guards: setInterval was called inside the subscription callback, so every
+        // emission of subscribedEvents$ replaced the stored handle with a new interval and left
+        // the previous one running until the tab closed. Asserted on the handle rather than on a
+        // call count, because setInterval is global and Angular's own machinery uses it too.
+        const events = new Subject<FeedEvent[]>();
+        (eventServiceMock as { subscribedEvents$: Observable<FeedEvent[]> }).subscribedEvents$ =
+            events.asObservable();
 
         component.ngOnInit();
+        const handle = component['timeUpdateInterval'];
+        expect(handle).toBeDefined();
 
-        expect(setSpy).toHaveBeenCalledTimes(1);
-        setSpy.mockRestore();
+        events.next(mockEvents);
+        events.next(mockEvents);
+        events.next(mockEvents);
+
+        expect(component['timeUpdateInterval']).toBe(handle);
     });
 
     describe('Touch handling', () => {
