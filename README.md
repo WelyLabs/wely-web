@@ -176,13 +176,27 @@ npm test            # tests unitaires (Vitest)
 Image multi-étapes : build Node, service par nginx.
 
 ```dockerfile
-FROM node:20-alpine AS build
-RUN npm ci --legacy-peer-deps && npm run build -- --configuration production
-
-FROM nginx:stable-alpine
+# Une seule étape : le bundle est compilé avant l'image, pas dedans.
+FROM nginxinc/nginx-unprivileged:stable-alpine
 COPY nginx.conf /etc/nginx/templates/default.conf.template   # envsubst au démarrage
-COPY --from=build /app/dist/calendar-app/browser /usr/share/nginx/html
+COPY --chown=101:101 dist/calendar-app/browser /usr/share/nginx/html
 ENTRYPOINT ["/entrypoint.sh"]
+```
+
+**Pourquoi le bundle n'est plus compilé dans l'image.** Elle est publiée pour `linux/amd64` *et*
+`linux/arm64` — le cluster tourne sur des Raspberry Pi — et `buildx` exécute chaque étape une
+fois par plateforme, la passe arm64 sous émulation QEMU. Un build Angular émulé est des dizaines
+de fois plus lent : le job est passé de deux minutes à six heures, puis a fini par pendre. Les
+services Java n'ont jamais eu le problème, leurs images ne font que copier un jar déjà compilé.
+
+Le workflow compile donc le bundle **une fois, nativement**, et l'image ne fait plus qu'une copie
+de fichiers — quelques secondes par architecture. Conséquence à connaître : un `docker build .`
+sans build préalable échoue sur le `COPY`, avec un message explicite plutôt qu'une racine web
+vide.
+
+```bash
+npm ci --legacy-peer-deps && npm run build -- --configuration production
+docker build -t wely-web .
 ```
 
 ---
