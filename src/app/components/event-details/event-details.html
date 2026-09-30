@@ -1,4 +1,4 @@
-@if (event) {
+@if (event(); as event) {
   <div class="details-container">
     <div class="details-card glass-panel">
       <div class="header">
@@ -11,9 +11,9 @@
         <!-- Information Tab -->
         <mat-tab label="Informations">
           <div class="tab-content">
-            @if (getImage()) {
+            @if (image()) {
               <div class="event-image">
-                <img [src]="getImage()" [alt]="event.title">
+                <img [src]="image()" [alt]="event.title">
               </div>
             }
             <div class="event-info">
@@ -24,30 +24,30 @@
                   <span class="value">{{ formatDate(event.startDate) }}</span>
                 </div>
               </div>
-              @if (getTime()) {
+              @if (time()) {
                 <div class="info-row">
                   <mat-icon>schedule</mat-icon>
                   <div class="info-content">
                     <span class="label">Heure</span>
-                    <span class="value">{{ getTime() }}</span>
+                    <span class="value">{{ time() }}</span>
                   </div>
                 </div>
               }
-              @if (getLocation()) {
+              @if (location()) {
                 <div class="info-row">
                   <mat-icon>location_on</mat-icon>
                   <div class="info-content">
                     <span class="label">Lieu</span>
-                    <span class="value">{{ getLocation() }}</span>
+                    <span class="value">{{ location() }}</span>
                   </div>
                 </div>
               }
-              @if (getOrganizer()) {
+              @if (organizer()) {
                 <div class="info-row">
                   <mat-icon>person</mat-icon>
                   <div class="info-content">
                     <span class="label">Organisateur</span>
-                    <span class="value">{{ getOrganizer() }}</span>
+                    <span class="value">{{ organizer() }}</span>
                   </div>
                 </div>
               }
@@ -67,7 +67,7 @@
         <!-- Chat Tab -->
         <mat-tab label="Chat">
           <div class="chat-container">
-            <app-shared-chat [messages]="chatMessages" [placeholder]="'Type a message...'"
+            <app-shared-chat [messages]="chatMessages()" [placeholder]="'Type a message...'"
               (send)="onSendMessage($event)">
             </app-shared-chat>
           </div>
@@ -77,7 +77,7 @@
   </div>
 }
 
-@if (!event) {
+@if (!event()) {
   <div class="not-found">
     <mat-icon>event_busy</mat-icon>
     <h2>Événement introuvable</h2>

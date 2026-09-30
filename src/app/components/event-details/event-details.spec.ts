@@ -69,8 +69,8 @@ describe('EventDetailsComponent', () => {
 
     it('should load feed event from service on init', () => {
         fixture.detectChanges();
-        expect(component.event).toEqual(mockFeedEvent);
-        expect(component.isFeedEvent).toBe(true);
+        expect(component.event()).toEqual(mockFeedEvent);
+        expect(component.isFeedEvent()).toBe(true);
     });
 
     it('should load calendar event from history state', () => {
@@ -82,8 +82,8 @@ describe('EventDetailsComponent', () => {
 
         fixture.detectChanges();
 
-        expect(component.event).toEqual(mockCalendarEvent);
-        expect(component.isFeedEvent).toBe(false);
+        expect(component.event()).toEqual(mockCalendarEvent);
+        expect(component.isFeedEvent()).toBe(false);
     });
 
     it('should navigate back to calendar', () => {
@@ -99,9 +99,9 @@ describe('EventDetailsComponent', () => {
     });
 
     it('should handle sending messages in mock chat', () => {
-        const initialCount = component.chatMessages.length;
+        const initialCount = component.chatMessages().length;
         component.onSendMessage('New message');
-        expect(component.chatMessages.length).toBe(initialCount + 1);
-        expect(component.chatMessages[initialCount].text).toBe('New message');
+        expect(component.chatMessages().length).toBe(initialCount + 1);
+        expect(component.chatMessages()[initialCount].text).toBe('New message');
     });
 });

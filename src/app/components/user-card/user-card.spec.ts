@@ -23,7 +23,7 @@ describe('UserCardComponent', () => {
 
         fixture = TestBed.createComponent(UserCardComponent);
         component = fixture.componentInstance;
-        component.user = mockUser;
+        fixture.componentRef.setInput('user', mockUser);
         fixture.detectChanges();
     });
 
@@ -31,9 +31,24 @@ describe('UserCardComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should return correct initials', () => {
-        expect(component.getInitials(mockUser)).toBe('TE');
-        expect(component.getInitials({ ...mockUser, userName: '' })).toBe('U');
+    it('should derive initials from the user name', () => {
+        expect(component.initials()).toBe('TE');
+    });
+
+    it('should fall back to U when the user name is empty', () => {
+        fixture.componentRef.setInput('user', { ...mockUser, userName: '' });
+        expect(component.initials()).toBe('U');
+    });
+
+    it('should recompute initials when the user input changes', () => {
+        // The point of a computed over a template method call: it tracks the input rather than
+        // being re-evaluated on every change-detection pass.
+        fixture.componentRef.setInput('user', { ...mockUser, userName: 'alice' });
+        expect(component.initials()).toBe('AL');
+    });
+
+    it('should show the friend badge by default', () => {
+        expect(component.showFriendBadge()).toBe(true);
     });
 
     it('should emit addFriend when onAddClick is called', () => {

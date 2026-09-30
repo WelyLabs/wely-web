@@ -77,28 +77,28 @@
         }
       </mat-form-field>
 
-      @if (errorMessage) {
+      @if (errorMessage()) {
         <div class="error-message">
           <mat-icon>error</mat-icon>
-          <span>{{ errorMessage }}</span>
+          <span>{{ errorMessage() }}</span>
         </div>
       }
     </form>
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-stroked-button (click)="onCancel()" [disabled]="isLoading">
+    <button mat-stroked-button (click)="onCancel()" [disabled]="isLoading()">
       Annuler
     </button>
-    <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="isLoading || profileForm.invalid"
+    <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="isLoading() || profileForm.invalid"
       class="save-button">
-      @if (!isLoading) {
+      @if (!isLoading()) {
         <mat-icon>save</mat-icon>
       }
-      @if (isLoading) {
+      @if (isLoading()) {
         <mat-icon class="spinner">refresh</mat-icon>
       }
-      {{ isLoading ? 'Enregistrement...' : 'Enregistrer' }}
+      {{ isLoading() ? 'Enregistrement...' : 'Enregistrer' }}
     </button>
   </mat-dialog-actions>
 </div>

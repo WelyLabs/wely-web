@@ -7,10 +7,10 @@
       </button>
       <div class="user-info">
         <div class="avatar-sm">
-          {{ conversation ? getAvatarInitial(conversation.title) : '?' }}
+          {{ getAvatarInitial(conversationTitle() ?? undefined) }}
         </div>
         <div class="text-info">
-          <h2 class="chat-title">{{ conversation ? conversation.title : 'Chargement...' }}</h2>
+          <h2 class="chat-title">{{ conversationTitle() ?? 'Chargement...' }}</h2>
           <span class="status-text">En ligne</span>
         </div>
       </div>
@@ -22,26 +22,26 @@
 
     <!-- Chat Content -->
     <div class="chat-content-area">
-      @if (isLoading) {
+      @if (isLoading()) {
         <div class="loading-state">
           <div class="loader-ring"></div>
           <p>Chargement du chat...</p>
         </div>
       }
 
-      @if (error) {
+      @if (error()) {
         <div class="error-state">
           <mat-icon>error_outline</mat-icon>
-          <p>{{ error }}</p>
+          <p>{{ error() }}</p>
           <button mat-flat-button class="retry-btn"
-          (click)="convId && loadConversationById(convId)">Réessayer</button>
+          (click)="convId() && loadConversationById(convId()!)">Réessayer</button>
         </div>
       }
 
-      @if (!isLoading && !error) {
+      @if (!isLoading() && !error()) {
         <div class="chat-shared-wrapper">
-          <app-shared-chat [messages]="chatMessages" [loading]="isSending" [historyLoading]="isHistoryLoading"
-            [hasMore]="hasMoreHistory" [placeholder]="placeholder" (send)="onSendMessage($event)"
+          <app-shared-chat [messages]="chatMessages()" [loading]="isSending()" [historyLoading]="isHistoryLoading()"
+            [hasMore]="hasMoreHistory()" [placeholder]="placeholder" (send)="onSendMessage($event)"
             (loadMore)="onLoadMoreMessages()">
           </app-shared-chat>
         </div>

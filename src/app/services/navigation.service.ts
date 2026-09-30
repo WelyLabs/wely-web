@@ -14,7 +14,7 @@ export class NavigationService {
 
     constructor() {
         this.router.events
-            // Le prédicat de type porte l'information : plus besoin de caster ensuite.
+            // The type predicate carries the information, so nothing needs casting afterwards.
             .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
             .subscribe((event) => {
                 const url = event.urlAfterRedirects;

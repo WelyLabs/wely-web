@@ -10,24 +10,24 @@
     <p class="future-algo-hint">(Future algorithm placeholder - matched to your interests)</p>
   </div>
 
-  @if (currentEvents.length > 0) {
+  @if (currentEvents().length > 0) {
     <div class="swipe-container">
       <!-- Stack of cards (show max 3) -->
-      @for (event of currentEvents; track event; let i = $index) {
+      @for (event of currentEvents(); track event.id; let i = $index) {
         <div class="event-card" [class.top-card]="i === 0"
-          [style.z-index]="currentEvents.length - i"
-          [style.transform]="i === 0 ? cardTransform : getStackTransform(i)"
-          [style.transition]="i === 0 ? cardTransition : ''" (touchstart)="i === 0 ? onCardTouchStart($event) : null"
+          [style.z-index]="currentEvents().length - i"
+          [style.transform]="i === 0 ? cardTransform() : getStackTransform(i)"
+          [style.transition]="i === 0 ? cardTransition() : ''" (touchstart)="i === 0 ? onCardTouchStart($event) : null"
           (touchmove)="i === 0 ? onCardTouchMove($event) : null" (touchend)="i === 0 ? onCardTouchEnd($event) : null"
           (mousedown)="i === 0 ? onCardMouseDown($event) : null"
           (mousemove)="i === 0 ? onCardMouseMove($event) : null" (mouseup)="i === 0 ? onCardMouseUp($event) : null"
           (mouseleave)="i === 0 ? onCardMouseUp($event) : null">
           <!-- Swipe Overlays -->
-          <div class="swipe-overlay swipe-overlay-left" [style.opacity]="i === 0 ? leftOverlayOpacity : 0">
+          <div class="swipe-overlay swipe-overlay-left" [style.opacity]="i === 0 ? leftOverlayOpacity() : 0">
             <mat-icon>close</mat-icon>
             <span>Skip</span>
           </div>
-          <div class="swipe-overlay swipe-overlay-right" [style.opacity]="i === 0 ? rightOverlayOpacity : 0">
+          <div class="swipe-overlay swipe-overlay-right" [style.opacity]="i === 0 ? rightOverlayOpacity() : 0">
             <mat-icon>favorite</mat-icon>
             <span>Add to Calendar</span>
           </div>
@@ -53,7 +53,7 @@
   }
 
   <!-- Action Buttons -->
-  @if (currentEvents.length > 0) {
+  @if (currentEvents().length > 0) {
     <div class="action-buttons">
       <button mat-fab color="warn" (click)="swipeLeft()" aria-label="Skip event">
         <mat-icon>close</mat-icon>
@@ -65,7 +65,7 @@
   }
 
   <!-- Empty State -->
-  @if (currentEvents.length === 0) {
+  @if (currentEvents().length === 0) {
     <div class="empty-state">
       <mat-icon>event_available</mat-icon>
       <h2>No more events!</h2>

@@ -11,9 +11,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BreakpointObserver } from '@angular/cdk/layout';
 
-// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
-// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
-// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+// The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
+// the module rather than redefining an object, so the service and the test work on the same
+// state — a Vite alias created two separate module instances instead.
 vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
 vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
 
@@ -89,26 +89,60 @@ describe('UserSearchComponent', () => {
         expect(socialServiceMock.searchUsers).toHaveBeenCalled();
         socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
-        expect(component.users.length).toBe(1);
-        expect(component.users[0].relationStatus).toBeUndefined();
+        expect(component.filteredUsers().length).toBe(1);
+        expect(component.filteredUsers()[0].relationStatus).toBeUndefined();
     });
 
-    it('should search users and filter locally', () => {
-        component.users = [
-            { userId: 'user-1', userName: 'Alice' } as any,
-            { userId: 'user-2', userName: 'Bob' } as any
-        ];
-        component.searchQuery = 'ali';
-        component.onSearchChange();
-        expect(component.filteredUsers.length).toBe(1);
-        expect(component.filteredUsers[0].userName).toBe('Alice');
+    it('should filter locally as the query changes', () => {
+        // filteredUsers is a computed, so setting the query is enough — there is no longer an
+        // onSearchChange for the template to remember to call.
+        socialServiceMock.searchUsers.mockReturnValue(of([
+            { userId: 'user-1', userName: 'Alice' },
+            { userId: 'user-2', userName: 'Bob' }
+        ]));
+        component.loadUsers();
+
+        component.searchQuery.set('ali');
+
+        expect(component.filteredUsers().length).toBe(1);
+        expect(component.filteredUsers()[0].userName).toBe('Alice');
     });
 
-    it('should search users and reset filter when query is empty', () => {
-        component.users = [{ userId: 'user-1', userName: 'Alice' } as any];
-        component.searchQuery = '';
-        component.onSearchChange();
-        expect(component.filteredUsers).toEqual(component.users);
+    it('should ignore case and surrounding spaces in the query', () => {
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
+        component.loadUsers();
+
+        component.searchQuery.set('  ALI  ');
+
+        expect(component.filteredUsers().length).toBe(1);
+    });
+
+    it('should show everyone again when the query is cleared', () => {
+        socialServiceMock.searchUsers.mockReturnValue(of([
+            { userId: 'user-1', userName: 'Alice' },
+            { userId: 'user-2', userName: 'Bob' }
+        ]));
+        component.loadUsers();
+        component.searchQuery.set('ali');
+        expect(component.filteredUsers().length).toBe(1);
+
+        component.searchQuery.set('');
+
+        expect(component.filteredUsers().length).toBe(2);
+    });
+
+    it('should keep the query when the list is reloaded', () => {
+        // The old code reset filteredUsers to the full list on every load, so a search was
+        // silently undone whenever a tab change or a friend action refreshed the results.
+        socialServiceMock.searchUsers.mockReturnValue(of([
+            { userId: 'user-1', userName: 'Alice' },
+            { userId: 'user-2', userName: 'Bob' }
+        ]));
+        component.searchQuery.set('ali');
+
+        component.loadUsers();
+
+        expect(component.filteredUsers().length).toBe(1);
     });
 
     it('should navigate to chat when onChat is called', () => {
@@ -119,23 +153,23 @@ describe('UserSearchComponent', () => {
     });
 
     it('should handle tab changes and inferred status for PENDING_OUTGOING', () => {
-        component.isFriendsMode = true;
+        component.isFriendsMode.set(true);
         component.onTabChange(1);
-        expect(component.activeTabIndex).toBe(1);
+        expect(component.activeTabIndex()).toBe(1);
         expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_OUTGOING');
         socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
-        expect(component.users[0].relationStatus).toBe('PENDING_OUTGOING');
+        expect(component.filteredUsers()[0].relationStatus).toBe('PENDING_OUTGOING');
     });
 
     it('should handle tab changes and inferred status for PENDING_INCOMING', () => {
-        component.isFriendsMode = true;
+        component.isFriendsMode.set(true);
         component.onTabChange(2);
-        expect(component.activeTabIndex).toBe(2);
+        expect(component.activeTabIndex()).toBe(2);
         expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_INCOMING');
         socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
-        expect(component.users[0].relationStatus).toBe('PENDING_INCOMING');
+        expect(component.filteredUsers()[0].relationStatus).toBe('PENDING_INCOMING');
     });
 
     it('should NOT remove friend if dialog is cancelled', () => {
@@ -153,26 +187,29 @@ describe('UserSearchComponent', () => {
     });
 
     it('should handle mobile breakpoint', () => {
+        // isMobile reads the observer through toSignal, evaluated when the component is built,
+        // so the mock has to answer before createComponent rather than before ngOnInit.
         breakpointObserverMock.observe.mockReturnValue(of({ matches: true }));
-        component.ngOnInit();
-        expect(component.isMobile).toBe(true);
+        const mobileFixture = TestBed.createComponent(UserSearchComponent);
+
+        expect(mobileFixture.componentInstance.isMobile()).toBe(true);
     });
 
     it('should navigate through tabs using nextTab and prevTab', () => {
-        component.activeTabIndex = 0;
+        component.activeTabIndex.set(0);
         component.nextTab();
-        expect(component.activeTabIndex).toBe(1);
+        expect(component.activeTabIndex()).toBe(1);
         component.nextTab();
-        expect(component.activeTabIndex).toBe(2);
+        expect(component.activeTabIndex()).toBe(2);
         component.nextTab(); // Should stay at 2
-        expect(component.activeTabIndex).toBe(2);
+        expect(component.activeTabIndex()).toBe(2);
 
         component.prevTab();
-        expect(component.activeTabIndex).toBe(1);
+        expect(component.activeTabIndex()).toBe(1);
         component.prevTab();
-        expect(component.activeTabIndex).toBe(0);
+        expect(component.activeTabIndex()).toBe(0);
         component.prevTab(); // Should stay at 0
-        expect(component.activeTabIndex).toBe(0);
+        expect(component.activeTabIndex()).toBe(0);
     });
 
     it('should open add friend dialog and reload if result is true', () => {
@@ -186,14 +223,14 @@ describe('UserSearchComponent', () => {
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         socialServiceMock.searchUsers.mockReturnValue(new Subject().asObservable()); // Stuck loading
         component.loadUsers();
-        expect(component.isLoading).toBe(true);
+        expect(component.isLoading()).toBe(true);
 
         const errorSubject = new Subject<any>();
         socialServiceMock.searchUsers.mockReturnValue(errorSubject.asObservable());
         component.loadUsers();
         errorSubject.error('API Error');
-        expect(component.error).toBe('Impossible de charger les utilisateurs');
-        expect(component.isLoading).toBe(false);
+        expect(component.error()).toBe('Impossible de charger les utilisateurs');
+        expect(component.isLoading()).toBe(false);
         expect(consoleSpy).toHaveBeenCalled();
     });
 
@@ -219,7 +256,7 @@ describe('UserSearchComponent', () => {
         socialServiceMock.acceptFriend.mockReturnValue(errorSubject.asObservable());
         component.onAcceptFriend({ userId: 'user-1' } as any);
         errorSubject.error('err');
-        expect(component.error).toBe('Impossible d\'accepter la demande');
+        expect(component.error()).toBe('Impossible d\'accepter la demande');
     });
 
     it('should decline friend and reload', () => {
@@ -234,7 +271,7 @@ describe('UserSearchComponent', () => {
         socialServiceMock.rejectFriend.mockReturnValue(errorSubject.asObservable());
         component.onDeclineFriend({ userId: 'user-1' } as any);
         errorSubject.error('err');
-        expect(component.error).toBe('Impossible de refuser la demande');
+        expect(component.error()).toBe('Impossible de refuser la demande');
     });
 
     it('should handle error when removing friend', () => {
@@ -243,7 +280,7 @@ describe('UserSearchComponent', () => {
         socialServiceMock.removeFriend.mockReturnValue(errorSubject.asObservable());
         component.onRemoveFriend({ userId: 'user-1' } as any);
         errorSubject.error('err');
-        expect(component.error).toBe('Impossible de supprimer l\'ami');
+        expect(component.error()).toBe('Impossible de supprimer l\'ami');
     });
 
     it('should handle error when opening chat', () => {
@@ -251,6 +288,6 @@ describe('UserSearchComponent', () => {
         chatServiceMock.getConversation.mockReturnValue(errorSubject.asObservable());
         component.onChat({ userId: 'user-1' } as any);
         errorSubject.error('err');
-        expect(component.error).toBe('Impossible d\'ouvrir la discussion');
+        expect(component.error()).toBe('Impossible d\'ouvrir la discussion');
     });
 });

@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
@@ -22,29 +23,38 @@ import { FormsModule } from '@angular/forms';
     ImageCropperComponent
 ],
     templateUrl: './avatar-upload-dialog.component.html',
-    styleUrls: ['./avatar-upload-dialog.component.scss']
+    styleUrls: ['./avatar-upload-dialog.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
+/** Crops a picture client-side and uploads the result as the user's avatar. */
 export class AvatarUploadDialogComponent {
     private readonly logger = inject(LoggerService);
-    dialogRef = inject<MatDialogRef<AvatarUploadDialogComponent>>(MatDialogRef);
-    private userService = inject(UserService);
+    private readonly userService = inject(UserService);
+    private readonly destroyRef = inject(DestroyRef);
 
-    /** Handed straight to ngx-image-cropper, which reads the file input's own event. */
-    imageChangedEvent: Event | '' = '';
-    croppedImage = '';
-    blob: Blob | null = null;
-    scale = 1;
-    isDragging = false;
-    isLoading = false;
+    readonly dialogRef = inject<MatDialogRef<AvatarUploadDialogComponent>>(MatDialogRef);
+
+    /**
+     * Handed straight to ngx-image-cropper, which reads the file input's own event.
+     *
+     * <p>`null` rather than the empty string the field used to hold: that is what the cropper's
+     * own input accepts, and the empty string only ever meant "nothing selected".
+     */
+    readonly imageChangedEvent = signal<Event | null>(null);
+    readonly croppedImage = signal('');
+    readonly blob = signal<Blob | null>(null);
+    readonly scale = signal(1);
+    readonly isDragging = signal(false);
+    readonly isLoading = signal(false);
 
     fileChangeEvent(event: Event): void {
-        this.imageChangedEvent = event;
+        this.imageChangedEvent.set(event);
     }
 
-    imageCropped(event: ImageCroppedEvent) {
+    imageCropped(event: ImageCroppedEvent): void {
         if (event.base64) {
-            this.croppedImage = event.base64;
-            this.blob = event.blob || null;
+            this.croppedImage.set(event.base64);
+            this.blob.set(event.blob ?? null);
         }
     }
 
@@ -52,40 +62,46 @@ export class AvatarUploadDialogComponent {
     // to do on any of them: the cropper shows itself, and a failed load is already
     // visible to the user. Kept as no-ops rather than removed, because unbinding them
     // in the template would make the cropper log a warning.
-    imageLoaded(_image: LoadedImage) {
+    imageLoaded(_image: LoadedImage): void {
         // Nothing to do: the cropper reveals itself.
     }
 
-    cropperReady() {
+    cropperReady(): void {
         // Nothing to do.
     }
 
-    loadImageFailed() {
+    loadImageFailed(): void {
         // Nothing to do: the cropper renders its own failure state.
     }
 
-    onZoomChange(event: { value: number | null }) {
-        this.scale = event.value ?? 1;
+    onZoomChange(event: { value: number | null }): void {
+        this.scale.set(event.value ?? 1);
     }
 
-    save() {
-        if (this.blob) {
-            this.isLoading = true;
-            const file = new File([this.blob], 'avatar.png', { type: 'image/png' });
-            this.userService.uploadAvatar(file).subscribe({
+    save(): void {
+        const blob = this.blob();
+        if (!blob) {
+            return;
+        }
+
+        this.isLoading.set(true);
+        const file = new File([blob], 'avatar.png', { type: 'image/png' });
+
+        this.userService.uploadAvatar(file)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
                 next: () => {
-                    this.isLoading = false;
-                    this.dialogRef.close(this.croppedImage);
+                    this.isLoading.set(false);
+                    this.dialogRef.close(this.croppedImage());
                 },
                 error: (err) => {
                     this.logger.error('AvatarUploadDialogComponent', 'Upload failed', err);
-                    this.isLoading = false;
+                    this.isLoading.set(false);
                 }
             });
-        }
     }
 
-    close() {
+    close(): void {
         this.dialogRef.close();
     }
 }

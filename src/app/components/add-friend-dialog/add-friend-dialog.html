@@ -13,31 +13,31 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Identifiant (Nom#Hashtag)</mat-label>
         <mat-icon matPrefix>person_add</mat-icon>
-        <input matInput [(ngModel)]="userTag" name="userTag" placeholder="Ex: Jean#1234"
-          [disabled]="isLoading">
+        <input matInput [ngModel]="userTag()" (ngModelChange)="userTag.set($event)" name="userTag" placeholder="Ex: Jean#1234"
+          [disabled]="isLoading()">
       </mat-form-field>
     </div>
 
-    @if (errorMessage) {
+    @if (errorMessage()) {
       <div class="error-message">
         <mat-icon>error</mat-icon>
-        <span>{{ errorMessage }}</span>
+        <span>{{ errorMessage() }}</span>
       </div>
     }
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-stroked-button (click)="onCancel()" class="cancel-btn" [disabled]="isLoading">
+    <button mat-stroked-button (click)="onCancel()" class="cancel-btn" [disabled]="isLoading()">
       Annuler
     </button>
-    <button mat-flat-button color="primary" (click)="onAdd()" [disabled]="!userTag || isLoading" class="add-btn">
-      @if (!isLoading) {
+    <button mat-flat-button color="primary" (click)="onAdd()" [disabled]="!userTag() || isLoading()" class="add-btn">
+      @if (!isLoading()) {
         <mat-icon>add</mat-icon>
       }
-      @if (isLoading) {
+      @if (isLoading()) {
         <mat-icon class="spinner">refresh</mat-icon>
       }
-      {{ isLoading ? 'Envoi...' : 'Ajouter' }}
+      {{ isLoading() ? 'Envoi...' : 'Ajouter' }}
     </button>
   </mat-dialog-actions>
 </div>

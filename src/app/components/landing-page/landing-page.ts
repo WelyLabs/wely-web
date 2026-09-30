@@ -1,4 +1,4 @@
-import { Component, inject, HostListener } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
 
 import { Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,13 +10,16 @@ import { KeycloakService } from 'keycloak-angular';
     standalone: true,
     imports: [RouterModule, MatButtonModule, MatIconModule],
     templateUrl: './landing-page.html',
-    styleUrl: './landing-page.scss'
+    styleUrl: './landing-page.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
+/** Public home page: the only route reachable without a session. */
 export class LandingPageComponent {
-    private router = inject(Router);
-    private keycloak = inject(KeycloakService);
+    private readonly router = inject(Router);
+    private readonly keycloak = inject(KeycloakService);
 
-    features = [
+    /** Static copy, so a plain array rather than a signal: nothing ever writes to it. */
+    readonly features = [
         {
             icon: 'calendar_today',
             title: 'Smart Calendar',
@@ -34,9 +37,9 @@ export class LandingPageComponent {
         }
     ];
 
-    showMobileMenu = false;
+    readonly showMobileMenu = signal(false);
 
-    async launchApp() {
+    async launchApp(): Promise<void> {
         const isLoggedIn = await this.keycloak.isLoggedIn();
 
         if (isLoggedIn) {
@@ -48,25 +51,24 @@ export class LandingPageComponent {
         }
     }
 
-    async signup() {
+    async signup(): Promise<void> {
         await this.keycloak.register({
             redirectUri: window.location.origin + '/calendar'
         });
     }
 
-    toggleMenu() {
-        this.showMobileMenu = !this.showMobileMenu;
+    toggleMenu(): void {
+        this.showMobileMenu.update(open => !open);
     }
     /** Escape closes the mobile menu; its backdrop cannot take focus. */
     @HostListener('document:keydown.escape')
-    onEscape() {
-        if (this.showMobileMenu) {
+    onEscape(): void {
+        if (this.showMobileMenu()) {
             this.closeMenu();
         }
     }
 
-
-    closeMenu() {
-        this.showMobileMenu = false;
+    closeMenu(): void {
+        this.showMobileMenu.set(false);
     }
 }

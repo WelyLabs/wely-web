@@ -189,12 +189,39 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 ## Limites connues
 
-- **Pas de linter.** ESLint n'est pas installé ; la configuration Prettier présente dans `package.json` est inopérante faute de dépendance. C'est le premier chantier.
-- **Style Angular pré-signals.** Le code utilise l'injection par constructeur et la détection de changements par défaut : aucun composant en `OnPush`, `signal()` quasi absent, `inject()` marginal. Une modernisation progressive est en cours.
-- **Souscriptions non fermées.** Plusieurs `ngOnInit` souscrivent sans `takeUntilDestroyed()` ni désabonnement — fuite mémoire à la navigation.
-- **`any` sur la couche RSocket.** `src/types/rsocket.d.ts` déclare les modules sans types, ce qui propage `any` dans tout `ChatService`. À remplacer par des interfaces minimales.
-- **`console.log` résiduels** en production, dont un qui journalise le contenu des messages reçus. À remplacer par un `LoggerService` silencieux en production.
-- **L'envoi optimiste ne remonte pas les échecs** : le flux est complété avant la réponse serveur, donc un `onError` postérieur est ignoré par RxJS.
-- **Recherche d'utilisateurs filtrée côté client** sur la liste complète — à déplacer côté serveur avec pagination.
-- **`environment.prod.ts` n'est pas typé** et a divergé des autres (clé `keycloakSilentCheckSso` manquante). Une interface `Environment` partagée corrigerait le problème à la compilation.
-- **`rsocket-core` est en version alpha** (`0.0.29-alpha.0`), sur la ligne legacy de `rsocket-js`.
+- **La recherche d'utilisateurs filtre côté client** sur la liste complète renvoyée par
+  `wely-social`. À déplacer côté serveur avec pagination — en l'état, la liste grandit avec le
+  nombre d'inscrits.
+- **`rsocket-core` est en version alpha** (`0.0.29-alpha.0`), sur la ligne legacy de
+  `rsocket-js`. Les typages de `src/types/rsocket.d.ts` sont écrits à la main faute de mieux.
+- **L'état `pending` / `failed` d'un message n'est pas affiché.** `ChatService` marque bien un
+  message envoyé mais non acquitté, et `ChatMessage` transporte les deux drapeaux — mais le
+  template de `SharedChatComponent` les ignore. Un message perdu ressemble donc à un message
+  envoyé jusqu'au prochain rechargement.
+- **`FriendsListComponent` est du code mort** : aucune route, aucun import, et construit sur
+  `MOCK_FRIENDS` avec un `setTimeout` simulant un appel réseau. Non modernisé volontairement ; à
+  supprimer ou à brancher sur `wely-social`.
+- **Les événements personnels du calendrier sont des données simulées.** `wely-events` modélise
+  les événements auxquels on s'abonne, pas un agenda personnel : les trois entrées de
+  `CalendarComponent.personalEvents` ne sont persistées nulle part.
+- **Le chat d'un événement est un placeholder.** `ConversationType.EVENT` existe dans le domaine
+  de `wely-chat` sans implémentation derrière, donc `EventDetailsComponent` affiche trois messages
+  en dur.
+- **Le bouton « Ajouter » d'une carte utilisateur ne fait rien.** Une demande d'ami part par tag
+  via `AddFriendDialogComponent` : les résultats de recherche ne portent pas le hashtag dont
+  `wely-social` a besoin pour identifier quelqu'un.
+
+### Ce qui a été corrigé
+
+Ces points figuraient ici et ne s'appliquent plus, mais valent d'être mentionnés parce que
+l'historique Git les documente :
+
+| Point | Correctif |
+|---|---|
+| Pas de linter | `eslint.config.js` + `angular-eslint`, de ~400 erreurs à 0 |
+| Style pré-signals | 18 composants sur 18 en `OnPush`, état en signals, `input()` / `output()` / `viewChild()` |
+| Souscriptions non fermées | `takeUntilDestroyed()` partout, `toSignal()` là où un flux *est* l'état |
+| `any` sur la couche RSocket | typages réels dans `src/types/rsocket.d.ts`, plus aucun `any` |
+| `console.log` en production | `LoggerService`, silencieux hors développement |
+| Échecs d'envoi optimiste ignorés | le flux n'est plus complété avant la réponse serveur |
+| `environment.prod.ts` non typé | interface `Environment` partagée |

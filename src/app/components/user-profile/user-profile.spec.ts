@@ -50,8 +50,24 @@ describe('UserProfileComponent', () => {
     });
 
     it('should load user data and show initials on init', () => {
-        expect(component.user).toEqual(MOCK_USER);
-        expect(component.getInitials()).toBe('TU');
+        expect(component.user()).toEqual(MOCK_USER);
+        expect(component.initials()).toBe('TU');
+    });
+
+    it('should follow the service stream without a manual subscription', () => {
+        // toSignal is what makes this safe: the previous version subscribed to currentUser$ — a
+        // long-lived subject — in ngOnInit and never unsubscribed, leaving a live subscriber
+        // behind on every visit to the page.
+        userSubject.next({ ...MOCK_USER, firstName: 'Alice', lastName: 'Zephyr' });
+
+        expect(component.user()?.firstName).toBe('Alice');
+        expect(component.initials()).toBe('AZ');
+    });
+
+    it('should report no initials while the user is still unknown', () => {
+        userSubject.next(null);
+
+        expect(component.initials()).toBe('');
     });
 
     it('should call reloadUserProfile on init', () => {
@@ -73,25 +89,37 @@ describe('UserProfileComponent', () => {
         expect(dialogMock.open).toHaveBeenCalled();
         expect(userServiceMock.updateCurrentUser).toHaveBeenCalledWith(editResult);
     });
-    it('should handle profile loading error', () => {
+    it('should stop showing the loader when the profile fails to load', () => {
+        // The user has to be absent for this to mean anything: with one already emitted, the
+        // computed reads false whatever the load did, and the assertion would pass for the
+        // wrong reason.
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        userSubject.next(null);
         userServiceMock.loadAndSetCurrentUser.mockReturnValue(throwError(() => new Error('API Error')));
 
         component.reloadUserProfile();
 
-        expect(component.isLoading).toBe(false);
+        expect(component.isLoading()).toBe(false);
         expect(consoleSpy).toHaveBeenCalled();
     });
 
-    it('should handle subscription error', () => {
+    it('should show the loader while no user has arrived yet', () => {
+        userSubject.next(null);
+
+        expect(component.isLoading()).toBe(true);
+    });
+
+    it('should show the loader again when a retry is started', () => {
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        const errorSubject = new Subject();
-        userServiceMock.currentUser$ = errorSubject.asObservable();
+        userSubject.next(null);
+        userServiceMock.loadAndSetCurrentUser.mockReturnValue(throwError(() => new Error('API Error')));
+        component.reloadUserProfile();
+        expect(component.isLoading()).toBe(false);
 
-        component.ngOnInit();
-        errorSubject.error('sub error');
+        userServiceMock.loadAndSetCurrentUser.mockReturnValue(new Subject());
+        component.reloadUserProfile();
 
-        expect(component.isLoading).toBe(false);
+        expect(component.isLoading()).toBe(true);
         expect(consoleSpy).toHaveBeenCalled();
     });
 });

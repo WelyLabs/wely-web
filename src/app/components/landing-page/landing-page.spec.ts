@@ -59,16 +59,33 @@ describe('LandingPageComponent', () => {
     });
 
     it('should toggle mobile menu', () => {
-        expect(component.showMobileMenu).toBe(false);
+        expect(component.showMobileMenu()).toBe(false);
         component.toggleMenu();
-        expect(component.showMobileMenu).toBe(true);
+        expect(component.showMobileMenu()).toBe(true);
         component.toggleMenu();
-        expect(component.showMobileMenu).toBe(false);
+        expect(component.showMobileMenu()).toBe(false);
     });
 
     it('should close mobile menu', () => {
-        component.showMobileMenu = true;
+        component.showMobileMenu.set(true);
         component.closeMenu();
-        expect(component.showMobileMenu).toBe(false);
+        expect(component.showMobileMenu()).toBe(false);
+    });
+
+    it('should close the menu on Escape when it is open', () => {
+        component.showMobileMenu.set(true);
+        component.onEscape();
+        expect(component.showMobileMenu()).toBe(false);
+    });
+
+    it('should do nothing on Escape when the menu is already closed', () => {
+        component.onEscape();
+        expect(component.showMobileMenu()).toBe(false);
+    });
+
+    it('should expose the three feature cards the template renders', () => {
+        expect(component.features).toHaveLength(3);
+        expect(component.features.map(feature => feature.icon))
+            .toEqual(['calendar_today', 'event_note', 'chat']);
     });
 });

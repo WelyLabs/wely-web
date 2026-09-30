@@ -1,6 +1,6 @@
 <div class="user-card-inner">
   <!-- Options for existing friends -->
-  @if (user.relationStatus === 'FRIENDS') {
+  @if (user().relationStatus === 'FRIENDS') {
     <div class="card-options">
       <button mat-icon-button [matMenuTriggerFor]="cardMenu" class="options-btn">
         <mat-icon>more_horiz</mat-icon>
@@ -20,23 +20,23 @@
 
   <div class="avatar-container">
     <div class="avatar-gradient">
-      @if (user.profilePicUrl) {
-        <img [src]="user.profilePicUrl" [alt]="user.userName">
+      @if (user().profilePicUrl) {
+        <img [src]="user().profilePicUrl" [alt]="user().userName">
       }
-      @if (!user.profilePicUrl) {
-        <span class="initials">{{ getInitials(user) }}</span>
+      @if (!user().profilePicUrl) {
+        <span class="initials">{{ initials() }}</span>
       }
     </div>
     <div class="status-dot" [class.online]="true"></div>
   </div>
 
   <div class="user-details">
-    <h3 class="name">{{ user.userName }}</h3>
+    <h3 class="name">{{ user().userName }}</h3>
   </div>
 
   <div class="actions">
     <!-- Not friends yet -->
-    @if (user.relationStatus === 'NONE') {
+    @if (user().relationStatus === 'NONE') {
       <button mat-flat-button class="add-btn" (click)="onAddClick()">
         <mat-icon>person_add</mat-icon>
         <span>Ajouter</span>
@@ -44,7 +44,7 @@
     }
 
     <!-- Already friends -->
-    @if (user.relationStatus === 'FRIENDS') {
+    @if (user().relationStatus === 'FRIENDS') {
       <div class="friends-actions">
         <button mat-button class="msg-btn" (click)="onChatClick()">
           <mat-icon>chat_bubble_outline</mat-icon>
@@ -54,7 +54,7 @@
     }
 
     <!-- Outgoing request -->
-    @if (user.relationStatus === 'SENT_BY_ME') {
+    @if (user().relationStatus === 'SENT_BY_ME') {
       <div class="pending-badge">
         <mat-icon>schedule</mat-icon>
         <span>Demande envoyée</span>
@@ -62,7 +62,7 @@
     }
 
     <!-- Incoming request -->
-    @if (user.relationStatus === 'SENT_BY_THEM' || user.relationStatus === 'PENDING_INCOMING') {
+    @if (user().relationStatus === 'SENT_BY_THEM' || user().relationStatus === 'PENDING_INCOMING') {
       <div
         class="request-buttons">
         <button mat-button class="decline-btn" (click)="onDeclineClick()">

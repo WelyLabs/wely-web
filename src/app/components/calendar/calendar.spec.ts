@@ -47,22 +47,22 @@ describe('CalendarComponent', () => {
     });
 
     it('should generate calendar on init', () => {
-        expect(component.days.length).toBe(42);
-        expect(component.events.length).toBeGreaterThan(mockEvents.length); // personal + subscribed
+        expect(component.days().length).toBe(42);
+        expect(component.events().length).toBeGreaterThan(mockEvents.length); // personal + subscribed
     });
 
     it('should change month when navigate(1) is called', () => {
-        const initialMonth = component.currentDate.getMonth();
+        const initialMonth = component.currentDate().getMonth();
         component.navigate(1);
-        expect(component.currentDate.getMonth()).toBe((initialMonth + 1) % 12);
+        expect(component.currentDate().getMonth()).toBe((initialMonth + 1) % 12);
     });
 
     it('should select a date and filter events', () => {
-        const today = component.days.find(d => d.isToday);
+        const today = component.days().find(d => d.isToday);
         if (today) {
             component.selectDate(today);
-            expect(component.selectedDate).toEqual(today.date);
-            expect(component.selectedEvents.length).toBeGreaterThan(0); // Should have at least the personal events
+            expect(component.selectedDate()).toEqual(today.date);
+            expect(component.selectedEvents().length).toBeGreaterThan(0); // Should have at least the personal events
         }
     });
 
@@ -73,9 +73,9 @@ describe('CalendarComponent', () => {
     });
 
     it('should change month when navigate(-1) is called', () => {
-        const initialMonth = component.currentDate.getMonth();
+        const initialMonth = component.currentDate().getMonth();
         component.navigate(-1);
-        expect(component.currentDate.getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
+        expect(component.currentDate().getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
     });
 
     it('should filter out unsubscribed events', () => {
@@ -85,25 +85,31 @@ describe('CalendarComponent', () => {
         ];
         (eventServiceMock as any).subscribedEvents$ = of(mixedEvents);
         component.ngOnInit();
-        expect(component.events.some(e => e.title === 'Subbed')).toBe(true);
+        expect(component.events().some(e => e.title === 'Subbed')).toBe(true);
     });
 
     it('should toggle views and scroll', async () => {
         vi.useFakeTimers();
-        const scrollSpy = vi.spyOn(component as any, 'scrollToCurrentTime');
+        // Stubbed rather than spied through: now that the view state is signals, advancing the
+        // timer actually renders the week view, and the real method calls Element.scrollTo —
+        // which the test DOM does not implement. What this asserts is that the scroll was
+        // requested when the view changed.
+        const scrollSpy = vi.spyOn(component as never, 'scrollToCurrentTime')
+            .mockImplementation(() => undefined);
 
         component.toggleView('week');
-        expect(component.viewMode).toBe('week');
+        expect(component.viewMode()).toBe('week');
         await vi.advanceTimersByTimeAsync(200);
         expect(scrollSpy).toHaveBeenCalled();
 
         component.toggleView('day');
-        expect(component.viewMode).toBe('day');
-        expect(component.selectedDate).toBeDefined();
+        expect(component.viewMode()).toBe('day');
+        expect(component.selectedDate()).not.toBeNull();
 
         component.toggleView('month');
-        expect(component.viewMode).toBe('month');
-        expect(component.selectedDate).toBeNull();
+        expect(component.viewMode()).toBe('month');
+        expect(component.selectedDate()).toBeNull();
+        scrollSpy.mockRestore();
         vi.useRealTimers();
     });
 
@@ -135,20 +141,35 @@ describe('CalendarComponent', () => {
         const aDate = new Date(2020, 0, 1);
         const day = { date: aDate, isToday: false, isCurrentMonth: true, hasEvents: false };
         component.selectDate(day);
-        expect(component.selectedDate).toEqual(aDate);
-        expect(component.selectedEvents.length).toBe(0);
+        expect(component.selectedDate()).toEqual(aDate);
+        expect(component.selectedEvents().length).toBe(0);
     });
 
     it('should close details', () => {
-        component.selectedDate = new Date();
+        component.selectedDate.set(new Date());
         component.closeDetails();
-        expect(component.selectedDate).toBeNull();
+        expect(component.selectedDate()).toBeNull();
     });
 
-    it('should unsubscribe on destroy', () => {
-        const spy = vi.spyOn(component['subscription']!, 'unsubscribe');
+    it('should clear the now-line interval on destroy', () => {
+        // The subscription is now closed by takeUntilDestroyed, so what is left to verify is the
+        // interval — which used to be created inside the subscription callback, so every emission
+        // of subscribedEvents$ started another one and only the last handle was ever cleared.
+        const clearSpy = vi.spyOn(globalThis, 'clearInterval');
+
         component.ngOnDestroy();
-        expect(spy).toHaveBeenCalled();
+
+        expect(clearSpy).toHaveBeenCalled();
+        clearSpy.mockRestore();
+    });
+
+    it('should start exactly one now-line interval however often events arrive', () => {
+        const setSpy = vi.spyOn(globalThis, 'setInterval');
+
+        component.ngOnInit();
+
+        expect(setSpy).toHaveBeenCalledTimes(1);
+        setSpy.mockRestore();
     });
 
     describe('Touch handling', () => {

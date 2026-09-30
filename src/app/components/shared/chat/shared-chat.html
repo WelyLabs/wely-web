@@ -3,7 +3,7 @@
     <div #topSentinel style="height: 1px; width: 100%;"></div>
 
     <!-- History Loading -->
-    @if (historyLoading) {
+    @if (historyLoading()) {
       <div class="history-loader">
         <div class="mini-spinner"></div>
         <span>Chargement de l'historique...</span>
@@ -11,7 +11,7 @@
     }
 
     <!-- History End -->
-    @if (!hasMore && messages.length > 0) {
+    @if (!hasMore() && messages().length > 0) {
       <div class="history-end-marker">
         <div class="marker-content">
           <mat-icon>verified_user</mat-icon>
@@ -21,7 +21,7 @@
     }
 
     <!-- Empty State -->
-    @if (!loading && messages.length === 0) {
+    @if (!loading() && messages().length === 0) {
       <div class="chat-empty-state">
         <div class="empty-icon">
           <mat-icon>forum</mat-icon>
@@ -31,7 +31,7 @@
     }
 
     <!-- Message Bubbles -->
-    @for (msg of messages; track trackByMessage(index, msg); let index = $index) {
+    @for (msg of messages(); track trackByMessage(index, msg); let index = $index) {
       <div class="message-row"
         [class.me]="msg.isMe">
         <div class="message-bubble">
@@ -46,12 +46,13 @@
   </div>
 
   <!-- Input Bar -->
-  @if (!loading || messages.length > 0) {
+  @if (!loading() || messages().length > 0) {
     <div class="chat-input-bar">
       <div class="input-glass-container">
-        <input type="text" [(ngModel)]="newMessage" [placeholder]="placeholder" (keyup.enter)="sendMessage()"
-          [disabled]="loading" class="modern-input">
-        <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage.trim() || loading">
+        <input type="text" [ngModel]="newMessage()" (ngModelChange)="newMessage.set($event)"
+          [placeholder]="placeholder()" (keyup.enter)="sendMessage()"
+          [disabled]="loading()" class="modern-input">
+        <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage().trim() || loading()">
           <mat-icon>send</mat-icon>
         </button>
       </div>

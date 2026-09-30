@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -8,8 +9,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { SocialService } from '../../services/social.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
+/** Sends a friend request to a user identified by their tag, `name#1234`. */
 @Component({
     selector: 'app-add-friend-dialog',
     standalone: true,
@@ -22,43 +25,54 @@ import { finalize } from 'rxjs';
     FormsModule
 ],
     templateUrl: './add-friend-dialog.html',
-    styleUrl: './add-friend-dialog.scss'
+    styleUrl: './add-friend-dialog.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AddFriendDialogComponent {
     private readonly logger = inject(LoggerService);
-    dialogRef = inject<MatDialogRef<AddFriendDialogComponent>>(MatDialogRef);
-    private socialService = inject(SocialService);
+    private readonly socialService = inject(SocialService);
+    private readonly destroyRef = inject(DestroyRef);
 
-    userTag = '';
-    isLoading = false;
-    errorMessage: string | null = null;
+    readonly dialogRef = inject<MatDialogRef<AddFriendDialogComponent>>(MatDialogRef);
 
-    onAdd() {
-        if (!this.userTag) return;
+    readonly userTag = signal('');
+    readonly isLoading = signal(false);
+    readonly errorMessage = signal<string | null>(null);
 
-        this.isLoading = true;
-        this.errorMessage = null;
+    onAdd(): void {
+        const tag = this.userTag();
+        if (!tag) {
+            return;
+        }
 
-        this.socialService.sendFriendRequest(this.userTag).pipe(
-            finalize(() => this.isLoading = false)
+        this.isLoading.set(true);
+        this.errorMessage.set(null);
+
+        this.socialService.sendFriendRequest(tag).pipe(
+            finalize(() => this.isLoading.set(false)),
+            takeUntilDestroyed(this.destroyRef)
         ).subscribe({
-            next: () => {
-                this.dialogRef.close(true);
-            },
-            error: (err) => {
+            next: () => this.dialogRef.close(true),
+            error: (err: HttpErrorResponse) => {
                 this.logger.error('AddFriendDialogComponent', 'Error sending friend request:', err);
-                if (err.status === 404) {
-                    this.errorMessage = "Utilisateur non trouvé.";
-                } else if (err.status === 409) {
-                    this.errorMessage = "Une demande est déjà en cours ou vous êtes déjà amis.";
-                } else {
-                    this.errorMessage = "Une erreur est survenue lors de l'envoi de la demande.";
-                }
+                this.errorMessage.set(this.messageFor(err.status));
             }
         });
     }
 
-    onCancel() {
+    onCancel(): void {
         this.dialogRef.close(false);
+    }
+
+    /** Maps the status the backend answered to something the user can act on. */
+    private messageFor(status: number): string {
+        switch (status) {
+            case 404:
+                return 'Utilisateur non trouvé.';
+            case 409:
+                return 'Une demande est déjà en cours ou vous êtes déjà amis.';
+            default:
+                return "Une erreur est survenue lors de l'envoi de la demande.";
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,12 +17,15 @@ export interface ConfirmDialogData {
     standalone: true,
     imports: [MatDialogModule, MatButtonModule, MatIconModule],
     templateUrl: './confirm-dialog.html',
-    styleUrl: './confirm-dialog.scss'
+    styleUrl: './confirm-dialog.scss',
+    // Safe to mark OnPush: the dialog's data is injected once and never mutated, so there is
+    // nothing for change detection to pick up beyond the initial render.
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
+/** A yes/no dialog. Closes with `true` on confirm and `false` on cancel. */
 export class ConfirmDialogComponent {
-    dialogRef = inject<MatDialogRef<ConfirmDialogComponent>>(MatDialogRef);
-    data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);
-
+    readonly dialogRef = inject<MatDialogRef<ConfirmDialogComponent>>(MatDialogRef);
+    readonly data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);
 
     onConfirm(): void {
         this.dialogRef.close(true);

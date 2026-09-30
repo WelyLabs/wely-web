@@ -1,237 +1,214 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent } from '../../services/event.service';
-import { Subscription } from 'rxjs';
 
+/** Horizontal travel, in pixels, past which a drag counts as a swipe rather than a nudge. */
+const SWIPE_THRESHOLD_PX = 100;
+
+/** How far a card is thrown off-screen, and how long the throw animation lasts. */
+const THROW_DISTANCE_PX = 1000;
+const THROW_ROTATION_DEG = 30;
+const THROW_DURATION_MS = 300;
+
+/** Drag distance over which the accept/skip overlay reaches full opacity. */
+const OVERLAY_FADE_PX = 100;
+
+/** How much a drag tilts the card: pixels of travel per degree of rotation. */
+const PIXELS_PER_DEGREE = 20;
+
+/** Cards rendered at once, the top one plus the two peeking behind it. */
+const VISIBLE_CARDS = 3;
+
+const RETURN_TRANSITION = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+
+/**
+ * Swipeable event feed: right subscribes to an event, left skips it.
+ */
 @Component({
   selector: 'app-event-feed',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule],
   templateUrl: './event-feed.html',
   styleUrl: './event-feed.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EventFeedComponent implements OnInit, OnDestroy {
-  private eventService = inject(EventService);
-  private router = inject(Router);
+export class EventFeedComponent implements OnInit {
+  private readonly eventService = inject(EventService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  events: FeedEvent[] = [];
-  currentEvents: FeedEvent[] = [];
-  private subscription?: Subscription;
+  private readonly events = signal<FeedEvent[]>([]);
 
-  // Swipe tracking
-  private touchStartX = 0;
-  private touchCurrentX = 0;
+  /** The top card plus the two stacked behind it. */
+  readonly currentEvents = computed(() => this.events().slice(0, VISIBLE_CARDS));
+
+  readonly cardTransform = signal('');
+  readonly cardTransition = signal(RETURN_TRANSITION);
+  readonly leftOverlayOpacity = signal(0);
+  readonly rightOverlayOpacity = signal(0);
+
+  private dragStartX = 0;
+  private dragCurrentX = 0;
   private isDragging = false;
   private animationFrameId?: number;
-  cardTransform = '';
-  cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-  leftOverlayOpacity = 0;
-  rightOverlayOpacity = 0;
 
-  ngOnInit() {
-    // Le chargement était déclenché par le constructeur du service, root-provided :
-    // les deux requêtes partaient au bootstrap, y compris pour un visiteur déconnecté
-    // sur la landing page, où elles ne pouvaient que revenir en 401.
+  ngOnInit(): void {
+    // The load used to be triggered by the root-provided service's constructor: both requests
+    // went out at bootstrap, including for a signed-out visitor on the landing page, where they
+    // could only come back 401.
     this.eventService.refreshEvents();
-    this.subscription = this.eventService.feedEvents$.subscribe(events => {
-      this.events = events;
-      this.updateCurrentEvents();
-    });
+
+    this.eventService.feedEvents$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(events => this.events.set(events));
   }
 
-  ngOnDestroy() {
-    this.subscription?.unsubscribe();
-  }
-
-  private updateCurrentEvents() {
-    // Show max 3 cards at a time
-    this.currentEvents = this.events.slice(0, 3);
-  }
-
+  /** Stacked effect for the cards behind the top one. */
   getStackTransform(index: number): string {
-    // Create stacked effect for cards behind the top one
     const scale = 1 - (index * 0.05);
     const translateY = index * 10;
     return `scale(${scale}) translateY(${translateY}px)`;
   }
 
-  onCardTouchStart(event: TouchEvent) {
-    this.touchStartX = event.touches[0].clientX;
-    this.touchCurrentX = this.touchStartX;
-    this.isDragging = true;
-    // Disable transition during drag for smooth movement
-    this.cardTransition = 'none';
-    // Cancel any pending animation frame
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
+  // Touch and mouse both describe the same gesture, so both delegate to the same three steps.
+  // They used to be two near-identical copies of forty lines, which is two places for a fix to
+  // land in and one of them to be missed.
+
+  onCardTouchStart(event: TouchEvent): void {
+    this.startDrag(event.touches[0].clientX);
   }
 
-  onCardTouchMove(event: TouchEvent) {
-    if (!this.isDragging) return;
-
-    this.touchCurrentX = event.touches[0].clientX;
-    const deltaX = this.touchCurrentX - this.touchStartX;
-
-    // Use requestAnimationFrame for smooth updates
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
-
-    this.animationFrameId = requestAnimationFrame(() => {
-      const rotation = deltaX / 20;
-      this.cardTransform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
-
-      if (deltaX > 0) {
-        this.rightOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-        this.leftOverlayOpacity = 0;
-      } else {
-        this.leftOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-        this.rightOverlayOpacity = 0;
-      }
-    });
+  onCardTouchMove(event: TouchEvent): void {
+    this.moveDrag(event.touches[0].clientX);
   }
 
-  onCardTouchEnd(_event: TouchEvent) {
-    if (!this.isDragging) return;
-
-    // Cancel any pending animation frame
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = undefined;
-    }
-
-    const deltaX = this.touchCurrentX - this.touchStartX;
-    const threshold = 100;
-
-    // Re-enable transition for smooth return or swipe animation
-    this.cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-
-    if (deltaX > threshold) {
-      // Swipe right - add to calendar
-      this.animateSwipeRight();
-    } else if (deltaX < -threshold) {
-      // Swipe left - skip
-      this.animateSwipeLeft();
-    } else {
-      // Return to center
-      this.resetCard();
-    }
-
-    this.isDragging = false;
+  onCardTouchEnd(_event: TouchEvent): void {
+    this.endDrag();
   }
 
-  // Mouse event handlers for PC
-  onCardMouseDown(event: MouseEvent) {
+  onCardMouseDown(event: MouseEvent): void {
     event.preventDefault();
-    this.touchStartX = event.clientX;
-    this.touchCurrentX = this.touchStartX;
-    this.isDragging = true;
-    // Disable transition during drag
-    this.cardTransition = 'none';
-    // Cancel any pending animation frame
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
+    this.startDrag(event.clientX);
   }
 
-  onCardMouseMove(event: MouseEvent) {
-    if (!this.isDragging) return;
+  onCardMouseMove(event: MouseEvent): void {
+    this.moveDrag(event.clientX);
+  }
 
-    this.touchCurrentX = event.clientX;
-    const deltaX = this.touchCurrentX - this.touchStartX;
+  onCardMouseUp(_event: MouseEvent): void {
+    this.endDrag();
+  }
 
-    // Use requestAnimationFrame for smooth updates
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
+  private startDrag(clientX: number): void {
+    this.dragStartX = clientX;
+    this.dragCurrentX = clientX;
+    this.isDragging = true;
+    // No transition while the finger is down: the card must follow it exactly.
+    this.cardTransition.set('none');
+    this.cancelPendingFrame();
+  }
+
+  private moveDrag(clientX: number): void {
+    if (!this.isDragging) {
+      return;
     }
 
-    this.animationFrameId = requestAnimationFrame(() => {
-      const rotation = deltaX / 20;
-      this.cardTransform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
+    this.dragCurrentX = clientX;
+    this.cancelPendingFrame();
 
-      if (deltaX > 0) {
-        this.rightOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-        this.leftOverlayOpacity = 0;
-      } else {
-        this.leftOverlayOpacity = Math.min(Math.abs(deltaX) / 100, 1);
-        this.rightOverlayOpacity = 0;
-      }
+    // One update per frame: a move event can fire several times between two paints, and the
+    // intermediate positions are never seen.
+    this.animationFrameId = requestAnimationFrame(() => {
+      const deltaX = this.dragCurrentX - this.dragStartX;
+      const rotation = deltaX / PIXELS_PER_DEGREE;
+      this.cardTransform.set(`translateX(${deltaX}px) rotate(${rotation}deg)`);
+
+      const opacity = Math.min(Math.abs(deltaX) / OVERLAY_FADE_PX, 1);
+      this.rightOverlayOpacity.set(deltaX > 0 ? opacity : 0);
+      this.leftOverlayOpacity.set(deltaX > 0 ? 0 : opacity);
     });
   }
 
-  onCardMouseUp(_event: MouseEvent) {
-    if (!this.isDragging) return;
-
-    // Cancel any pending animation frame
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = undefined;
+  private endDrag(): void {
+    if (!this.isDragging) {
+      return;
     }
 
-    const deltaX = this.touchCurrentX - this.touchStartX;
-    const threshold = 100;
+    this.cancelPendingFrame();
+    this.isDragging = false;
 
-    // Re-enable transition
-    this.cardTransition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+    const deltaX = this.dragCurrentX - this.dragStartX;
+    this.cardTransition.set(RETURN_TRANSITION);
 
-    if (deltaX > threshold) {
+    if (deltaX > SWIPE_THRESHOLD_PX) {
       this.animateSwipeRight();
-    } else if (deltaX < -threshold) {
+    } else if (deltaX < -SWIPE_THRESHOLD_PX) {
       this.animateSwipeLeft();
     } else {
       this.resetCard();
     }
-
-    this.isDragging = false;
   }
 
-  swipeRight() {
+  private cancelPendingFrame(): void {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
+    }
+  }
+
+  swipeRight(): void {
     this.animateSwipeRight();
   }
 
-  swipeLeft() {
+  swipeLeft(): void {
     this.animateSwipeLeft();
   }
 
-  private animateSwipeRight() {
-    const currentEvent = this.currentEvents[0];
-    this.cardTransform = 'translateX(1000px) rotate(30deg)';
-    this.rightOverlayOpacity = 1;
+  private animateSwipeRight(): void {
+    const currentEvent = this.currentEvents()[0];
+    if (!currentEvent) {
+      return;
+    }
 
+    this.cardTransform.set(`translateX(${THROW_DISTANCE_PX}px) rotate(${THROW_ROTATION_DEG}deg)`);
+    this.rightOverlayOpacity.set(1);
+
+    // The subscription is sent when the card has left the screen, so a slow response does not
+    // stall the animation the user is watching.
     setTimeout(() => {
-      // Add to calendar via API
-      this.eventService.toggleSubscription(currentEvent).subscribe();
+      this.eventService.toggleSubscription(currentEvent)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe();
       this.removeCurrentCard();
-    }, 300);
+    }, THROW_DURATION_MS);
   }
 
-  private animateSwipeLeft() {
-    this.cardTransform = 'translateX(-1000px) rotate(-30deg)';
-    this.leftOverlayOpacity = 1;
+  private animateSwipeLeft(): void {
+    this.cardTransform.set(`translateX(-${THROW_DISTANCE_PX}px) rotate(-${THROW_ROTATION_DEG}deg)`);
+    this.leftOverlayOpacity.set(1);
 
-    setTimeout(() => {
-      this.removeCurrentCard();
-    }, 300);
+    setTimeout(() => this.removeCurrentCard(), THROW_DURATION_MS);
   }
 
-  private removeCurrentCard() {
-    this.events.shift(); // Remove first event
-    this.updateCurrentEvents();
+  private removeCurrentCard(): void {
+    // slice, not shift: the array came from the service's own stream, and shifting it emptied
+    // the service's copy as the user swiped.
+    this.events.update(events => events.slice(1));
     this.resetCard();
   }
 
-  private resetCard() {
-    this.cardTransform = '';
-    this.leftOverlayOpacity = 0;
-    this.rightOverlayOpacity = 0;
+  private resetCard(): void {
+    this.cardTransform.set('');
+    this.leftOverlayOpacity.set(0);
+    this.rightOverlayOpacity.set(0);
   }
 
-  viewEventDetails(event: FeedEvent) {
+  viewEventDetails(event: FeedEvent): void {
     this.router.navigate(['/event', 'feed', event.id]);
   }
 }

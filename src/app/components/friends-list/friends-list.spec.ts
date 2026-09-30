@@ -66,13 +66,13 @@ describe('FriendsListComponent', () => {
         expect(component.getInitials(user)).toBe('AB');
     });
 
-    it('contactFriend ne fait encore rien de visible pour l’utilisateur', () => {
-        // Le bouton « Contacter » du template appelle cette méthode, qui se contente
-        // de tracer : cliquer dessus ne fait rien. Stub non implémenté, pas un
-        // comportement à figer — ce test signale l'écart au lieu de le masquer.
+    it('does nothing the user can see when contactFriend is called', () => {
+        // The template's "Contacter" button calls this method, which only traces: clicking it
+        // does nothing. An unimplemented stub, not behaviour to pin down — this test records the
+        // gap rather than hiding it.
         const user = { firstName: 'John' } as unknown as BusinessUser;
 
-        // Rien à vérifier au-delà de l'absence d'erreur : la méthode ne fait rien.
+        // Nothing to assert beyond the absence of an error: the method does nothing.
         expect(() => component.contactFriend(user)).not.toThrow();
     });
 

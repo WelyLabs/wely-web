@@ -71,8 +71,8 @@ describe('EditProfileDialogComponent', () => {
     it('should show error message on API failure', () => {
         userServiceMock.updateProfile.mockReturnValue(throwError(() => new Error('API Error')));
         component.onSubmit();
-        expect(component.errorMessage).toContain('Erreur lors de la mise à jour');
-        expect(component.isLoading).toBe(false);
+        expect(component.errorMessage()).toContain('Erreur lors de la mise à jour');
+        expect(component.isLoading()).toBe(false);
     });
 
     it('should close on cancel', () => {

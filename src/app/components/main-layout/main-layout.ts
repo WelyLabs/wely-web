@@ -1,4 +1,5 @@
-import { Component, ViewChild, OnInit, OnDestroy, inject, HostListener } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { Router, RouterModule } from '@angular/router';
@@ -14,8 +15,11 @@ import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
 import { NotificationService } from '../../services/notification.service';
 import { Message } from '../../models/chat.model';
-import { Subscription, filter } from 'rxjs';
+import { filter, map, startWith } from 'rxjs';
 import { NavigationEnd } from '@angular/router';
+
+/** How long the "copied" tick stays visible after the user tag is put on the clipboard. */
+const COPY_FEEDBACK_MS = 2000;
 
 @Component({
   selector: 'app-main-layout',
@@ -29,117 +33,137 @@ import { NavigationEnd } from '@angular/router';
     MatToolbarModule
 ],
   templateUrl: './main-layout.html',
-  styleUrl: './main-layout.scss'
+  styleUrl: './main-layout.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MainLayoutComponent implements OnInit, OnDestroy {
-    private readonly logger = inject(LoggerService);
-  private breakpointObserver = inject(BreakpointObserver);
-  private keycloak = inject(KeycloakService);
-  private userService = inject(UserService);
-  private chatService = inject(ChatService);
-  private notificationService = inject(NotificationService);
-  private router = inject(Router);
+export class MainLayoutComponent implements OnInit {
+  private readonly logger = inject(LoggerService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly keycloak = inject(KeycloakService);
+  private readonly userService = inject(UserService);
+  private readonly chatService = inject(ChatService);
+  private readonly notificationService = inject(NotificationService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  @ViewChild('sidenav') sidenav!: MatSidenav;
+  /** Public because the sidenav's open state is imperative and worth asserting on. */
+  readonly sidenav = viewChild<MatSidenav>('sidenav');
 
-  navItems = [
+  readonly navItems = [
     { label: 'Calendar', icon: 'calendar_today', route: '/calendar' },
     { label: 'Event Feed', icon: 'event_note', route: '/feed' },
     { label: 'Users', icon: 'people', route: '/users' }
   ];
 
-  isMobile = false;
-  isOpened = true;
-  userProfile: User | null = null;
-  showUserMenu = false;
-  showMobileMenu = false;
-  showCopySuccess = false;
-  isChatPage = false;
-  private chatSubscription?: Subscription;
-  private routerSubscription?: Subscription;
+  /**
+   * Viewport and route state, read from their sources rather than mirrored into fields.
+   *
+   * <p>Three of these used to be booleans kept in step by hand from subscriptions that were
+   * never closed — the breakpoint observer and the user stream both outlive this component, so
+   * every navigation through the layout left a live subscriber behind.
+   */
+  readonly isMobile = toSignal(
+    this.breakpointObserver.observe(['(max-width: 1023px)']).pipe(map(result => result.matches)),
+    { initialValue: false }
+  );
 
-  ngOnInit() {
+  readonly userProfile = toSignal<User | null, null>(this.userService.currentUser$, { initialValue: null });
+
+  readonly isChatPage = toSignal(
+    this.router.events.pipe(
+      // The type predicate carries the information, so nothing needs casting afterwards.
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map(event => event.urlAfterRedirects.includes('/chat/')),
+      startWith(this.router.url.includes('/chat/'))
+    ),
+    { initialValue: false }
+  );
+
+  readonly showUserMenu = signal(false);
+  readonly showMobileMenu = signal(false);
+  readonly showCopySuccess = signal(false);
+
+  /** The tag a user shares to be added as a friend; empty until the profile has loaded. */
+  readonly userTag = computed(() => {
+    const profile = this.userProfile();
+    return profile ? `${profile.userName}#${profile.hashtag}` : '';
+  });
+
+  ngOnInit(): void {
+    // The sidenav is driven imperatively because MatSidenav owns its own open state: opening on
+    // the way to desktop and closing on the way to mobile is an action, not a binding.
     this.breakpointObserver.observe(['(max-width: 1023px)'])
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(result => {
-        this.isMobile = result.matches;
-        // Automatically open sidebar when switching to desktop, close when switching to mobile
-        if (this.sidenav) {
-          if (this.isMobile) {
-            this.sidenav.close();
-          } else {
-            this.sidenav.open();
-          }
+        const sidenav = this.sidenav();
+        if (!sidenav) {
+          return;
+        }
+        if (result.matches) {
+          sidenav.close();
+        } else {
+          sidenav.open();
         }
       });
 
-    // Subscribe to the reactive user stream - updates automatically when user data changes
-    this.userService.currentUser$.subscribe({
-      next: (user) => {
-        this.userProfile = user;
-      },
-      error: (err: unknown) => this.logger.error('MainLayoutComponent', 'Error loading profile in layout:', err)
-    });
+    this.userService.currentUser$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (err: unknown) =>
+          this.logger.error('MainLayoutComponent', 'Error loading profile in layout:', err)
+      });
 
-    // User data is already preloaded by APP_INITIALIZER
-    // Initialize RSocket stream for real-time messages
+    // The profile is already preloaded by APP_INITIALIZER; this opens the RSocket stream that
+    // carries incoming messages for the whole session.
     this.chatService.initializeStream();
 
-    // Subscribe to incoming messages for global notifications
-    this.chatSubscription = this.chatService.messages$.subscribe((msg: Message) => {
-      // Check if we are currently in the conversation with the sender or in the conversation ID route
-      const isViewingByConversationId = this.router.url.includes(`/chat/${msg.conversationId}`);
+    this.chatService.messages$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((message: Message) => {
+        const isViewingThisConversation =
+          this.router.url.includes(`/chat/${message.conversationId}`);
 
-      // Only show notification if message is from someone else AND we're not already in that chat
-      if (msg.senderId !== this.userProfile?.id && !isViewingByConversationId) {
-        this.notificationService.showChatNotification(msg);
-      }
-    });
-
-    // Track route changes to hide mobile avatar on chat page
-    this.isChatPage = this.router.url.includes('/chat/');
-    this.routerSubscription = this.router.events.pipe(
-      // Le prédicat de type porte l'information : plus besoin de caster ensuite.
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd)
-    ).subscribe((event) => {
-      this.isChatPage = event.urlAfterRedirects.includes('/chat/');
-    });
+        // Only notify for someone else's message, and only when that conversation is not
+        // already on screen.
+        if (message.senderId !== this.userProfile()?.id && !isViewingThisConversation) {
+          this.notificationService.showChatNotification(message);
+        }
+      });
   }
 
-  toggleSidenav() {
-    this.sidenav.toggle();
+  toggleSidenav(): void {
+    this.sidenav()?.toggle();
   }
 
-  toggleMobileMenu() {
-    this.showMobileMenu = !this.showMobileMenu;
+  toggleMobileMenu(): void {
+    this.showMobileMenu.update(open => !open);
   }
+
   /** Escape closes the mobile menu; its backdrop cannot take focus. */
   @HostListener('document:keydown.escape')
-  onEscape() {
-    if (this.showMobileMenu) {
+  onEscape(): void {
+    if (this.showMobileMenu()) {
       this.closeMobileMenu();
     }
   }
 
-
-  closeMobileMenu() {
-    this.showMobileMenu = false;
+  closeMobileMenu(): void {
+    this.showMobileMenu.set(false);
   }
 
-  async logout() {
+  async logout(): Promise<void> {
     await this.keycloak.logout(window.location.origin);
   }
 
-  copyUserTag() {
-    if (!this.userProfile) return;
-    const tag = `${this.userProfile.userName}#${this.userProfile.hashtag}`;
-    navigator.clipboard.writeText(tag).then(() => {
-      this.showCopySuccess = true;
-      setTimeout(() => this.showCopySuccess = false, 2000);
-    });
-  }
+  copyUserTag(): void {
+    const tag = this.userTag();
+    if (!tag) {
+      return;
+    }
 
-  ngOnDestroy() {
-    this.chatSubscription?.unsubscribe();
-    this.routerSubscription?.unsubscribe();
+    navigator.clipboard.writeText(tag).then(() => {
+      this.showCopySuccess.set(true);
+      setTimeout(() => this.showCopySuccess.set(false), COPY_FEEDBACK_MS);
+    });
   }
 }

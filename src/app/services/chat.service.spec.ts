@@ -12,9 +12,9 @@ import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 import { MessageType } from '../models/chat.model';
 
-// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
-// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
-// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+// The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
+// the module rather than redefining an object, so the service and the test work on the same
+// state — a Vite alias created two separate module instances instead.
 vi.mock('rsocket-core', () => import('../../testing/rsocket-core.stub'));
 vi.mock('rsocket-websocket-client', () => import('../../testing/rsocket-websocket-client.stub'));
 

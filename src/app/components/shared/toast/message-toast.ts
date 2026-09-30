@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,12 +11,14 @@ import { Router } from '@angular/router';
     standalone: true,
     imports: [CommonModule, MatIconModule, MatButtonModule],
     templateUrl: './message-toast.html',
-    styleUrl: './message-toast.scss'
+    styleUrl: './message-toast.scss',
+    // The toast renders one message, injected at construction and never changed.
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
+/** Snack bar shown when a message arrives for a conversation the user is not looking at. */
 export class MessageToastComponent {
-    data = inject<Message>(MAT_SNACK_BAR_DATA);
-
-    snackBarRef = inject(MatSnackBarRef);
+    readonly data = inject<Message>(MAT_SNACK_BAR_DATA);
+    readonly snackBarRef = inject(MatSnackBarRef);
     private router = inject(Router);
 
     navigateToConversation(): void {

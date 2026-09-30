@@ -14,11 +14,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { RouterTestingModule } from '@angular/router/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, NavigationEnd } from '@angular/router';
 
-// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
-// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
-// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+// The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
+// the module rather than redefining an object, so the service and the test work on the same
+// state — a Vite alias created two separate module instances instead.
 vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
 vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
 
@@ -112,7 +112,7 @@ describe('MainLayoutComponent', () => {
     it('should initialize services and subscriptions on init', () => {
         fixture.detectChanges();
         expect(chatServiceMock.initializeStream).toHaveBeenCalled();
-        expect(component.userProfile?.userName).toBe('Me');
+        expect(component.userProfile()?.userName).toBe('Me');
     });
 
     it('should show notification for incoming messages when not in that chat', () => {
@@ -140,17 +140,73 @@ describe('MainLayoutComponent', () => {
 
     it('should toggle sidenav', () => {
         fixture.detectChanges();
-        const toggleSpy = vi.spyOn(component.sidenav, 'toggle');
+        const toggleSpy = vi.spyOn(component.sidenav()!, 'toggle');
         component.toggleSidenav();
         expect(toggleSpy).toHaveBeenCalled();
     });
 
     it('should handle mobile breakpoint changes', () => {
         fixture.detectChanges();
-        const closeSpy = vi.spyOn(component.sidenav, 'close');
+        const closeSpy = vi.spyOn(component.sidenav()!, 'close');
         breakpointSubject.next({ matches: true }); // Mobile detected
-        expect(component.isMobile).toBe(true);
+        expect(component.isMobile()).toBe(true);
         expect(closeSpy).toHaveBeenCalled();
+    });
+
+    it('should open the sidenav again on the way back to desktop', () => {
+        fixture.detectChanges();
+        const openSpy = vi.spyOn(component.sidenav()!, 'open');
+
+        breakpointSubject.next({ matches: false });
+
+        expect(component.isMobile()).toBe(false);
+        expect(openSpy).toHaveBeenCalled();
+    });
+
+    it('should track the chat page from router navigation', () => {
+        fixture.detectChanges();
+        expect(component.isChatPage()).toBe(false);
+
+        routerEventsSubject.next(new NavigationEnd(1, '/chat/conv1', '/chat/conv1'));
+
+        expect(component.isChatPage()).toBe(true);
+    });
+
+    it('should build the shareable user tag from the profile', () => {
+        fixture.detectChanges();
+
+        expect(component.userTag()).toBe('Me#1234');
+    });
+
+    it('should expose an empty tag until the profile arrives', () => {
+        userSubject.next(null);
+        fixture.detectChanges();
+
+        expect(component.userTag()).toBe('');
+    });
+
+    it('should not copy anything when there is no profile', () => {
+        // Guarding on the tag rather than the profile: an empty tag is the one thing that must
+        // never reach the clipboard, and that is what the guard now reads.
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', { clipboard: { writeText } });
+        userSubject.next(null);
+        fixture.detectChanges();
+
+        component.copyUserTag();
+
+        expect(writeText).not.toHaveBeenCalled();
+        vi.unstubAllGlobals();
+    });
+
+    it('should toggle and close the mobile menu', () => {
+        fixture.detectChanges();
+
+        component.toggleMobileMenu();
+        expect(component.showMobileMenu()).toBe(true);
+
+        component.onEscape();
+        expect(component.showMobileMenu()).toBe(false);
     });
 
     it('should logout', async () => {

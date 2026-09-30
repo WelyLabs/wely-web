@@ -48,7 +48,11 @@ describe('EventFeedComponent', () => {
     });
 
     it('should load events on init', () => {
-        expect(component.events).toEqual(currentMockEvents);
+        expect(component.currentEvents()).toEqual(currentMockEvents);
+    });
+
+    it('should show at most three cards at once', () => {
+        expect(component.currentEvents().length).toBeLessThanOrEqual(3);
     });
 
     it('should toggle subscription when swiped right', () => {
@@ -57,6 +61,98 @@ describe('EventFeedComponent', () => {
         vi.advanceTimersByTime(300);
         expect(eventServiceMock.toggleSubscription).toHaveBeenCalled();
         vi.useRealTimers();
+    });
+
+    it('should drop the card without subscribing when swiped left', () => {
+        vi.useFakeTimers();
+        const before = component.currentEvents().length;
+
+        component.swipeLeft();
+        vi.advanceTimersByTime(300);
+
+        expect(eventServiceMock.toggleSubscription).not.toHaveBeenCalled();
+        expect(component.currentEvents().length).toBe(before - 1);
+        vi.useRealTimers();
+    });
+
+    it('should not empty the array the service handed it', () => {
+        // The previous version called events.shift(), and that array came straight from the
+        // service's own stream: swiping drained the service's copy along with the component's.
+        vi.useFakeTimers();
+
+        component.swipeLeft();
+        vi.advanceTimersByTime(300);
+
+        expect(currentMockEvents.length).toBe(1);
+        vi.useRealTimers();
+    });
+
+    it('should reset the card after a swipe completes', () => {
+        vi.useFakeTimers();
+
+        component.swipeLeft();
+        vi.advanceTimersByTime(300);
+
+        expect(component.cardTransform()).toBe('');
+        expect(component.leftOverlayOpacity()).toBe(0);
+        expect(component.rightOverlayOpacity()).toBe(0);
+        vi.useRealTimers();
+    });
+
+    it('should do nothing when swiping right with no card left', () => {
+        vi.useFakeTimers();
+        component.swipeLeft();
+        vi.advanceTimersByTime(300);
+        expect(component.currentEvents()).toHaveLength(0);
+
+        component.swipeRight();
+        vi.advanceTimersByTime(300);
+
+        expect(eventServiceMock.toggleSubscription).not.toHaveBeenCalled();
+        vi.useRealTimers();
+    });
+
+    it('should scale and offset each card behind the top one', () => {
+        expect(component.getStackTransform(0)).toBe('scale(1) translateY(0px)');
+        expect(component.getStackTransform(2)).toBe('scale(0.9) translateY(20px)');
+    });
+
+    it('should follow a mouse drag and tilt the card', () => {
+        vi.useFakeTimers();
+        const frames: (() => void)[] = [];
+        vi.stubGlobal('requestAnimationFrame', (callback: () => void) => {
+            frames.push(callback);
+            return frames.length;
+        });
+        vi.stubGlobal('cancelAnimationFrame', () => undefined);
+
+        component.onCardMouseDown({ clientX: 0, preventDefault: () => undefined } as MouseEvent);
+        expect(component.cardTransition()).toBe('none');
+
+        component.onCardMouseMove({ clientX: 60 } as MouseEvent);
+        frames.forEach(frame => frame());
+
+        expect(component.cardTransform()).toBe('translateX(60px) rotate(3deg)');
+        expect(component.rightOverlayOpacity()).toBeCloseTo(0.6);
+        expect(component.leftOverlayOpacity()).toBe(0);
+
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+    });
+
+    it('should return the card to centre when the drag is too short', () => {
+        component.onCardMouseDown({ clientX: 0, preventDefault: () => undefined } as MouseEvent);
+        component.onCardMouseUp({} as MouseEvent);
+
+        expect(component.cardTransform()).toBe('');
+        expect(component.cardTransition()).not.toBe('none');
+    });
+
+    it('should ignore a move or release that no drag started', () => {
+        component.onCardMouseMove({ clientX: 500 } as MouseEvent);
+        component.onCardTouchEnd({} as TouchEvent);
+
+        expect(component.cardTransform()).toBe('');
     });
 
     it('should navigate to event details', () => {

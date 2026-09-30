@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, AfterViewChecked, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, NgZone, inject } from '@angular/core';
+import { AfterViewChecked, AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnChanges, OnDestroy, SimpleChanges, inject, input, output, signal, viewChild } from '@angular/core';
 import { LoggerService } from '../../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,9 +14,9 @@ export interface ChatMessage {
     isMe: boolean;
     senderName?: string;
     animationDelay?: string;
-    /** Envoyé, pas encore acquitté par le serveur. */
+    /** Sent, not yet acknowledged by the server. */
     pending?: boolean;
-    /** Le serveur a refusé ou la connexion a échoué. */
+    /** The server refused it, or the connection failed. */
     failed?: boolean;
 }
 
@@ -25,24 +25,25 @@ export interface ChatMessage {
     standalone: true,
     imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatInputModule, MatFormFieldModule],
     templateUrl: './shared-chat.html',
-    styleUrl: './shared-chat.scss'
+    styleUrl: './shared-chat.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterViewInit, OnDestroy {
     private readonly logger = inject(LoggerService);
-    private ngZone = inject(NgZone);
 
-    @Input() messages: ChatMessage[] = [];
-    @Input() placeholder = 'Type a message...';
-    @Input() loading = false;
-    @Input() historyLoading = false;
-    @Input() hasMore = true;
-    @Output() send = new EventEmitter<string>();
-    @Output() loadMore = new EventEmitter<void>();
+    readonly messages = input<ChatMessage[]>([]);
+    readonly placeholder = input('Type a message...');
+    readonly loading = input(false);
+    readonly historyLoading = input(false);
+    readonly hasMore = input(true);
 
-    @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
-    @ViewChild('topSentinel') private topSentinel!: ElementRef;
+    readonly send = output<string>();
+    readonly loadMore = output<void>();
 
-    newMessage = '';
+    private readonly scrollContainer = viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
+    private readonly topSentinel = viewChild<ElementRef<HTMLElement>>('topSentinel');
+
+    readonly newMessage = signal('');
     private shouldScrollToBottom = false;
     private shouldPreserveScroll = false;
     private previousScrollHeight = 0;
@@ -50,23 +51,23 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
     private allowTrigger = true;
     private observer?: IntersectionObserver;
 
-    ngAfterViewInit() {
+    ngAfterViewInit(): void {
         this.setupIntersectionObserver();
     }
 
-    ngOnDestroy() {
+    ngOnDestroy(): void {
         this.observer?.disconnect();
     }
 
-    private setupIntersectionObserver() {
+    private setupIntersectionObserver(): void {
         const options = {
-            root: this.scrollContainer.nativeElement,
+            root: this.scrollContainer().nativeElement,
             threshold: 0
         };
 
         this.observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if (entry.isIntersecting && this.allowTrigger && this.hasMore && !this.historyLoading) {
+                if (entry.isIntersecting && this.allowTrigger && this.hasMore() && !this.historyLoading()) {
                     this.logger.debug('SharedChatComponent', '🚀 [SharedChat] Sentinel visible - Triggering LOAD MORE');
                     this.loadMore.emit();
                     this.allowTrigger = false; // Lock immediately
@@ -74,11 +75,18 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
             });
         }, options);
 
-        if (this.topSentinel) {
-            this.observer.observe(this.topSentinel.nativeElement);
+        const sentinel = this.topSentinel();
+        if (sentinel) {
+            this.observer.observe(sentinel.nativeElement);
         }
     }
 
+    /**
+     * Kept as {@code ngOnChanges}, which still fires for signal inputs, because the scroll
+     * anchoring needs the previous value of `messages` as well as the current one: whether a
+     * batch was appended or prepended is the difference between following the conversation down
+     * and holding the reader's place. A computed cannot see what a value used to be.
+     */
     ngOnChanges(changes: SimpleChanges): void {
         const historyLoadingChange = changes['historyLoading'];
 
@@ -100,7 +108,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
             if (previousMessages && currentMessages && currentMessages.length > previousMessages.length) {
                 // Check if prepended (first new message is different from first old message)
                 if (currentMessages[0] !== previousMessages[0]) {
-                    const scrollEl = this.scrollContainer.nativeElement;
+                    const scrollEl = this.scrollContainer().nativeElement;
                     this.shouldPreserveScroll = true;
                     this.previousScrollHeight = scrollEl.scrollHeight;
                     this.previousScrollTop = scrollEl.scrollTop;
@@ -114,7 +122,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
         }
     }
 
-    ngAfterViewChecked() {
+    ngAfterViewChecked(): void {
         if (this.shouldScrollToBottom) {
             this.scrollToBottom();
             this.shouldScrollToBottom = false;
@@ -125,7 +133,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
     }
 
     private preserveScroll(): void {
-        const element = this.scrollContainer.nativeElement;
+        const element = this.scrollContainer().nativeElement;
 
         const originalBehavior = element.style.scrollBehavior;
         element.style.scrollBehavior = 'auto';
@@ -159,7 +167,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
 
     private scrollToBottom(): void {
         try {
-            const element = this.scrollContainer.nativeElement;
+            const element = this.scrollContainer().nativeElement;
             element.scrollTop = element.scrollHeight;
         } catch {
             // The container is not in the DOM yet — the view has not rendered, or the
@@ -167,14 +175,18 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
         }
     }
 
-    sendMessage() {
-        if (this.newMessage.trim()) {
-            this.send.emit(this.newMessage);
-            this.newMessage = '';
-            this.shouldScrollToBottom = true;
+    sendMessage(): void {
+        const text = this.newMessage().trim();
+        if (!text) {
+            return;
         }
+
+        this.send.emit(text);
+        this.newMessage.set('');
+        this.shouldScrollToBottom = true;
     }
 
+    /** An optimistic message has no server id yet, so its position stands in for one. */
     trackByMessage(index: number, message: ChatMessage): string | number {
         return message.id ?? index;
     }

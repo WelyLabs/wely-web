@@ -1,12 +1,12 @@
 <mat-sidenav-container class="sidenav-container">
-  <mat-sidenav #sidenav [mode]="isMobile ? 'over' : 'side'" [opened]="!isMobile" class="sidenav"
-    [class.hidden]="isMobile">
+  <mat-sidenav #sidenav [mode]="isMobile() ? 'over' : 'side'" [opened]="!isMobile()" class="sidenav"
+    [class.hidden]="isMobile()">
     <div class="logo-container">
       <span class="logo-text"><span class="highlight">Wely</span></span>
     </div>
 
     <div class="nav-list">
-      @for (item of navItems; track item) {
+      @for (item of navItems; track item.route) {
         <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
           <mat-icon>{{ item.icon }}</mat-icon>
           <span class="label">{{ item.label }}</span>
@@ -14,33 +14,33 @@
       }
     </div>
 
-    <div class="user-profile" (mouseenter)="showUserMenu = true" (mouseleave)="showUserMenu = false">
-      <div class="avatar" [class.has-image]="userProfile?.profilePicUrl">
-        @if (userProfile?.profilePicUrl) {
-          <img [src]="userProfile?.profilePicUrl"
-            [alt]="'Photo de profil de ' + userProfile?.firstName" class="avatar-image">
+    <div class="user-profile" (mouseenter)="showUserMenu.set(true)" (mouseleave)="showUserMenu.set(false)">
+      <div class="avatar" [class.has-image]="userProfile()?.profilePicUrl">
+        @if (userProfile()?.profilePicUrl) {
+          <img [src]="userProfile()?.profilePicUrl"
+            [alt]="'Photo de profil de ' + userProfile()?.firstName" class="avatar-image">
         }
-        @if (!userProfile?.profilePicUrl) {
-          <span aria-hidden="true">{{ userProfile?.firstName?.[0] || 'U' }}{{
-            userProfile?.lastName?.[0]
+        @if (!userProfile()?.profilePicUrl) {
+          <span aria-hidden="true">{{ userProfile()?.firstName?.[0] || 'U' }}{{
+            userProfile()?.lastName?.[0]
             ||
           '' }}</span>
         }
       </div>
       <div class="info">
-        <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>
+        <span class="name">{{ userProfile()?.firstName }} {{ userProfile()?.lastName }}</span>
         <div class="tag-container">
-          <span class="email">{{ userProfile?.userName }}#{{ userProfile?.hashtag }}</span>
+          <span class="email">{{ userProfile()?.userName }}#{{ userProfile()?.hashtag }}</span>
           <button class="copy-btn" (click)="copyUserTag(); $event.stopPropagation()"
-            [title]="showCopySuccess ? 'Copié !' : 'Copier l\'identifiant'"
+            [title]="showCopySuccess() ? 'Copié !' : 'Copier l\'identifiant'"
             aria-label="Copier l'identifiant utilisateur">
-            <mat-icon>{{ showCopySuccess ? 'done' : 'content_copy' }}</mat-icon>
+            <mat-icon>{{ showCopySuccess() ? 'done' : 'content_copy' }}</mat-icon>
           </button>
         </div>
       </div>
 
       <!-- Dropdown Menu -->
-      <div class="user-menu" [class.show]="showUserMenu">
+      <div class="user-menu" [class.show]="showUserMenu()">
         <button class="menu-item" routerLink="/profile">
           <mat-icon>person</mat-icon>
           <span>Mon Profil</span>
@@ -64,17 +64,17 @@
   <mat-sidenav-content class="content-area">
     <div class="page-container">
       <!-- Mobile Profile Trigger -->
-      @if (isMobile && !isChatPage) {
+      @if (isMobile() && !isChatPage()) {
         <div class="mobile-profile-trigger" role="button" tabindex="0" (click)="toggleMobileMenu()"
              (keydown.enter)="toggleMobileMenu()" (keydown.space)="toggleMobileMenu()"
-          [class.active]="showMobileMenu">
+          [class.active]="showMobileMenu()">
           <div class="avatar-ring">
-            @if (userProfile?.profilePicUrl) {
-              <img [src]="userProfile?.profilePicUrl"
-                [alt]="'Photo de profil de ' + userProfile?.firstName">
+            @if (userProfile()?.profilePicUrl) {
+              <img [src]="userProfile()?.profilePicUrl"
+                [alt]="'Photo de profil de ' + userProfile()?.firstName">
             }
-            @if (!userProfile?.profilePicUrl) {
-              <span>{{ userProfile?.firstName?.[0] || 'U' }}</span>
+            @if (!userProfile()?.profilePicUrl) {
+              <span>{{ userProfile()?.firstName?.[0] || 'U' }}</span>
             }
           </div>
         </div>
@@ -84,9 +84,9 @@
     </div>
 
     <!-- Mobile Bottom Navigation -->
-    @if (isMobile) {
+    @if (isMobile()) {
       <div class="bottom-nav">
-        @for (item of navItems; track item) {
+        @for (item of navItems; track item.route) {
           <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
             <mat-icon>{{ item.icon }}</mat-icon>
             <span class="label">{{ item.label }}</span>
@@ -99,29 +99,29 @@
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
          Presentational dismiss target: it is not a control and cannot take focus. Keyboard
          dismissal is handled by the component's Escape listener. -->
-    <div class="mobile-menu-overlay" [class.show]="showMobileMenu" (click)="closeMobileMenu()">
+    <div class="mobile-menu-overlay" [class.show]="showMobileMenu()" (click)="closeMobileMenu()">
       <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
            Not a control: the click handler exists only to stop the event reaching the
            backdrop behind it. -->
       <div class="mobile-menu-content" (click)="$event.stopPropagation()">
         <div class="mobile-user-header">
           <div class="avatar-large">
-            @if (userProfile?.profilePicUrl) {
-              <img [src]="userProfile?.profilePicUrl"
-                [alt]="'Photo de profil de ' + userProfile?.firstName">
+            @if (userProfile()?.profilePicUrl) {
+              <img [src]="userProfile()?.profilePicUrl"
+                [alt]="'Photo de profil de ' + userProfile()?.firstName">
             }
-            @if (!userProfile?.profilePicUrl) {
+            @if (!userProfile()?.profilePicUrl) {
               <span aria-hidden="true">
-                {{ userProfile?.firstName?.[0] }}{{ userProfile?.lastName?.[0] }}
+                {{ userProfile()?.firstName?.[0] }}{{ userProfile()?.lastName?.[0] }}
               </span>
             }
           </div>
           <div class="user-details">
-            <span class="name">{{ userProfile?.firstName }} {{ userProfile?.lastName }}</span>
+            <span class="name">{{ userProfile()?.firstName }} {{ userProfile()?.lastName }}</span>
             <div class="tag-container">
-              <span class="email">{{ userProfile?.userName }}#{{ userProfile?.hashtag }}</span>
+              <span class="email">{{ userProfile()?.userName }}#{{ userProfile()?.hashtag }}</span>
               <button class="copy-btn" (click)="copyUserTag(); $event.stopPropagation()">
-                <mat-icon>{{ showCopySuccess ? 'done' : 'content_copy' }}</mat-icon>
+                <mat-icon>{{ showCopySuccess() ? 'done' : 'content_copy' }}</mat-icon>
               </button>
             </div>
           </div>

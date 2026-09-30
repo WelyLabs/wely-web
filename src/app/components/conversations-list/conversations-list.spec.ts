@@ -8,9 +8,9 @@ import { ConversationSummary, ConversationType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
-// Les modules RSocket sont remplacés par le stub partagé de src/testing. Le factory
-// réexporte le module au lieu de redéfinir un objet, pour que le service et le test
-// manipulent le même état — un alias Vite en aurait créé deux instances distinctes.
+// The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
+// the module rather than redefining an object, so the service and the test work on the same
+// state — a Vite alias created two separate module instances instead.
 vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
 vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
 
@@ -62,15 +62,53 @@ describe('ConversationsListComponent', () => {
 
     it('should load conversations on init', () => {
         expect(chatServiceMock.getAllConversations).toHaveBeenCalled();
-        expect(component.conversations.length).toBe(1);
-        expect(component.isLoading).toBe(false);
+        expect(component.conversations().length).toBe(1);
+        expect(component.isLoading()).toBe(false);
+    });
+
+    it('should sort conversations with the most recently updated first', () => {
+        const older = { ...mockConversations[0], id: 'older', updatedAt: '2025-01-01T10:00:00Z' };
+        const newer = { ...mockConversations[0], id: 'newer', updatedAt: '2025-06-01T10:00:00Z' };
+        chatServiceMock.getAllConversations.mockReturnValue(of([older, newer]));
+
+        component.loadConversations();
+
+        expect(component.conversations().map(conversation => conversation.id))
+            .toEqual(['newer', 'older']);
+    });
+
+    it('should not sort the array it was handed', () => {
+        // The previous version called .sort() on the service's own array, which mutates it in
+        // place: a caller holding that reference would silently see it reordered.
+        const source = [
+            { ...mockConversations[0], id: 'older', updatedAt: '2025-01-01T10:00:00Z' },
+            { ...mockConversations[0], id: 'newer', updatedAt: '2025-06-01T10:00:00Z' }
+        ];
+        chatServiceMock.getAllConversations.mockReturnValue(of(source));
+
+        component.loadConversations();
+
+        expect(source.map(conversation => conversation.id)).toEqual(['older', 'newer']);
     });
 
     it('should handle error during loading', () => {
         chatServiceMock.getAllConversations.mockReturnValue(throwError(() => new Error('Error')));
+
         component.loadConversations();
-        expect(component.error).toBeDefined();
-        expect(component.isLoading).toBe(false);
+
+        expect(component.error()).toBe('Impossible de charger vos conversations');
+        expect(component.isLoading()).toBe(false);
+    });
+
+    it('should clear a previous error when reloading', () => {
+        chatServiceMock.getAllConversations.mockReturnValue(throwError(() => new Error('Error')));
+        component.loadConversations();
+        expect(component.error()).not.toBeNull();
+
+        chatServiceMock.getAllConversations.mockReturnValue(of(mockConversations));
+        component.loadConversations();
+
+        expect(component.error()).toBeNull();
     });
 
     it('should navigate to chat when openConversation is called', () => {

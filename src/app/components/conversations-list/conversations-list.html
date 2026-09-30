@@ -12,7 +12,7 @@
 
   <div class="content-area">
     <!-- Loading State -->
-    @if (isLoading) {
+    @if (isLoading()) {
       <div class="loading-state">
         <div class="loader-ring"></div>
         <p>Chargement des messages...</p>
@@ -20,18 +20,18 @@
     }
 
     <!-- Error State -->
-    @if (!isLoading && error) {
+    @if (!isLoading() && error()) {
       <div class="error-state">
         <div class="error-icon">
           <mat-icon>error_outline</mat-icon>
         </div>
-        <p>{{ error }}</p>
+        <p>{{ error() }}</p>
         <button mat-stroked-button (click)="loadConversations()">Réessayer</button>
       </div>
     }
 
     <!-- Empty State -->
-    @if (!isLoading && !error && conversations.length === 0) {
+    @if (!isLoading() && !error() && conversations().length === 0) {
       <div class="empty-state">
         <div class="empty-icon">
           <mat-icon>chat_bubble_outline</mat-icon>
@@ -43,9 +43,9 @@
     }
 
     <!-- Conversation List -->
-    @if (!isLoading && !error && conversations.length > 0) {
+    @if (!isLoading() && !error() && conversations().length > 0) {
       <div class="conversations-grid">
-        @for (conv of conversations; track conv; let i = $index) {
+        @for (conv of conversations(); track conv.id; let i = $index) {
           <div class="conv-item" role="button" tabindex="0"
             [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)"
             (keydown.enter)="openConversation(conv)" (keydown.space)="openConversation(conv)">

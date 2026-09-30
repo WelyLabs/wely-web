@@ -2,15 +2,15 @@
   <div class="search-header">
     <div class="title-group">
       <h1>
-        @if (isFriendsMode) {
+        @if (isFriendsMode()) {
           Mes Amis
         }
-        @if (!isFriendsMode) {
+        @if (!isFriendsMode()) {
           Recherche
         }
       </h1>
       <p class="subtitle">
-        {{ isFriendsMode ? 'Gérez vos relations et contacts' : 'Découvrez de nouveaux membres' }}
+        {{ isFriendsMode() ? 'Gérez vos relations et contacts' : 'Découvrez de nouveaux membres' }}
       </p>
     </div>
 
@@ -18,10 +18,10 @@
       <!-- Search bar refined -->
       <div class="search-bar-modern">
         <mat-icon>search</mat-icon>
-        <input [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" placeholder="Rechercher..."
+        <input [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Rechercher..."
           type="text">
-        @if (searchQuery) {
-          <button mat-icon-button (click)="searchQuery = ''; onSearchChange()"
+        @if (searchQuery()) {
+          <button mat-icon-button (click)="searchQuery.set('')"
             class="clear-btn">
             <mat-icon>close</mat-icon>
           </button>
@@ -29,7 +29,7 @@
       </div>
 
       <!-- Add Friend Action -->
-      @if (isFriendsMode) {
+      @if (isFriendsMode()) {
         <button mat-flat-button class="invite-btn" (click)="openAddFriendDialog()">
           <mat-icon>person_add</mat-icon>
           <span>Inviter</span>
@@ -39,12 +39,12 @@
   </div>
 
   <!-- Segmented Tabs for Friends Mode -->
-  @if (isFriendsMode) {
+  @if (isFriendsMode()) {
     <div class="tabs-segment-wrapper">
       <div class="tabs-segment">
-        <button [class.active]="activeTabIndex === 0" (click)="onTabChange(0)">Amis</button>
-        <button [class.active]="activeTabIndex === 1" (click)="onTabChange(1)">Invités</button>
-        <button [class.active]="activeTabIndex === 2" (click)="onTabChange(2)">Reçus</button>
+        <button [class.active]="activeTabIndex() === 0" (click)="onTabChange(0)">Amis</button>
+        <button [class.active]="activeTabIndex() === 1" (click)="onTabChange(1)">Invités</button>
+        <button [class.active]="activeTabIndex() === 2" (click)="onTabChange(2)">Reçus</button>
       </div>
     </div>
   }
@@ -52,7 +52,7 @@
   <!-- Content Sections -->
   <div class="results-content">
     <!-- Loading -->
-    @if (isLoading) {
+    @if (isLoading()) {
       <div class="loading-state">
         <div class="loader-ring"></div>
         <p>Chargement...</p>
@@ -60,22 +60,22 @@
     }
 
     <!-- Error -->
-    @if (error && !isLoading) {
+    @if (error() && !isLoading()) {
       <div class="error-state">
         <mat-icon>error_outline</mat-icon>
-        <p>{{ error }}</p>
+        <p>{{ error() }}</p>
         <button mat-flat-button (click)="loadUsers()">Réessayer</button>
       </div>
     }
 
     <!-- Grid -->
-    @if (!isLoading && !error) {
+    @if (!isLoading() && !error()) {
       <div class="grid-wrapper">
-        @if (filteredUsers.length > 0) {
+        @if (filteredUsers().length > 0) {
           <div class="users-grid">
-            @for (user of filteredUsers; track user; let i = $index) {
+            @for (user of filteredUsers(); track user.userId; let i = $index) {
               <app-user-card [user]="user"
-                [showFriendBadge]="!isFriendsMode" [style.animation-delay]="(i * 0.05) + 's'"
+                [showFriendBadge]="!isFriendsMode()" [style.animation-delay]="(i * 0.05) + 's'"
                 (addFriend)="onAddFriend($event)" (acceptFriend)="onAcceptFriend($event)"
                 (declineFriend)="onDeclineFriend($event)" (removeFriend)="onRemoveFriend($event)"
                 (chat)="onChat($event)">
@@ -84,14 +84,14 @@
           </div>
         }
         <!-- Empty State -->
-        @if (filteredUsers.length === 0) {
+        @if (filteredUsers().length === 0) {
           <div class="empty-state">
             <div class="empty-icon">
               <mat-icon>person_search</mat-icon>
             </div>
             <h3>Aucun résultat</h3>
             <p>Nous n'avons trouvé aucun utilisateur correspondant à votre recherche.</p>
-            <button mat-stroked-button (click)="searchQuery = ''; onSearchChange()">Voir tout</button>
+            <button mat-stroked-button (click)="searchQuery.set('')">Voir tout</button>
           </div>
         }
       </div>

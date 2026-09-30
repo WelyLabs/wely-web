@@ -39,7 +39,7 @@ describe('AddFriendDialogComponent', () => {
     });
 
     it('should call close(true) on successful add', () => {
-        component.userTag = 'User#1234';
+        component.userTag.set('User#1234');
         component.onAdd();
         expect(socialServiceMock.sendFriendRequest).toHaveBeenCalledWith('User#1234');
         expect(dialogRefMock.close).toHaveBeenCalledWith(true);
@@ -47,27 +47,27 @@ describe('AddFriendDialogComponent', () => {
 
     it('should show error message on 404', () => {
         socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 404 })));
-        component.userTag = 'NotFound';
+        component.userTag.set('NotFound');
         component.onAdd();
-        expect(component.errorMessage).toContain('Utilisateur non trouvé');
+        expect(component.errorMessage()).toContain('Utilisateur non trouvé');
     });
 
     it('should show error message on 409', () => {
         socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 409 })));
-        component.userTag = 'Conflict';
+        component.userTag.set('Conflict');
         component.onAdd();
-        expect(component.errorMessage).toContain('déjà en cours');
+        expect(component.errorMessage()).toContain('déjà en cours');
     });
 
     it('should show generic error message on other errors', () => {
         socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 500 })));
-        component.userTag = 'Error';
+        component.userTag.set('Error');
         component.onAdd();
-        expect(component.errorMessage).toContain('erreur est survenue');
+        expect(component.errorMessage()).toContain('erreur est survenue');
     });
 
     it('should NOT call socialService if userTag is empty', () => {
-        component.userTag = '';
+        component.userTag.set('');
         component.onAdd();
         expect(socialServiceMock.sendFriendRequest).not.toHaveBeenCalled();
     });
@@ -75,5 +75,30 @@ describe('AddFriendDialogComponent', () => {
     it('should call close(false) on cancel', () => {
         component.onCancel();
         expect(dialogRefMock.close).toHaveBeenCalledWith(false);
+    });
+
+    it('should clear a previous error before retrying', () => {
+        socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 404 })));
+        component.userTag.set('NotFound');
+        component.onAdd();
+        expect(component.errorMessage()).not.toBeNull();
+
+        socialServiceMock.sendFriendRequest.mockReturnValue(of({}));
+        component.onAdd();
+
+        expect(component.errorMessage()).toBeNull();
+    });
+
+    it('should stop loading whether the request succeeds or fails', () => {
+        // finalize, not a duplicated set in both callbacks: the previous version would have
+        // left the dialog spinning on any error path that was added later and forgotten.
+        socialServiceMock.sendFriendRequest.mockReturnValue(throwError(() => ({ status: 500 })));
+        component.userTag.set('Error');
+        component.onAdd();
+        expect(component.isLoading()).toBe(false);
+
+        socialServiceMock.sendFriendRequest.mockReturnValue(of({}));
+        component.onAdd();
+        expect(component.isLoading()).toBe(false);
     });
 });

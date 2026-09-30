@@ -1,4 +1,4 @@
-@if (isLoading) {
+@if (isLoading()) {
   <div class="skeleton-profile-container">
     <div class="profile-header">
       <div class="banner skeleton"></div>
@@ -45,7 +45,7 @@
   </div>
 }
 
-@if (!isLoading && user) {
+@if (!isLoading() && user(); as user) {
   <div class="profile-container fade-in">
     <!-- Header Section -->
     <div class="profile-header">
