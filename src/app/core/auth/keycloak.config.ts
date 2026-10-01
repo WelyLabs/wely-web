@@ -13,6 +13,6 @@ function isSubstituted(value: string | undefined): value is string {
  */
 export const KEYCLOAK_CONFIG = {
   url: isSubstituted(window.KEYCLOAK_URL) ? window.KEYCLOAK_URL : environment.keycloakUrl,
-  realm: 'calendar-app',
-  clientId: 'calendar-app-client',
+  realm: 'wely-realm',
+  clientId: 'wely-client',
 } as const;
