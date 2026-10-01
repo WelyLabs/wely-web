@@ -48,7 +48,9 @@ describe('CalendarComponent', () => {
 
     it('should generate calendar on init', () => {
         expect(component.days().length).toBe(42);
-        expect(component.events().length).toBeGreaterThan(mockEvents.length); // personal + subscribed
+        // Exactly the subscribed events, and nothing else. Three hardcoded demo events used to
+        // be merged in, which is why this assertion read "greater than".
+        expect(component.events().length).toBe(mockEvents.length);
     });
 
     it('should change month when navigate(1) is called', () => {
@@ -67,7 +69,14 @@ describe('CalendarComponent', () => {
     });
 
     it('should navigate to details on viewEventDetails', () => {
-        const event = component.personalEvents[0];
+        const event: CalendarEvent = {
+            id: '101',
+            title: 'External Event',
+            time: '10:00 AM - 11:00 AM',
+            description: '...',
+            startDate: new Date(),
+            endDate: new Date(),
+        };
         component.viewEventDetails(event);
         expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'calendar', event.id], expect.any(Object));
     });
