@@ -220,4 +220,164 @@ describe('CalendarComponent', () => {
             expect(touchMoveEvent.preventDefault).not.toHaveBeenCalled();
         });
     });
+    /**
+     * Characterisation tests for the popover geometry, written before refactoring
+     * calculatePopoverPosition and kept afterwards. They pin what the function produces
+     * rather than how it produces it: the signals it writes, for each view mode and each
+     * side of the grid. Nothing covered this before, and it is the most intricate function
+     * in the component.
+     */
+    describe('popover placement', () => {
+        const POPOVER_WIDTH = 320;
+        const POPOVER_HEIGHT = 400;
+
+        /** A DOM stub whose only job is to answer getBoundingClientRect. */
+        const rect = (left: number, top: number, width: number, height: number) => ({
+            getBoundingClientRect: () => ({
+                left, top, right: left + width, bottom: top + height, width, height,
+            }),
+            querySelector: () => null,
+            parentElement: null,
+        });
+
+        /** Points the component at a fake calendar DOM. */
+        const stubDom = (container: unknown, cells: unknown[], selector = '.day-cell') => {
+            const native = (component as unknown as { el: { nativeElement: HTMLElement } }).el
+                .nativeElement as unknown as Record<string, unknown>;
+            native['querySelector'] = (s: string) => (s === '.calendar-container' ? container : null);
+            native['querySelectorAll'] = (s: string) => (s === selector ? cells : []);
+        };
+
+        const click = (x: number, y: number) =>
+            ({ clientX: x, clientY: y }) as MouseEvent;
+
+        const place = (event: MouseEvent, date?: Date | null) =>
+            (component as unknown as {
+                calculatePopoverPosition: (e: MouseEvent, d?: Date | null) => void;
+            }).calculatePopoverPosition(event, date);
+
+        beforeEach(() => {
+            Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true });
+            Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+        });
+
+        it('pins the popover to the corner on a narrow screen', () => {
+            Object.defineProperty(window, 'innerWidth', { value: 500, configurable: true });
+            stubDom(rect(0, 0, 500, 900), []);
+
+            place(click(100, 200), component.days()[10].date);
+
+            expect(component.isMobilePopover()).toBe(true);
+            expect(component.popoverPosition()).toEqual({ x: 0, y: 0, arrowSide: 'top' });
+        });
+
+        it('opens to the right of a cell in the left half of the month grid', () => {
+            const cells = component.days().map((_, i) => rect(100 + (i % 7) * 100, 200, 90, 80));
+            stubDom(rect(0, 0, 1400, 900), cells);
+
+            // days()[0] sits in column 0, which is <= 3, so the popover opens to its right.
+            place(click(0, 0), component.days()[0].date);
+
+            const position = component.popoverPosition();
+            expect(position.arrowSide).toBe('left');
+            expect(position.x).toBe(100 + 90 + 5);
+        });
+
+        it('opens to the left of a cell in the right half of the month grid', () => {
+            const cells = component.days().map((_, i) => rect(100 + (i % 7) * 100, 200, 90, 80));
+            stubDom(rect(0, 0, 1400, 900), cells);
+
+            // Column 4 is > 3, so the popover flips to the other side of the cell.
+            place(click(0, 0), component.days()[4].date);
+
+            const position = component.popoverPosition();
+            expect(position.arrowSide).toBe('right');
+            expect(position.x).toBe(100 + 4 * 100 - POPOVER_WIDTH - 5);
+        });
+
+        it('centres the popover vertically on the anchor cell', () => {
+            const cells = component.days().map((_, i) => rect(100 + (i % 7) * 100, 200, 90, 80));
+            stubDom(rect(0, 0, 1400, 900), cells);
+
+            place(click(0, 0), component.days()[0].date);
+
+            // Cell centre is 200 + 80/2 = 240; the popover is centred on it.
+            expect(component.popoverPosition().y).toBe(240 - POPOVER_HEIGHT / 2);
+        });
+
+        it('falls back to the click position when the date is not on screen', () => {
+            stubDom(rect(0, 0, 1400, 900), []);
+
+            place(click(600, 300), new Date(1900, 0, 1));
+
+            const position = component.popoverPosition();
+            expect(position.arrowSide).toBe('top');
+            expect(position.x).toBe(600);
+            expect(position.y).toBe(300);
+            expect(component.arrowOffset()).toBe(50);
+        });
+
+        it('keeps the popover inside the container', () => {
+            stubDom(rect(0, 0, 1000, 700), []);
+
+            place(click(9999, 9999), new Date(1900, 0, 1));
+
+            // Clamped to maxWidth - width - padding and maxHeight - height - padding.
+            expect(component.popoverPosition().x).toBe(1000 - POPOVER_WIDTH - 20);
+            expect(component.popoverPosition().y).toBe(700 - POPOVER_HEIGHT - 20);
+        });
+
+        it('anchors on the selection overlay in week view', () => {
+            // A drag leaves a .selection-overlay inside the column; the popover points at
+            // the dragged range, not at the middle of the whole day.
+            const overlay = rect(300, 400, 90, 60);
+            const column = {
+                ...rect(300, 100, 90, 600),
+                querySelector: (s: string) => (s === '.selection-overlay' ? overlay : null),
+                parentElement: { children: [] as unknown[] },
+            };
+            const columns = component.days().map((_, i) => (i === 3 ? column : rect(0, 0, 0, 0)));
+            column.parentElement.children = columns;
+
+            component.viewMode.set('week');
+            component.selectionDate = component.days()[3].date;
+            stubDom(rect(0, 0, 1400, 900), columns, '.day-column');
+
+            place(click(0, 0), component.days()[3].date);
+
+            // Overlay centre is 400 + 60/2 = 430.
+            expect(component.popoverPosition().y).toBe(430 - POPOVER_HEIGHT / 2);
+        });
+
+        it('falls back to the column centre when nothing was dragged', () => {
+            const column = {
+                ...rect(300, 100, 90, 600),
+                querySelector: () => null,
+                parentElement: { children: [] as unknown[] },
+            };
+            const columns = component.days().map((_, i) => (i === 3 ? column : rect(0, 0, 0, 0)));
+            column.parentElement.children = columns;
+
+            component.viewMode.set('week');
+            component.selectionDate = null;
+            stubDom(rect(0, 0, 1400, 900), columns, '.day-column');
+
+            place(click(0, 0), component.days()[3].date);
+
+            // Column centre is 100 + 600/2 = 400.
+            expect(component.popoverPosition().y).toBe(400 - POPOVER_HEIGHT / 2);
+        });
+
+        it('clamps the arrow offset to the popover', () => {
+            const cells = component.days().map((_, i) => rect(100 + (i % 7) * 100, 200, 90, 80));
+            stubDom(rect(0, 0, 1400, 900), cells);
+
+            place(click(0, 0), component.days()[0].date);
+
+            const offset = component.arrowOffset();
+            expect(offset).toBeGreaterThanOrEqual(10);
+            expect(offset).toBeLessThanOrEqual(90);
+        });
+    });
+
 });

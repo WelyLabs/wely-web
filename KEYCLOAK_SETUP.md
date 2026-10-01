@@ -35,7 +35,7 @@ Download from: https://www.keycloak.org/downloads
 1. In `calendar-app` realm, go to **Clients** → **Create client**
 2. **General Settings**:
    - Client type: `OpenID Connect`
-   - Client ID: `calendar-app-client`
+   - Client ID: `wely-client`
 3. **Capability config**:
    - Client authentication: `OFF` (public client)
    - Authorization: `OFF`
@@ -150,7 +150,7 @@ npm run start
 ### "Failed to initialize adapter"
 - Check Keycloak server is running on http://localhost:8080
 - Verify realm name is `calendar-app`
-- Verify client ID is `calendar-app-client`
+- Verify client ID is `wely-client`
 
 ### "Invalid redirect URI"
 - Check client settings in Keycloak
@@ -173,8 +173,8 @@ For production, update `keycloak-init.factory.ts`:
 ```typescript
 config: {
   url: 'https://your-keycloak-domain.com',
-  realm: 'calendar-app',
-  clientId: 'calendar-app-client'
+  realm: 'wely-realm',
+  clientId: 'wely-client'
 }
 ```
 

@@ -38,7 +38,7 @@ Ce guide explique comment ajouter l'authentification Google et Apple (Sign in wi
 4. **Name** : `Calendar App Client`
 5. **Authorized redirect URIs** :
    ```
-   http://localhost:8080/realms/calendar-app/broker/google/endpoint
+   http://localhost:8080/realms/wely-realm/broker/google/endpoint
    ```
    > ⚠️ Remplacez `localhost:8080` par votre URL Keycloak en production
 
@@ -95,7 +95,7 @@ Ce guide explique comment ajouter l'authentification Google et Apple (Sign in wi
    > En production, ajoutez votre domaine réel
 9. **Return URLs** :
    ```
-   http://localhost:8080/realms/calendar-app/broker/apple/endpoint
+   http://localhost:8080/realms/wely-realm/broker/apple/endpoint
    ```
 10. Cliquez **"Save"** puis **"Continue"** puis **"Register"**
 
@@ -263,7 +263,7 @@ Puis redémarrez Keycloak ou rechargez le thème.
 
 ### Google : "redirect_uri_mismatch"
 - Vérifiez que l'URL de redirection dans Google Cloud Console correspond exactement
-- Format : `http://localhost:8080/realms/calendar-app/broker/google/endpoint`
+- Format : `http://localhost:8080/realms/wely-realm/broker/google/endpoint`
 
 ### Apple : "invalid_client"
 - Vérifiez le Service ID

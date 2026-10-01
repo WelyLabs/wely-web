@@ -42,6 +42,22 @@ export interface CalendarEvent {
 
 import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
 
+/** Popover geometry, in CSS pixels. */
+const POPOVER_WIDTH = 320;
+const POPOVER_HEIGHT = 400;
+const POPOVER_PADDING = 20;
+const POPOVER_GAP = 5;
+/** Below this width the popover is pinned to the corner rather than anchored. */
+const POPOVER_MOBILE_BREAKPOINT = 768;
+/** Columns up to this index open to the right of their cell; later ones flip. */
+const POPOVER_FLIP_COLUMN = 3;
+/** The arrow stays within the popover's own height, as a percentage. */
+const POPOVER_ARROW_MIN = 10;
+const POPOVER_ARROW_MAX = 90;
+
+/** Keeps a value inside a range. */
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
+
 @Component({
   selector: 'app-calendar',
   standalone: true,
@@ -696,139 +712,116 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.isDetailsOpen.set(false);
   }
 
+  /**
+   * Places the new-event popover next to the day the user clicked.
+   *
+   * <p>This used to be one 130-line function with a cognitive complexity of 50. It resolved
+   * the anchor's geometry twice — once to position the popover, once to aim its arrow — in
+   * two near-identical blocks that had already drifted apart. The geometry is resolved once
+   * here, by {@link anchorGeometry}, and everything else reads from it.
+   */
   private calculatePopoverPosition(event: MouseEvent, targetDate?: Date | null) {
     const container = this.el.nativeElement.querySelector('.calendar-container');
     const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
     const dateToAnchor = targetDate || this.selectedDate();
 
-    let x = event.clientX - containerRect.left;
-    let y = event.clientY - containerRect.top;
-    let arrowSide: 'top' | 'left' | 'right' = 'top';
-
-    const popoverWidth = 320;
-    const popoverHeight = 400;
-    const padding = 20;
-
-    this.isMobilePopover.set(window.innerWidth <= 768);
-
+    this.isMobilePopover.set(window.innerWidth <= POPOVER_MOBILE_BREAKPOINT);
     if (this.isMobilePopover()) {
       this.popoverPosition.set({ x: 0, y: 0, arrowSide: 'top' });
       return;
     }
 
-    if (this.viewMode() === 'month' && dateToAnchor) {
-      const dayCells = this.el.nativeElement.querySelectorAll('.day-cell');
-      const dayIndex = this.days().findIndex(d => this.isSameDate(d.date, dateToAnchor));
+    const anchor = this.anchorGeometry(dateToAnchor, containerRect);
 
-      if (dayIndex !== -1) {
-        const cell = dayCells[dayIndex] as HTMLElement;
-        const rect = cell.getBoundingClientRect();
-        const relativeRect = {
-          left: rect.left - containerRect.left,
-          right: rect.right - containerRect.left,
-          top: rect.top - containerRect.top,
-          bottom: rect.bottom - containerRect.top
-        };
+    // With no anchor on screen the popover simply opens where the pointer is.
+    let x = event.clientX - containerRect.left;
+    let y = event.clientY - containerRect.top;
+    let arrowSide: 'top' | 'left' | 'right' = 'top';
 
-        const colIndex = dayIndex % 7;
-        if (colIndex <= 3) {
-          x = relativeRect.right + 5;
-          arrowSide = 'left';
-        } else {
-          x = relativeRect.left - popoverWidth - 5;
-          arrowSide = 'right';
-        }
-        // Center vertically relative to cell
-        y = relativeRect.top + (rect.height / 2) - (popoverHeight / 2);
-      }
-    } else if ((this.viewMode() === 'week' || this.viewMode() === 'day') && (this.selectionDate || dateToAnchor)) {
-      // Use selectionDate or passed date for Week/Day view
-      const activeDate = this.selectionDate || dateToAnchor;
-      let column: HTMLElement | null = null;
-      if (activeDate) {
-        const dayColumns = this.el.nativeElement.querySelectorAll('.day-column');
-        const dayIndex = this.days().findIndex(d => this.isSameDate(d.date, activeDate));
-        if (dayIndex !== -1) {
-          column = dayColumns[dayIndex] as HTMLElement;
-        }
-      }
-
-      if (column) {
-        const rect = column.getBoundingClientRect();
-        const relativeRect = {
-          left: rect.left - containerRect.left,
-          right: rect.right - containerRect.left,
-          top: rect.top - containerRect.top,
-          bottom: rect.bottom - containerRect.top
-        };
-
-        const colIndex = Array.from(column.parentElement?.children || []).indexOf(column) - (this.viewMode() === 'week' ? 1 : 0);
-
-        if (colIndex <= 3) {
-          x = relativeRect.right + 5;
-          arrowSide = 'left';
-        } else {
-          x = relativeRect.left - popoverWidth - 5;
-          arrowSide = 'right';
-        }
-
-        const selectionOverlay = column.querySelector('.selection-overlay');
-        if (selectionOverlay) {
-          const selectionRect = selectionOverlay.getBoundingClientRect();
-          const relativeSelectionTop = selectionRect.top - containerRect.top;
-          y = relativeSelectionTop + (selectionRect.height / 2) - (popoverHeight / 2);
-        } else {
-          y = relativeRect.top + (rect.height / 2) - (popoverHeight / 2);
-        }
-      }
+    if (anchor) {
+      // Columns in the left half open to the right of the cell, and the reverse, so the
+      // popover never hangs off the side of the grid.
+      const opensRight = anchor.columnIndex <= POPOVER_FLIP_COLUMN;
+      arrowSide = opensRight ? 'left' : 'right';
+      x = opensRight ? anchor.right + POPOVER_GAP : anchor.left - POPOVER_WIDTH - POPOVER_GAP;
+      y = anchor.centerY - POPOVER_HEIGHT / 2;
     }
 
-    // Boundary checks relative to container
     const maxWidth = containerRect.width || window.innerWidth;
     const maxHeight = containerRect.height || window.innerHeight;
-
-    x = Math.max(padding, Math.min(x, maxWidth - popoverWidth - padding));
-    y = Math.max(padding, Math.min(y, maxHeight - popoverHeight - padding));
+    x = clamp(x, POPOVER_PADDING, maxWidth - POPOVER_WIDTH - POPOVER_PADDING);
+    y = clamp(y, POPOVER_PADDING, maxHeight - POPOVER_HEIGHT - POPOVER_PADDING);
 
     this.popoverPosition.set({ x, y, arrowSide });
 
-    // Calculate Arrow Offset to point exactly to the target
-    if ((arrowSide === 'left' || arrowSide === 'right') && dateToAnchor) {
-      let targetCenterY = 0;
-      if (this.viewMode() === 'month') {
-        const dayCells = this.el.nativeElement.querySelectorAll('.day-cell');
-        const dayIndex = this.days().findIndex(d => this.isSameDate(d.date, dateToAnchor));
-        if (dayIndex !== -1) {
-          const rect = dayCells[dayIndex].getBoundingClientRect();
-          targetCenterY = rect.top - containerRect.top + (rect.height / 2);
-        }
-      } else {
-        // Week/Day view selection sticky position
-        const activeDate = this.selectionDate || dateToAnchor;
-        const dayColumns = this.el.nativeElement.querySelectorAll('.day-column');
-        const dayIndex = this.days().findIndex(d => this.isSameDate(d.date, activeDate));
+    // The popover is clamped, the thing it points at is not, so the arrow is offset to span
+    // the gap. A missing anchor leaves it centred.
+    const pointsSideways = arrowSide === 'left' || arrowSide === 'right';
+    const canAim = pointsSideways && dateToAnchor && anchor && anchor.centerY > 0;
+    this.arrowOffset.set(
+      canAim
+        ? clamp(((anchor.centerY - y) / POPOVER_HEIGHT) * 100, POPOVER_ARROW_MIN, POPOVER_ARROW_MAX)
+        : 50,
+    );
+  }
 
-        if (dayIndex !== -1) {
-          const column = dayColumns[dayIndex] as HTMLElement;
-          const selectionOverlay = column?.querySelector('.selection-overlay');
-          if (selectionOverlay) {
-            const rect = selectionOverlay.getBoundingClientRect();
-            targetCenterY = rect.top - containerRect.top + (rect.height / 2);
-          } else {
-            const rect = column.getBoundingClientRect();
-            targetCenterY = rect.top - containerRect.top + (rect.height / 2);
-          }
-        }
-      }
+  /**
+   * The on-screen box the popover should point at, in container coordinates.
+   *
+   * <p>In month view that is the day cell. In week and day view it is the selection overlay
+   * when the user dragged a range, and the whole column otherwise — and the date comes from
+   * {@link selectionDate} in preference to the clicked one, because a drag ends on a
+   * different cell than it started.
+   *
+   * <p>Returns null when the date is not currently rendered, which is what tells the caller
+   * to fall back to the pointer position.
+   */
+  private anchorGeometry(
+    date: Date | null | undefined,
+    containerRect: { left: number; top: number },
+  ): { left: number; right: number; centerY: number; columnIndex: number } | null {
+    const toContainer = (rect: DOMRect) => ({
+      left: rect.left - containerRect.left,
+      right: rect.right - containerRect.left,
+      centerY: rect.top - containerRect.top + rect.height / 2,
+    });
 
-      if (targetCenterY > 0) {
-        this.arrowOffset.set(Math.max(10, Math.min(90, ((targetCenterY - y) / popoverHeight) * 100)));
-      } else {
-        this.arrowOffset.set(50);
+    if (this.viewMode() === 'month') {
+      if (!date) {
+        return null;
       }
-    } else {
-      this.arrowOffset.set(50);
+      const index = this.days().findIndex((day) => this.isSameDate(day.date, date));
+      if (index === -1) {
+        return null;
+      }
+      const cell = this.el.nativeElement.querySelectorAll('.day-cell')[index] as HTMLElement;
+      return { ...toContainer(cell.getBoundingClientRect()), columnIndex: index % 7 };
     }
+
+    const activeDate = this.selectionDate || date;
+    if (!activeDate) {
+      return null;
+    }
+    const index = this.days().findIndex((day) => this.isSameDate(day.date, activeDate));
+    if (index === -1) {
+      return null;
+    }
+    const column = this.el.nativeElement.querySelectorAll('.day-column')[index] as HTMLElement;
+    if (!column) {
+      return null;
+    }
+
+    // Week view carries a leading hours gutter among its siblings; day view does not.
+    const siblings = Array.from(column.parentElement?.children || []);
+    const columnIndex = siblings.indexOf(column) - (this.viewMode() === 'week' ? 1 : 0);
+
+    const overlay = column.querySelector('.selection-overlay');
+    const box = toContainer(column.getBoundingClientRect());
+    const centerY = overlay
+      ? toContainer(overlay.getBoundingClientRect()).centerY
+      : box.centerY;
+
+    return { left: box.left, right: box.right, centerY, columnIndex };
   }
 
   cancelCreatingEvent() {
