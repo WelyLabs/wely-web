@@ -16,6 +16,14 @@
 
 # The unprivileged nginx image runs as uid 101 and listens on 8080, rather than needing root to
 # bind port 80. The Service keeps exposing 80 externally.
+#
+# entrypoint.sh rewrites index.html in place to inject KEYCLOAK_URL, and `sed -i` does that by
+# creating a temp file *in the same directory* before renaming it over the original. COPY --chown
+# sets ownership on the copied files but leaves /usr/share/nginx/html itself owned by root, so
+# uid 101 could write index.html and still not create the temp file beside it. That failed at
+# startup with "sed: can't create temp file ...: Permission denied", crash-looping the pod while
+# the image built, pushed and deployed without a word. Hence the explicit chown on the directory
+# further down.
 FROM nginxinc/nginx-unprivileged:stable-alpine
 
 # nginx.conf is a template: entrypoint.sh substitutes the DNS resolver into it at start, because
@@ -25,7 +33,8 @@ COPY --chown=101:101 dist/calendar-app/browser /usr/share/nginx/html
 COPY entrypoint.sh /entrypoint.sh
 
 USER root
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+ && chown -R 101:101 /usr/share/nginx/html
 USER 101
 
 EXPOSE 8080
