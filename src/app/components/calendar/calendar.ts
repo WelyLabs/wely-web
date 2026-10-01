@@ -42,6 +42,9 @@ export interface CalendarEvent {
 
 import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
 
+/** How many event titles a month cell names before it starts counting the rest. */
+const MONTH_CELL_EVENTS = 3;
+
 /** Popover geometry, in CSS pixels. */
 const POPOVER_WIDTH = 320;
 const POPOVER_HEIGHT = 400;
@@ -418,6 +421,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   getEventsForDay(date: Date): CalendarEvent[] {
     return this.events().filter(event => this.isSameDate(event.startDate, date));
+  }
+
+  /** The events a month cell has room to name, earliest first. */
+  monthCellEvents(date: Date): CalendarEvent[] {
+    return this.getEventsForDay(date)
+      .slice()
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+      .slice(0, MONTH_CELL_EVENTS);
+  }
+
+  /** How many events the cell could not name, or 0 when they all fit. */
+  hiddenEventCount(date: Date): number {
+    return Math.max(0, this.getEventsForDay(date).length - MONTH_CELL_EVENTS);
   }
 
   getAllDayEvents(date: Date): CalendarEvent[] {

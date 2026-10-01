@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent } from '../../services/event.service';
+import { SocialService } from '../../services/social.service';
 
 /** Horizontal travel, in pixels, past which a drag counts as a swipe rather than a nudge. */
 const SWIPE_THRESHOLD_PX = 100;
@@ -39,10 +40,21 @@ const RETURN_TRANSITION = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 })
 export class EventFeedComponent implements OnInit {
   private readonly eventService = inject(EventService);
+  private readonly socialService = inject(SocialService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly events = signal<FeedEvent[]>([]);
+
+  /**
+   * Organiser business id to display name.
+   *
+   * <p>A feed event carries `organizerId` and nothing else — wely-events has no idea who its
+   * users are, which is the point of keeping the services apart. The card used to print that
+   * UUID verbatim under the title. The social service already answers with every user and
+   * their name, so the names are resolved here once rather than one request per card.
+   */
+  private readonly organiserNames = signal<Map<string, string>>(new Map());
 
   /** The top card plus the two stacked behind it. */
   readonly currentEvents = computed(() => this.events().slice(0, VISIBLE_CARDS));
@@ -66,6 +78,17 @@ export class EventFeedComponent implements OnInit {
     this.eventService.feedEvents$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(events => this.events.set(events));
+
+    this.socialService.searchUsers()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(users =>
+        this.organiserNames.set(new Map(users.map(user => [user.userId, user.userName]))),
+      );
+  }
+
+  /** The organiser's name, or nothing while the names are still on their way. */
+  organiserName(organizerId: string): string {
+    return this.organiserNames().get(organizerId) ?? '';
   }
 
   /** Stacked effect for the cards behind the top one. */

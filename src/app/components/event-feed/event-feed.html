@@ -39,7 +39,9 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="organizer">{{ event.organizerId }}</div>
+            @if (organiserName(event.organizerId); as organiser) {
+              <div class="organizer">{{ organiser }}</div>
+            }
             <h2>{{ event.title }}</h2>
             <div class="location">
               <mat-icon>location_on</mat-icon>
