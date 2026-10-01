@@ -147,12 +147,38 @@ export class MainLayoutComponent implements OnInit {
     }
   }
 
+  /**
+   * Closes the menu only when the backdrop itself was clicked.
+   *
+   * <p>The panel used to carry `(click)="$event.stopPropagation()"` so that clicking inside it
+   * did not reach the backdrop. That made a plain div look like a control to every accessibility
+   * checker, for a handler that did nothing but swallow an event. Comparing target to
+   * currentTarget answers the same question without a second listener.
+   */
+  dismissIfBackdrop(event: Event): void {
+    if (event.target === event.currentTarget) {
+      this.closeMobileMenu();
+    }
+  }
+
   closeMobileMenu(): void {
     this.showMobileMenu.set(false);
   }
 
-  async logout(): Promise<void> {
-    await this.keycloak.logout(window.location.origin);
+  /**
+   * Signs the user out.
+   *
+   * <p>Returns void rather than the promise: the template calls this from (click), where
+   * Angular drops whatever is returned. An async method there leaves a floating promise, so a
+   * Keycloak outage during logout surfaced as an unhandled rejection in the console and nowhere
+   * else. The failure is now logged, and the method says it does not expect to be awaited.
+   */
+  logout(): void {
+    this.keycloak
+      .logout(window.location.origin)
+      .catch((error: unknown) =>
+        this.logger.error('MainLayoutComponent', 'Logout failed:', error),
+      );
   }
 
   copyUserTag(): void {

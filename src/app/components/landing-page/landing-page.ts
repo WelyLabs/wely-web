@@ -68,6 +68,20 @@ export class LandingPageComponent {
         }
     }
 
+    /**
+     * Closes the menu only when the backdrop itself was clicked.
+     *
+     * <p>The panel used to carry `(click)="$event.stopPropagation()"` so that clicking inside
+     * it did not reach the backdrop. That made a plain div look like a control to every
+     * accessibility checker, for a handler that did nothing but swallow an event. Comparing
+     * target to currentTarget answers the same question without a second listener.
+     */
+    dismissIfBackdrop(event: Event): void {
+        if (event.target === event.currentTarget) {
+            this.closeMenu();
+        }
+    }
+
     closeMenu(): void {
         this.showMobileMenu.set(false);
     }
