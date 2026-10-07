@@ -83,6 +83,24 @@ describe('LandingPageComponent', () => {
         expect(component.showMobileMenu()).toBe(false);
     });
 
+    it('should close the menu when the backdrop itself is clicked', () => {
+        component.showMobileMenu.set(true);
+        const backdrop: HTMLElement = fixture.nativeElement.querySelector('.mobile-menu-overlay');
+
+        backdrop.click();
+
+        expect(component.showMobileMenu()).toBe(false);
+    });
+
+    it('should keep the menu open when a click inside the panel bubbles up to the backdrop', () => {
+        component.showMobileMenu.set(true);
+        const panel: HTMLElement = fixture.nativeElement.querySelector('.mobile-menu-content');
+
+        panel.click();
+
+        expect(component.showMobileMenu()).toBe(true);
+    });
+
     it('should expose the three feature cards the template renders', () => {
         expect(component.features).toHaveLength(3);
         expect(component.features.map(feature => feature.icon))
