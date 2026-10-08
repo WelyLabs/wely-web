@@ -1,472 +1,531 @@
-.landing-container {
-    min-height: 100vh;
+// Public home page.
+//
+// Built from the application's own design: the tokens of styles.scss (--bg-canvas,
+// --accent-gradient, --text-*), Outfit at 800 for titles, the black pill of the active
+// sidebar item, 12px-radius event cards with a gradient accent, the red dot on today.
+// The hero visual is a replica of the week view in those same styles, not a picture.
+
+:host {
+    display: block;
     background: var(--bg-canvas);
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
+    color: var(--text-primary);
+    overflow-x: clip;
 }
 
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 32px 48px;
-    max-width: 1400px;
+$ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+.landing {
+    max-width: 1200px;
     margin: 0 auto;
-    width: 100%;
-    z-index: 100;
+    padding: 0 24px;
+}
 
-    .logo {
-        font-size: 26px;
-        font-weight: 800;
-        letter-spacing: -1px;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 8px;
+.logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
 
-        .highlight {
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-    }
+    &.small { font-size: 18px; }
+}
+
+.highlight,
+.gradient-text {
+    background: var(--accent-gradient);
+    // Same gradient, interpolated in OKLCH: in sRGB its middle is a dull grey-mauve, which
+    // shows at headline size. The login screen does the same; the line above is the fallback.
+    background: linear-gradient(135deg in oklch, #3b82f6 0%, #f97316 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────────────
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    font: 600 15px/1 inherit;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s $ease, background 0.2s ease, box-shadow 0.2s ease;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    &:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 3px; }
+}
+
+// The app's active-item pill: black, white ink.
+.btn-primary {
+    background: var(--text-primary);
+    color: #fff;
+
+    &:hover { background: #000; transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+}
+
+.btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: rgba(0, 0, 0, 0.08);
+
+    &:hover { background: var(--bg-subtle); }
+}
+
+.btn-ghost {
+    height: 40px;
+    padding: 0 16px;
+    background: transparent;
+    color: var(--text-primary);
+    border-color: rgba(0, 0, 0, 0.1);
+
+    &:hover { background: var(--bg-card); }
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────────────
+.nav {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    height: 80px;
 
     .nav-links {
         display: flex;
-        align-items: center;
-        gap: 40px;
+        gap: 28px;
+        margin-left: auto;
 
         a {
-            text-decoration: none;
             color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 15px;
             font-weight: 500;
-            font-size: 15px;
-            transition: all 0.2s ease;
 
-            &:hover {
-                color: var(--text-primary);
-            }
-        }
-
-        .login-btn {
-            color: var(--text-primary);
-            font-weight: 600;
-            border: none;
-            background: none;
-            font-size: 15px;
-            cursor: pointer;
-            padding: 8px 16px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
-
-            &:hover {
-                background: var(--bg-subtle);
-            }
-        }
-
-        .signup-btn {
-            background: var(--text-primary);
-            color: white;
-            padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 14px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-
-            &:hover {
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-xl);
-                background: #000;
-            }
-        }
-    }
-
-    .mobile-menu-toggle {
-        display: none;
-        color: var(--text-primary);
-    }
-
-    @media (max-width: 1024px) {
-        padding: 24px;
-
-        .nav-links {
-            display: none;
-        }
-
-        .mobile-menu-toggle {
-            display: flex;
+            &:hover { color: var(--text-primary); }
         }
     }
 }
 
-.hero-section {
-    flex: 1;
+// ── Hero ──────────────────────────────────────────────────────────────────────────────
+.hero {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 56px;
+    padding: 56px 0 96px;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; }
+}
+
+h1 {
+    margin: 24px 0 20px;
+    font-size: clamp(38px, 4.4vw, 56px);
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -2px;
+}
+
+.lead {
+    margin: 0 0 32px;
+    max-width: 30em;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.demo-hint {
+    margin: 20px 0 0;
+    font-size: 13px;
+    color: var(--text-tertiary);
+
+    code {
+        font: 500 13px/1 inherit;
+        font-family: inherit;
+        color: var(--text-secondary);
+        user-select: all;
+    }
+}
+
+.hero-visual {
+    position: relative;
+    padding: 24px 0;
+}
+
+// ── App window replica ────────────────────────────────────────────────────────────────
+.app-window {
+    border-radius: 24px;
+    background: var(--bg-canvas);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03), 0 40px 80px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.window-bar {
+    display: flex;
+    gap: 6px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-default);
+
+    span { width: 10px; height: 10px; border-radius: 50%; background: #e5e2dc; }
+}
+
+.app-body { display: grid; grid-template-columns: 124px 1fr; min-height: 340px; }
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px 10px;
+    border-right: 1px solid rgba(0, 0, 0, 0.04);
+
+    .logo { padding: 0 8px 14px; }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 34px;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        color: var(--text-secondary);
+
+        mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+        &.active { background: var(--text-primary); color: #fff; font-weight: 600; }
+    }
+
+    .profile {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: auto;
+        padding: 0 4px;
+
+        img { width: 28px; height: 28px; border-radius: 50%; }
+        strong { display: block; font-size: 11px; }
+        small { font-size: 10px; color: var(--text-tertiary); }
+    }
+}
+
+.week {
+    padding: 18px 18px 22px;
+
+    h2 { margin: 0 0 14px; font-size: 20px; font-weight: 800; letter-spacing: -0.6px; }
+}
+
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: auto repeat(7, 30px);
+    gap: 4px;
+}
+
+.day-head {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 100px 24px;
-    max-width: 1000px;
-    margin: 0 auto;
-    width: 100%;
+    gap: 2px;
+    padding-bottom: 6px;
 
-    @media (max-width: 768px) {
-        padding: 60px 24px;
-    }
+    small { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-tertiary); }
 
-    .hero-content {
-        max-width: 800px;
-        margin-bottom: 80px;
-
-        .hero-title {
-            font-size: 80px;
-            line-height: 1.05;
-            font-weight: 900;
-            letter-spacing: -3px;
-            margin-bottom: 32px;
-            color: var(--text-primary);
-
-            .gradient-text {
-                display: block;
-                background: var(--accent-gradient);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-            }
-
-            @media (max-width: 768px) {
-                font-size: 48px;
-                letter-spacing: -1.5px;
-            }
-        }
-
-        .hero-subtitle {
-            font-size: 22px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: 48px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-
-            @media (max-width: 768px) {
-                font-size: 18px;
-            }
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-
-            button {
-                height: 56px;
-                padding: 0 32px;
-                font-size: 16px;
-                font-weight: 600;
-                border-radius: 16px;
-                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            }
-
-            .cta-button {
-                background: var(--text-primary);
-                color: white;
-                border: none;
-                cursor: pointer;
-
-                &:hover {
-                    transform: translateY(-2px);
-                    box-shadow: var(--shadow-xl);
-                    background: #000;
-                }
-            }
-
-            .secondary-button {
-                background: white;
-                color: var(--text-primary);
-                border: 1px solid var(--border-default);
-                cursor: pointer;
-
-                &:hover {
-                    background: var(--bg-subtle);
-                    border-color: var(--text-tertiary);
-                }
-            }
-
-            @media (max-width: 480px) {
-                flex-direction: column;
-                width: 100%;
-
-                button {
-                    width: 100%;
-                }
-            }
-        }
-    }
-
-    .hero-visual {
-        width: 100%;
-        max-width: 900px;
-        position: relative;
-        margin-top: 40px;
-
-        .mockup-container {
-            background: #fff;
-            border-radius: 24px;
-            border: 1px solid var(--border-default);
-            box-shadow: var(--shadow-xl);
-            padding: 8px;
-            position: relative;
-            z-index: 10;
-
-            img {
-                width: 100%;
-                border-radius: 18px;
-                display: block;
-            }
-        }
-
-        .floating-element {
-            position: absolute;
-            z-index: 20;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid white;
-            border-radius: 20px;
-            box-shadow: var(--shadow-lg);
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: float 6s ease-in-out infinite;
-
-            &.el-1 {
-                top: -20px;
-                right: -40px;
-                animation-delay: 0s;
-            }
-
-            &.el-2 {
-                bottom: -30px;
-                left: -40px;
-                animation-delay: 1s;
-            }
-
-            @media (max-width: 1100px) {
-                display: none;
-            }
-        }
-    }
-}
-
-.features-section {
-    padding: 120px 24px;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-    text-align: center;
-
-    .section-tag {
-        font-size: 14px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: var(--primary-blue);
-        margin-bottom: 24px;
-        display: block;
-    }
-
-    .section-title {
-        font-size: 48px;
-        font-weight: 800;
-        margin-bottom: 64px;
-        letter-spacing: -1.5px;
-
-        @media (max-width: 768px) {
-            font-size: 36px;
-        }
-    }
-
-    .features-grid {
+    span {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 32px;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        font-size: 13px;
+        font-weight: 700;
+    }
 
-        .feature-card {
-            padding: 40px;
-            border-radius: 32px;
-            background: var(--bg-subtle);
-            border: 1px solid transparent;
-            text-align: left;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    &.today span { background: #ff3b30; color: #fff; }
+}
 
-            &:hover {
-                background: white;
-                border-color: var(--border-default);
-                box-shadow: var(--shadow-lg);
-                transform: translateY(-4px);
-            }
+// The app's inline event card: white, 12px radius, gradient accent bar.
+.event {
+    position: relative;
+    min-width: 0;
+    padding: 5px 5px 5px 10px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-md);
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    // Two lines rather than an ellipsis in mid-word: a column is ~55px wide here.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
 
-            .icon-wrapper {
-                width: 64px;
-                height: 64px;
-                border-radius: 20px;
-                background: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-bottom: 24px;
-                box-shadow: var(--shadow-sm);
-
-                mat-icon {
-                    font-size: 32px;
-                    width: 32px;
-                    height: 32px;
-                    color: var(--text-primary);
-                }
-            }
-
-            h3 {
-                font-size: 24px;
-                font-weight: 700;
-                margin-bottom: 16px;
-                color: var(--text-primary);
-            }
-
-            p {
-                color: var(--text-secondary);
-                line-height: 1.6;
-                font-size: 16px;
-                margin: 0;
-            }
-        }
+    .accent {
+        position: absolute;
+        left: 4px;
+        top: 6px;
+        width: 3px;
+        height: 12px;
+        border-radius: 2px;
+        background: var(--accent-gradient);
     }
 }
 
-.footer {
-    padding: 80px 24px 40px;
-    text-align: center;
-
-    .footer-logo {
-        font-size: 24px;
-        font-weight: 800;
-        margin-bottom: 24px;
-        color: var(--text-primary);
-    }
-
-    .footer-links {
-        display: flex;
-        justify-content: center;
-        gap: 32px;
-        margin-bottom: 48px;
-
-        a {
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-size: 15px;
-            font-weight: 500;
-            transition: color 0.2s;
-
-            &:hover {
-                color: var(--text-primary);
-            }
-        }
-    }
-
-    .copyright {
-        color: var(--text-tertiary);
-        font-size: 14px;
-    }
+// ── Floating cards ────────────────────────────────────────────────────────────────────
+.float {
+    position: absolute;
+    border-radius: 20px;
+    background: var(--bg-card);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.1);
+    animation: drift 7s ease-in-out infinite alternate;
 }
 
-@keyframes float {
+.feed-card {
+    right: -28px;
+    bottom: -36px;
+    width: 210px;
+    overflow: hidden;
 
-    0%,
-    100% {
-        transform: translateY(0);
+    .feed-image {
+        position: relative;
+        height: 104px;
+
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
     }
 
-    50% {
-        transform: translateY(-20px);
-    }
-}
-
-.mobile-menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-
-    &.active {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .mobile-menu-content {
-        padding: 40px 24px;
-        height: 100%;
+    .date-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
         display: flex;
         flex-direction: column;
         align-items: center;
+        padding: 5px 9px;
+        border-radius: 12px;
+        background: var(--bg-card);
+        font-size: 14px;
+        font-weight: 800;
 
-        .mobile-logo {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 60px;
-
-            .highlight {
-                background: var(--accent-gradient);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-            }
-        }
-
-        .mobile-links {
-            display: flex;
-            flex-direction: column;
-            gap: 32px;
-            text-align: center;
-            width: 100%;
-
-            a {
-                text-decoration: none;
-                color: var(--text-primary);
-                font-size: 24px;
-                font-weight: 700;
-                letter-spacing: -0.5px;
-            }
-
-            .mobile-actions {
-                margin-top: 40px;
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-
-                button {
-                    height: 64px;
-                    border-radius: 20px;
-                    font-size: 18px;
-                    font-weight: 700;
-                }
-
-                .signup-btn {
-                    background: var(--text-primary);
-                    color: white;
-                }
-            }
-        }
+        small { font-size: 8px; font-weight: 700; letter-spacing: 1px; color: var(--primary-blue); }
     }
+
+    .feed-body {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 12px 14px 14px;
+
+        small { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--text-tertiary); }
+        strong { font-size: 14px; font-weight: 800; letter-spacing: -0.3px; }
+    }
+
+    .place {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 11px;
+        color: var(--text-secondary);
+
+        mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    }
+}
+
+// The app's chat bubbles: grey with a sharp bottom-left corner, blue with a sharp bottom-right.
+.chat-card {
+    left: -36px;
+    bottom: -28px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 236px;
+    padding: 12px;
+    animation-delay: -3s;
+
+    .bubble { padding: 8px 12px; font-size: 12px; line-height: 1.4; }
+
+    .other {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        border-radius: 18px 18px 18px 4px;
+        background: var(--bg-subtle);
+
+        img { width: 18px; height: 18px; border-radius: 50%; }
+    }
+
+    .me { align-self: flex-end; border-radius: 18px 18px 4px 18px; background: var(--primary-blue); color: #fff; }
+}
+
+.request-card {
+    top: -4px;
+    right: 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 10px 10px;
+    border-radius: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    animation-delay: -5s;
+
+    img { width: 30px; height: 30px; border-radius: 50%; }
+    strong { color: var(--text-primary); }
+}
+
+@keyframes drift {
+    from { transform: translateY(0); }
+    to { transform: translateY(-8px); }
+}
+
+// ── Features ──────────────────────────────────────────────────────────────────────────
+.features,
+.stack { padding: 80px 0; border-top: 1px solid rgba(0, 0, 0, 0.05); }
+
+.features h2,
+.stack h2 {
+    margin: 0 0 40px;
+    max-width: 18em;
+    font-size: clamp(28px, 3.4vw, 40px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1.2px;
+}
+
+.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+
+.feature {
+    padding: 28px;
+    border-radius: 24px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-premium);
+    transition: transform 0.3s $ease, box-shadow 0.3s ease;
+
+    &:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl); }
+
+    .icon {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: var(--accent-gradient);
+        color: #fff;
+    }
+
+    h3 { margin: 20px 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
+    p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--text-secondary); }
+}
+
+// ── Stack ─────────────────────────────────────────────────────────────────────────────
+.stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 48px;
+    align-items: center;
+
+    h2 { margin-bottom: 16px; }
+    p { margin: 0 0 28px; font-size: 17px; line-height: 1.6; color: var(--text-secondary); }
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: var(--bg-card);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        font-size: 14px;
+        font-weight: 600;
+    }
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────────────
+.footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 24px;
+    padding: 32px 0 40px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 14px;
+    color: var(--text-tertiary);
+
+    a { margin-left: auto; color: var(--text-secondary); text-decoration: none; font-weight: 500; }
+}
+
+// ── Entrance ──────────────────────────────────────────────────────────────────────────
+@keyframes enter {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+}
+
+.hero-copy > *,
+.app-window {
+    animation: enter 0.6s $ease backwards;
+}
+
+.hero-copy > :nth-child(2) { animation-delay: 60ms; }
+.hero-copy > :nth-child(3) { animation-delay: 120ms; }
+.hero-copy > :nth-child(4) { animation-delay: 180ms; }
+.hero-copy > :nth-child(5) { animation-delay: 240ms; }
+.app-window { animation-delay: 150ms; }
+
+// ── Narrow screens ────────────────────────────────────────────────────────────────────
+// Below 1180px the window no longer has room beside the copy: its columns shrink under the
+// event titles and the feed card runs off the screen. It moves under the copy instead.
+@media (max-width: 1180px) {
+    .hero { grid-template-columns: minmax(0, 1fr); gap: 48px; padding-top: 24px; }
+    .hero-visual { max-width: 760px; margin: 0 auto 32px; width: 100%; }
+    .chat-card { left: -12px; }
+    .feed-card { right: -8px; }
+}
+
+@media (max-width: 1023px) {
+    .stack { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 720px) {
+    .nav .nav-links { display: none; }
+    .nav .btn-ghost { margin-left: auto; }
+    .app-body { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .float { display: none; }
+    .feature-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .float,
+    .hero-copy > *,
+    .app-window { animation: none; }
+
+    .btn,
+    .feature { transition: none; }
 }
