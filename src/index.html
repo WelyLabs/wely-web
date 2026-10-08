@@ -3,9 +3,27 @@
 
 <head>
   <meta charset="utf-8">
-  <title>CalendarApp</title>
+  <title>Wely · vos agendas, partagés avec ceux qui comptent</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Créez un événement : vos amis le voient passer dans leur fil et le rejoignent en un clic. Projet open source, démo en libre accès.">
+  <meta name="theme-color" content="#fcfaf7">
+
+  <!-- Link previews (LinkedIn, Slack, messaging apps). Crawlers do not run JavaScript, so these
+       must be in the static page. ${PUBLIC_URL} is the site's own origin, written in by
+       entrypoint.sh at container start like KEYCLOAK_URL: the image URL has to be absolute,
+       and the origin differs between environments. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Wely">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:title" content="Wely · vos agendas, partagés avec ceux qui comptent">
+  <meta property="og:description" content="Créez un événement : vos amis le voient passer dans leur fil et le rejoignent en un clic. Projet open source, démo en libre accès.">
+  <meta property="og:url" content="${PUBLIC_URL}/">
+  <meta property="og:image" content="${PUBLIC_URL}/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Page d'accueil de Wely, avec une réplique de l'application montrant une semaine d'événements, une conversation et une carte d'événement.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
