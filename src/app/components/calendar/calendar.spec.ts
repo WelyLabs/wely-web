@@ -48,7 +48,9 @@ describe('CalendarComponent', () => {
 
     it('should generate calendar on init', () => {
         expect(component.days().length).toBe(42);
-        expect(component.events().length).toBeGreaterThan(mockEvents.length); // personal + subscribed
+        // Exactly the subscribed events, and nothing else. Three hardcoded demo events used to
+        // be merged in, which is why this assertion read "greater than".
+        expect(component.events().length).toBe(mockEvents.length);
     });
 
     it('should change month when navigate(1) is called', () => {
@@ -67,7 +69,14 @@ describe('CalendarComponent', () => {
     });
 
     it('should navigate to details on viewEventDetails', () => {
-        const event = component.personalEvents[0];
+        const event: CalendarEvent = {
+            id: '101',
+            title: 'External Event',
+            time: '10:00 AM - 11:00 AM',
+            description: '...',
+            startDate: new Date(),
+            endDate: new Date(),
+        };
         component.viewEventDetails(event);
         expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'calendar', event.id], expect.any(Object));
     });
@@ -227,6 +236,34 @@ describe('CalendarComponent', () => {
      * side of the grid. Nothing covered this before, and it is the most intricate function
      * in the component.
      */
+    describe('month cell events', () => {
+        const at = (hour: number, title: string) => ({
+            id: title, title, time: '', description: '',
+            startDate: new Date(new Date().setHours(hour, 0, 0, 0)),
+            endDate: new Date(new Date().setHours(hour + 1, 0, 0, 0)),
+        });
+
+        it('names the events of a day, earliest first', () => {
+            component.events.set([at(15, 'Soirée jeux'), at(9, 'Point hebdo')]);
+
+            const titles = component.monthCellEvents(new Date()).map(e => e.title);
+            expect(titles).toEqual(['Point hebdo', 'Soirée jeux']);
+        });
+
+        it('names at most three and counts the rest', () => {
+            component.events.set([at(8, 'A'), at(9, 'B'), at(10, 'C'), at(11, 'D'), at(12, 'E')]);
+
+            expect(component.monthCellEvents(new Date())).toHaveLength(3);
+            expect(component.hiddenEventCount(new Date())).toBe(2);
+        });
+
+        it('counts nothing when they all fit', () => {
+            component.events.set([at(8, 'A'), at(9, 'B')]);
+
+            expect(component.hiddenEventCount(new Date())).toBe(0);
+        });
+    });
+
     describe('popover placement', () => {
         const POPOVER_WIDTH = 320;
         const POPOVER_HEIGHT = 400;

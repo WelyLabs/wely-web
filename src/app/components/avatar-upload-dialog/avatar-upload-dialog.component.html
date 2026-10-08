@@ -26,13 +26,16 @@
       </div>
     }
 
-    <input type="file" (change)="fileChangeEvent($event)" #fileInput style="display: none" accept="image/*" />
+    <label class="visually-hidden" for="avatar-file-input">Choisir une image</label>
+    <input id="avatar-file-input" type="file" (change)="fileChangeEvent($event)" #fileInput style="display: none"
+      accept="image/*" />
 
     @if (imageChangedEvent()) {
       <div class="controls">
         <mat-icon>remove</mat-icon>
         <mat-slider min="0.5" max="3" step="0.1" [discrete]="false">
-          <input matSliderThumb [ngModel]="scale()" (ngModelChange)="scale.set($event)">
+          <label class="visually-hidden" for="avatar-zoom">Zoom</label>
+          <input id="avatar-zoom" matSliderThumb [ngModel]="scale()" (ngModelChange)="scale.set($event)">
         </mat-slider>
         <mat-icon>add</mat-icon>
       </div>

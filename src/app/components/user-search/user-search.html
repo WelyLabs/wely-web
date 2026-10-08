@@ -18,8 +18,9 @@
       <!-- Search bar refined -->
       <div class="search-bar-modern">
         <mat-icon>search</mat-icon>
-        <input [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Rechercher..."
-          type="text">
+        <label class="visually-hidden" for="user-search-input">Rechercher un utilisateur</label>
+        <input id="user-search-input" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+          placeholder="Rechercher..." type="text">
         @if (searchQuery()) {
           <button mat-icon-button (click)="searchQuery.set('')"
             class="clear-btn">

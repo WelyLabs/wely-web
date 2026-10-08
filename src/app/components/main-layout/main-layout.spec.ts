@@ -9,6 +9,7 @@ import { UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
 import { ChatService } from '../../services/chat.service';
 import { NotificationService } from '../../services/notification.service';
+import { LoggerService } from '../../core/logging/logger.service';
 import { of, BehaviorSubject, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -30,6 +31,7 @@ describe('MainLayoutComponent', () => {
     let userServiceMock: Partial<UserService>;
     let chatServiceMock: Partial<ChatService>;
     let notificationServiceMock: Partial<NotificationService>;
+    let loggerMock: { error: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn>; debug: ReturnType<typeof vi.fn> };
     let routerMock: any; // Router 'url' is read-only, we must use 'any' to override it in tests
     let userSubject: BehaviorSubject<User | null>;
     let chatMessagesSubject: Subject<any>;
@@ -62,7 +64,10 @@ describe('MainLayoutComponent', () => {
             observe: vi.fn().mockReturnValue(breakpointSubject.asObservable())
         };
         keycloakMock = {
-            logout: vi.fn()
+            // Resolves, rather than returning undefined. The previous mock returned nothing and
+            // the test still passed, because `await undefined` is legal — so it never exercised
+            // the promise the component actually depends on.
+            logout: vi.fn().mockResolvedValue(undefined)
         };
         userServiceMock = {
             currentUser$: userSubject.asObservable()
@@ -74,6 +79,7 @@ describe('MainLayoutComponent', () => {
         notificationServiceMock = {
             showChatNotification: vi.fn()
         };
+        loggerMock = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
         routerMock = {
             url: '/calendar',
             events: routerEventsSubject.asObservable(),
@@ -95,7 +101,8 @@ describe('MainLayoutComponent', () => {
                     { provide: UserService, useValue: userServiceMock },
                     { provide: ChatService, useValue: chatServiceMock },
                     { provide: NotificationService, useValue: notificationServiceMock },
-                    { provide: Router, useValue: routerMock }
+                    { provide: Router, useValue: routerMock },
+                    { provide: LoggerService, useValue: loggerMock }
                 ]
             }
         }).compileComponents();
@@ -209,9 +216,34 @@ describe('MainLayoutComponent', () => {
         expect(component.showMobileMenu()).toBe(false);
     });
 
-    it('should logout', async () => {
+    it('should logout', () => {
         fixture.detectChanges();
-        await component.logout();
+        component.logout();
         expect(keycloakMock.logout).toHaveBeenCalled();
+    });
+
+    it('logs a failed logout instead of leaving it unhandled', async () => {
+        fixture.detectChanges();
+        (keycloakMock.logout as unknown as ReturnType<typeof vi.fn>)
+            .mockReturnValue(Promise.reject(new Error('keycloak down')));
+
+        component.logout();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(loggerMock.error).toHaveBeenCalled();
+    });
+
+    it('closes the mobile menu only when the backdrop itself is clicked', () => {
+        const backdrop = document.createElement('div');
+        const panel = document.createElement('div');
+        backdrop.appendChild(panel);
+
+        component.toggleMobileMenu();
+        component.dismissIfBackdrop({ target: panel, currentTarget: backdrop } as unknown as Event);
+        expect(component.showMobileMenu()).toBe(true);
+
+        component.dismissIfBackdrop({ target: backdrop, currentTarget: backdrop } as unknown as Event);
+        expect(component.showMobileMenu()).toBe(false);
     });
 });

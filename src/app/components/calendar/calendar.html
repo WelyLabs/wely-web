@@ -61,9 +61,17 @@
             <div class="day-content">
               <span class="day-number">{{ day.date | date:'d' }}</span>
               @if (day.hasEvents) {
-                <div class="event-dots">
-                  <span class="dot"></span>
-                </div>
+                <!-- Titles, not a dot: a month that only marks which days are busy says less
+                     than an empty one, because the reader cannot tell whether a day is worth
+                     opening. Three fit a cell; the rest are counted. -->
+                <ul class="day-events">
+                  @for (event of monthCellEvents(day.date); track event.id) {
+                    <li class="day-event" [title]="event.title">{{ event.title }}</li>
+                  }
+                  @if (hiddenEventCount(day.date); as hidden) {
+                    <li class="day-event more">+{{ hidden }}</li>
+                  }
+                </ul>
               }
             </div>
           </div>

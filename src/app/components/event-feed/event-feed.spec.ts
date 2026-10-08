@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EventFeedComponent } from './event-feed';
 import { EventService } from '../../services/event.service';
+import { SocialService } from '../../services/social.service';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -10,6 +11,7 @@ describe('EventFeedComponent', () => {
     let component: EventFeedComponent;
     let fixture: ComponentFixture<EventFeedComponent>;
     let eventServiceMock: any;
+    let socialServiceMock: any;
     let routerMock: any;
 
     let currentMockEvents: any[];
@@ -24,6 +26,11 @@ describe('EventFeedComponent', () => {
             feedEvents$: of(currentMockEvents),
             toggleSubscription: vi.fn().mockReturnValue(of({}))
         };
+        socialServiceMock = {
+            searchUsers: vi.fn().mockReturnValue(of([
+                { userId: 'Org 1', userName: 'madie', relationStatus: 'FRIEND' }
+            ]))
+        };
         routerMock = {
             navigate: vi.fn(),
             createUrlTree: vi.fn().mockReturnValue({}),
@@ -34,6 +41,7 @@ describe('EventFeedComponent', () => {
             imports: [EventFeedComponent, NoopAnimationsModule],
             providers: [
                 { provide: EventService, useValue: eventServiceMock },
+                { provide: SocialService, useValue: socialServiceMock },
                 { provide: Router, useValue: routerMock }
             ]
         }).compileComponents();
@@ -160,4 +168,15 @@ describe('EventFeedComponent', () => {
         component.viewEventDetails(event);
         expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'feed', event.id]);
     });
+    it('shows the organiser name rather than their business id', () => {
+        // The card used to print organizerId verbatim, which is a UUID: a feed event carries
+        // no name, because wely-events does not know who its users are.
+        expect(component.organiserName('Org 1')).toBe('madie');
+    });
+
+    it('shows nothing for an organiser the social service does not know', () => {
+        // Better an absent line than a UUID: the card still reads as a card.
+        expect(component.organiserName('unknown-id')).toBe('');
+    });
+
 });

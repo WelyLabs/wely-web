@@ -42,6 +42,9 @@ export interface CalendarEvent {
 
 import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
 
+/** How many event titles a month cell names before it starts counting the rest. */
+const MONTH_CELL_EVENTS = 3;
+
 /** Popover geometry, in CSS pixels. */
 const POPOVER_WIDTH = 320;
 const POPOVER_HEIGHT = 400;
@@ -114,40 +117,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private touchStartPos = { x: 0, y: 0 };
 
   /**
-   * Placeholder agenda.
+   * The events this user is subscribed to.
    *
-   * <p>These three are not stored anywhere: `wely-events` models events a user subscribes to,
-   * not a personal agenda, so nothing persists them. They are merged with the subscribed feed
-   * events so the week and day views have something to lay out.
+   * <p>Three hardcoded ones — "Team Meeting", "Lunch with Client", "Code Review" — used to be
+   * merged in here, repositioned onto today at every load, because wely-events models
+   * subscriptions rather than a personal agenda and the week and day views had nothing to lay
+   * out otherwise. They were demo data in production: an empty calendar is honest, a calendar
+   * showing "Review PR #123" to every user is not.
    */
-  readonly personalEvents: CalendarEvent[] = [
-    {
-      id: 1,
-      title: 'Team Meeting',
-      time: '10:00 AM - 11:30 AM',
-      description: 'Weekly sync with the team.',
-      startDate: new Date(new Date().setHours(10, 0, 0, 0)),
-      endDate: new Date(new Date().setHours(11, 30, 0, 0))
-    },
-    {
-      id: 2,
-      title: 'Lunch with Client',
-      time: '12:30 PM - 1:30 PM',
-      description: 'Discuss project roadmap.',
-      startDate: new Date(new Date().setHours(12, 30, 0, 0)),
-      endDate: new Date(new Date().setHours(13, 30, 0, 0))
-    },
-    {
-      id: 3,
-      title: 'Code Review',
-      time: '03:00 PM - 4:00 PM',
-      description: 'Review PR #123.',
-      startDate: new Date(new Date().setHours(15, 0, 0, 0)),
-      endDate: new Date(new Date().setHours(16, 0, 0, 0))
-    }
-  ];
-
-  /** Personal events plus the ones subscribed to from the feed. */
   readonly events = signal<CalendarEvent[]>([]);
 
   // Range selection, drag to create
@@ -174,7 +151,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       .subscribe((feedEvents: FeedEvent[]) => {
         const subscribedEvents = feedEvents.map(event => this.convertFeedEventToCalendarEvent(event));
 
-        this.events.set([...this.personalEvents, ...subscribedEvents]);
+        this.events.set(subscribedEvents);
         this.generateCalendar();
       });
 
@@ -444,6 +421,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   getEventsForDay(date: Date): CalendarEvent[] {
     return this.events().filter(event => this.isSameDate(event.startDate, date));
+  }
+
+  /** The events a month cell has room to name, earliest first. */
+  monthCellEvents(date: Date): CalendarEvent[] {
+    return this.getEventsForDay(date)
+      .slice()
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+      .slice(0, MONTH_CELL_EVENTS);
+  }
+
+  /** How many events the cell could not name, or 0 when they all fit. */
+  hiddenEventCount(date: Date): number {
+    return Math.max(0, this.getEventsForDay(date).length - MONTH_CELL_EVENTS);
   }
 
   getAllDayEvents(date: Date): CalendarEvent[] {

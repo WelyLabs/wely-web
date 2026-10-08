@@ -1,20 +1,19 @@
-<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
-     Not a control: the click handler exists only to stop the event reaching the
-     backdrop behind it. The popover's own buttons carry the actions. -->
 <div class="popover-container" [style.left.px]="isMobile() ? 0 : position().x" [style.top.px]="isMobile() ? 0 : position().y"
     [class.arrow-left]="!isMobile() && position().arrowSide === 'left'"
     [class.arrow-right]="!isMobile() && position().arrowSide === 'right'"
-    [class.arrow-top]="!isMobile() && position().arrowSide === 'top'" [class.mobile-centered]="isMobile()"
-    (click)="$event.stopPropagation()">
+    [class.arrow-top]="!isMobile() && position().arrowSide === 'top'" [class.mobile-centered]="isMobile()">
     <div class="popover-content">
         <div class="form-group title-group">
-            <input type="text" [ngModel]="draft().title" (ngModelChange)="update('title', $event)" placeholder="Titre de l'événement"
-                (keyup.enter)="onSave()">
+            <label class="visually-hidden" for="quick-event-title">Titre de l'événement</label>
+            <input id="quick-event-title" type="text" [ngModel]="draft().title" (ngModelChange)="update('title', $event)"
+                placeholder="Titre de l'événement" (keyup.enter)="onSave()">
         </div>
 
         <div class="form-group">
             <mat-icon>location_on</mat-icon>
-            <input type="text" [ngModel]="draft().location" (ngModelChange)="update('location', $event)" placeholder="Ajouter un lieu">
+            <label class="visually-hidden" for="quick-event-location">Lieu de l'événement</label>
+            <input id="quick-event-location" type="text" [ngModel]="draft().location"
+                (ngModelChange)="update('location', $event)" placeholder="Ajouter un lieu">
         </div>
 
         <div class="form-group date-group">
@@ -27,7 +26,9 @@
 
         <div class="form-group notes-group">
             <mat-icon>notes</mat-icon>
-            <textarea [ngModel]="draft().description" (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
+            <label class="visually-hidden" for="quick-event-notes">Notes de l'événement</label>
+            <textarea id="quick-event-notes" [ngModel]="draft().description"
+                (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
         </div>
 
         <div class="form-group checkbox-group">
