@@ -1,117 +1,128 @@
-<div class="landing-container">
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="logo">
-            <span class="highlight">Wely</span>
-        </div>
+<div class="landing">
+    <nav class="nav">
+        <span class="logo"><span class="highlight">Wely</span></span>
         <div class="nav-links">
-            <a href="#">Features</a>
-            <a href="#">Pricing</a>
-            <a href="#">About</a>
-            <button mat-stroked-button (click)="launchApp()">Login</button>
-            <button mat-flat-button color="primary" class="signup-btn" (click)="signup()">Sign Up</button>
+            <a href="#fonctionnalites">Fonctionnalités</a>
+            <a href="#sous-le-capot">Sous le capot</a>
+            <a [href]="repositoryUrl" target="_blank" rel="noopener">GitHub</a>
         </div>
-
-        <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMenu()" aria-label="Menu">
-            <mat-icon>{{ showMobileMenu() ? 'close' : 'menu' }}</mat-icon>
-        </button>
+        <button type="button" class="btn btn-ghost" (click)="launchApp()">Se connecter</button>
     </nav>
 
-    <!-- Mobile Menu Overlay -->
-    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
-         Presentational dismiss target: it is not a control and cannot take focus. Keyboard
-         dismissal is handled by the component's Escape listener. -->
-    <div class="mobile-menu-overlay" [class.active]="showMobileMenu()" (click)="dismissIfBackdrop($event)">
-        <div class="mobile-menu-content">
-            <div class="mobile-logo">
-                <span class="highlight">Wely</span>
+    <header class="hero">
+        <div class="hero-copy">
+            <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Projet open source · démo en libre accès</span>
+            <h1>Vos agendas, partagés avec <span class="gradient-text">ceux qui comptent.</span></h1>
+            <p class="lead">
+                Créez un événement : vos amis le voient passer dans leur fil et le rejoignent en un clic.
+                Pour s'organiser, le chat est juste à côté, en temps réel.
+            </p>
+            <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="launchApp()">
+                    Essayer la démo<mat-icon aria-hidden="true">arrow_forward</mat-icon>
+                </button>
+                <button type="button" class="btn btn-secondary" (click)="signup()">Créer un compte</button>
             </div>
-            <div class="mobile-links">
-                <a href="#" (click)="closeMenu()">Features</a>
-                <a href="#" (click)="closeMenu()">Pricing</a>
-                <a href="#" (click)="closeMenu()">About</a>
-                <div class="mobile-actions">
-                    <button mat-stroked-button (click)="launchApp(); closeMenu()">Login</button>
-                    <button mat-flat-button color="primary" class="signup-btn" (click)="signup(); closeMenu()">Sign Up
-                    </button>
+            <p class="demo-hint">
+                Compte de démo&nbsp;: <code>demo&#64;welylabs.app</code> · <code>Demo-Wely-2026</code>
+            </p>
+        </div>
+
+        <!-- A replica of the app's week view, built from its own styles rather than a picture:
+             it stays sharp at any size and cannot drift from what the demo shows. -->
+        <div class="hero-visual" aria-hidden="true">
+            <div class="app-window">
+                <div class="window-bar"><span></span><span></span><span></span></div>
+                <div class="app-body">
+                    <aside class="sidebar">
+                        <span class="logo small"><span class="highlight">Wely</span></span>
+                        <span class="nav-item active"><mat-icon>calendar_today</mat-icon>Calendar</span>
+                        <span class="nav-item"><mat-icon>event_note</mat-icon>Event Feed</span>
+                        <span class="nav-item"><mat-icon>people</mat-icon>Users</span>
+                        <span class="profile">
+                            <img src="/demo/avatars/camille.svg" alt="">
+                            <span><strong>Camille Martin</strong><small>camille#2680</small></span>
+                        </span>
+                    </aside>
+                    <section class="week">
+                        <h2>{{ weekTitle }}</h2>
+                        <div class="week-grid">
+                            @for (day of week; track day.label) {
+                                <div class="day-head" [class.today]="day.isToday">
+                                    <small>{{ day.label }}</small><span>{{ day.date }}</span>
+                                </div>
+                            }
+                            @for (event of previewEvents; track event.title) {
+                                <div class="event" [style.grid-column]="event.weekday + 1"
+                                     [style.grid-row]="(event.row + 1) + ' / span ' + event.span">
+                                    <span class="accent"></span>{{ event.title }}
+                                </div>
+                            }
+                        </div>
+                    </section>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Hero Section -->
-    <header class="hero-section">
-        <div class="hero-content">
-            <h1 class="hero-title">
-                Experience the <br>
-                <span class="gradient-text">Future of Time</span>
-            </h1>
-            <p class="hero-subtitle">
-                The most beautiful, intuitive, and high-performance calendar designed for modern teams.
-                Plan smarter, execute faster.
-            </p>
-            <div class="hero-actions">
-                <button class="cta-button" (click)="launchApp()">Get Started for Free</button>
-                <button class="secondary-button" (click)="launchApp()">View Demo</button>
+            <!-- Not the concert: camille has joined it, and the feed only shows what she has not. -->
+            <div class="float feed-card">
+                <div class="feed-image">
+                    <img src="/demo/events/vinyles.jpg" alt="">
+                    <span class="date-badge"><small>{{ feedDate.month }}</small>{{ feedDate.day }}</span>
+                </div>
+                <div class="feed-body">
+                    <small>JULES</small>
+                    <strong>Écoute de vinyles</strong>
+                    <span class="place"><mat-icon>place</mat-icon>Lyon 4e</span>
+                </div>
             </div>
-        </div>
 
-        <div class="hero-visual">
-            <div class="mockup-container">
-                <img src="assets/wely-mockup.png" alt="Wely Calendar Mockup">
+            <div class="float chat-card">
+                <div class="bubble other"><img src="/demo/avatars/lea.svg" alt="">Tu viens toujours à la rando samedi&nbsp;?</div>
+                <div class="bubble me">Oui&nbsp;! Je m'occupe du café</div>
             </div>
-            <div class="floating-element el-1">
-                <mat-icon>event</mat-icon>
-                <span>New Event Created</span>
-            </div>
-            <div class="floating-element el-2">
-                <mat-icon>bolt</mat-icon>
-                <span>Performance Optimized</span>
+
+            <div class="float request-card">
+                <img src="/demo/avatars/jules.svg" alt="">
+                <span><strong>Jules</strong> vous a envoyé une demande d'ami</span>
             </div>
         </div>
     </header>
 
-    <!-- Features Section -->
-    <section class="features-section">
-        <span class="section-tag">Powerful Features</span>
-        <h2 class="section-title">Built for the next generation of teams</h2>
-
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="icon-wrapper">
-                    <mat-icon>calendar_today</mat-icon>
-                </div>
-                <h3>Intelligent Grid</h3>
-                <p>A seamless, interactive experience that adapts to your workflow. Focused and distraction-free.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="icon-wrapper">
-                    <mat-icon>auto_awesome</mat-icon>
-                </div>
-                <h3>Smart Scheduling</h3>
-                <p>AI-powered suggestions to find the perfect time for your team across all timezones.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="icon-wrapper">
-                    <mat-icon>security</mat-icon>
-                </div>
-                <h3>Enterprise Security</h3>
-                <p>Private by default. Your data is encrypted and protected with industry-leading standards.</p>
-            </div>
+    <section id="fonctionnalites" class="features">
+        <h2>Tout ce qu'il faut pour se retrouver, rien de plus</h2>
+        <div class="feature-grid">
+            @for (feature of features; track feature.icon) {
+                <article class="feature">
+                    <span class="icon"><mat-icon>{{ feature.icon }}</mat-icon></span>
+                    <h3>{{ feature.title }}</h3>
+                    <p>{{ feature.description }}</p>
+                </article>
+            }
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-logo">Wely</div>
-        <div class="footer-links">
-            <a href="#">Terms</a>
-            <a href="#">Privacy</a>
-            <a href="#">Security</a>
-            <a href="#">Contact</a>
+    <section id="sous-le-capot" class="stack">
+        <div>
+            <h2>Sous le capot</h2>
+            <p>
+                Quatre microservices réactifs en architecture hexagonale, chacun avec la base qui
+                correspond à la forme de sa donnée, reliés par Kafka et déployés en GitOps sur un
+                Raspberry Pi.
+            </p>
+            <a class="btn btn-secondary" [href]="repositoryUrl" target="_blank" rel="noopener">
+                Lire l'architecture<mat-icon aria-hidden="true">north_east</mat-icon>
+            </a>
         </div>
-        <p class="copyright">&copy; 2026 Wely Inc. All rights reserved.</p>
+        <ul class="chips">
+            @for (item of stack; track item) {
+                <li>{{ item }}</li>
+            }
+        </ul>
+    </section>
+
+    <footer class="footer">
+        <span class="logo small"><span class="highlight">Wely</span></span>
+        <span>Projet personnel open source · la démo est remise à zéro chaque nuit</span>
+        <a [href]="repositoryUrl" target="_blank" rel="noopener">GitHub</a>
     </footer>
 </div>
