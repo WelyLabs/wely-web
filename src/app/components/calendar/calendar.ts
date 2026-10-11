@@ -78,6 +78,9 @@ import { DayLayout, DaySummary, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS
 import { MonthDayOverlayComponent } from '../month-day-overlay/month-day-overlay';
 import { FriendOverlayBarComponent } from '../friend-overlay-bar/friend-overlay-bar';
 
+/** Shared empty result: a cell without events gets the same array every time, nothing to diff. */
+const NO_EVENTS: CalendarEvent[] = [];
+
 /** How many event titles a month cell names before it starts counting the rest. */
 const MONTH_CELL_EVENTS = 3;
 
@@ -584,16 +587,44 @@ export class CalendarComponent implements OnInit, OnDestroy {
       date1.getDate() === date2.getDate();
   }
 
+  /**
+   * The events grouped by day, earliest first, rebuilt only when the events change.
+   *
+   * <p>The templates used to filter the whole list per cell: the week view called
+   * `getEventsForHour` for each of its 168 hour cells on every change detection — and every
+   * pointer move over the grid, or touch move while dragging, runs one. Lookups are now O(1)
+   * and return the same array each time, so `@for` has nothing to diff either.
+   */
+  private readonly eventsByDay = computed(() => {
+    const byDay = new Map<string, CalendarEvent[]>();
+    const sorted = [...this.events()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    for (const event of sorted) {
+      const key = event.startDate.toDateString();
+      byDay.set(key, [...(byDay.get(key) ?? []), event]);
+    }
+    return byDay;
+  });
+
+  /** The same events, by day and starting hour, for the week and day grids. */
+  private readonly eventsByHour = computed(() => {
+    const byHour = new Map<string, CalendarEvent[]>();
+    for (const [day, events] of this.eventsByDay()) {
+      for (const event of events) {
+        const key = `${day}|${event.startDate.getHours()}`;
+        byHour.set(key, [...(byHour.get(key) ?? []), event]);
+      }
+    }
+    return byHour;
+  });
+
   getEventsForDay(date: Date): CalendarEvent[] {
-    return this.events().filter(event => this.isSameDate(event.startDate, date));
+    return this.eventsByDay().get(date.toDateString()) ?? NO_EVENTS;
   }
 
   /** The events a month cell has room to name, earliest first. */
   monthCellEvents(date: Date): CalendarEvent[] {
-    return this.getEventsForDay(date)
-      .slice()
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-      .slice(0, MONTH_CELL_EVENTS);
+    const events = this.getEventsForDay(date);
+    return events.length <= MONTH_CELL_EVENTS ? events : events.slice(0, MONTH_CELL_EVENTS);
   }
 
   /** How many events the cell could not name, or 0 when they all fit. */
@@ -602,16 +633,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   getAllDayEvents(date: Date): CalendarEvent[] {
-    return this.events().filter(event =>
-      this.isSameDate(event.startDate, date) && event.time.toLowerCase() === 'all day'
-    );
+    const events = this.getEventsForDay(date).filter(event => event.time.toLowerCase() === 'all day');
+    return events.length > 0 ? events : NO_EVENTS;
   }
 
   getEventsForHour(date: Date, hour: number): CalendarEvent[] {
-    return this.events().filter(event => {
-      if (!this.isSameDate(event.startDate, date)) return false;
-      return event.startDate.getHours() === hour;
-    });
+    return this.eventsByHour().get(`${date.toDateString()}|${hour}`) ?? NO_EVENTS;
   }
 
   getEventHeight(event: CalendarEvent): number {

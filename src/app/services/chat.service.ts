@@ -1,3 +1,5 @@
+// Must stay first: rsocket-js reads the Node globals this sets.
+import './node-shims';
 import { Injectable, OnDestroy, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, timer, throwError } from 'rxjs';

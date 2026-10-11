@@ -1,9 +1,7 @@
-import { importProvidersFrom } from '@angular/core';
 import { ApplicationConfig, APP_INITIALIZER, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { KeycloakService, KeycloakBearerInterceptor } from 'keycloak-angular';
 import { SessionInterceptor } from './core/interceptors/session.interceptor';
 import { UserService } from './services/user.service';
@@ -17,9 +15,10 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideAnimations(),
+    // Async: the animation engine (about 60 KB) loads with the first animated component
+    // instead of delaying the first paint.
+    provideAnimationsAsync(),
     provideHttpClient(withInterceptorsFromDi()),
-    importProvidersFrom(MatSnackBarModule),
     KeycloakService,
     UserService,
     {

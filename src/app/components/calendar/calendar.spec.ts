@@ -699,4 +699,48 @@ describe('CalendarComponent', () => {
         });
     });
 
+    describe('event index', () => {
+        const event = (id: string, start: Date, hours = 1): CalendarEvent => ({
+            id, title: id, time: '', description: '', startDate: start,
+            endDate: new Date(start.getTime() + hours * 3_600_000)
+        });
+
+        beforeEach(() => {
+            component.events.set([
+                event('late', new Date(2026, 9, 14, 18, 30)),
+                event('early', new Date(2026, 9, 14, 9)),
+                event('also-nine', new Date(2026, 9, 14, 9, 45)),
+                event('next-day', new Date(2026, 9, 15, 9))
+            ]);
+        });
+
+        it('getEventsForDay_shouldListTheDaysEventsEarliestFirst', () => {
+            expect(component.getEventsForDay(new Date(2026, 9, 14)).map(e => e.id)).toEqual(['early', 'also-nine', 'late']);
+        });
+
+        it('getEventsForHour_shouldKeepOnlyEventsStartingInThatHour', () => {
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9).map(e => e.id)).toEqual(['early', 'also-nine']);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 10)).toEqual([]);
+        });
+
+        it('getEventsForHour_shouldReturnTheSameArray_untilTheEventsChange', () => {
+            // What spares @for a diff on each of the 168 cells at every change detection.
+            const first = component.getEventsForHour(new Date(2026, 9, 14), 9);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9)).toBe(first);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 3)).toBe(component.getEventsForHour(new Date(2026, 9, 16), 3));
+
+            component.events.set([event('other', new Date(2026, 9, 14, 9))]);
+
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9)).not.toBe(first);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9).map(e => e.id)).toEqual(['other']);
+        });
+
+        it('monthCellEvents_shouldNameAtMostThree_andCountTheRest', () => {
+            component.events.update(events => [...events, event('fourth', new Date(2026, 9, 14, 21))]);
+
+            expect(component.monthCellEvents(new Date(2026, 9, 14)).map(e => e.id)).toEqual(['early', 'also-nine', 'late']);
+            expect(component.hiddenEventCount(new Date(2026, 9, 14))).toBe(1);
+        });
+    });
+
 });
