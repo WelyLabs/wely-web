@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from '../logging/logger.service';
 import { KeycloakService } from 'keycloak-angular';
 import { from } from 'rxjs';
@@ -9,6 +9,15 @@ import { from } from 'rxjs';
 export class AuthService {
     private readonly logger = inject(LoggerService);
     private keycloak = inject(KeycloakService);
+
+    private readonly startupFailedState = signal(false);
+
+    /** True when Keycloak could not be initialised: the app shows an error screen instead of a blank page. */
+    readonly startupFailed = this.startupFailedState.asReadonly();
+
+    markStartupFailed(): void {
+        this.startupFailedState.set(true);
+    }
 
     /** Browser timer handle; `number` in the DOM, not NodeJS.Timeout. */
     private refreshTimer?: ReturnType<typeof setTimeout>;

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { KeycloakService } from 'keycloak-angular';
 import { authGuard } from './auth.guard';
+import { AuthService } from '../auth/auth.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('authGuard', () => {
@@ -45,5 +46,18 @@ describe('authGuard', () => {
             redirectUri: expect.stringContaining('/protected')
         }));
         expect(result).toBe(false);
+    });
+
+    it('should neither redirect to Keycloak nor allow access once startup has failed', async () => {
+        // Redirecting to a Keycloak that just failed would loop between the two.
+        TestBed.inject(AuthService).markStartupFailed();
+
+        const result = await TestBed.runInInjectionContext(() =>
+            authGuard({} as any, { url: '/calendar' } as any)
+        );
+
+        expect(result).toBe(false);
+        expect(keycloakMock.login).not.toHaveBeenCalled();
+        expect(keycloakMock.isLoggedIn).not.toHaveBeenCalled();
     });
 });
