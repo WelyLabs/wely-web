@@ -1,8 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Coordinates } from '../models/place.model';
+import { Coordinates, MapArea } from '../models/place.model';
 
 /** Who may see an event besides those taking part: everyone, the organizer's friends, or nobody. */
 export type Visibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
@@ -131,6 +131,16 @@ export class EventService {
     return this.http.post<EventPayload>(`${this.apiUrl}/${event.id}/subscribe`, {}).pipe(
       map((updated) => this.toFeedEvent(updated)),
       tap(() => this.refreshEvents()),
+    );
+  }
+
+  /** Upcoming events the user may see, inside the area on the map. */
+  getMapEvents(area: MapArea): Observable<FeedEvent[]> {
+    const params = new HttpParams()
+      .set('south', area.south).set('west', area.west)
+      .set('north', area.north).set('east', area.east);
+    return this.http.get<EventPayload[]>(`${this.apiUrl}/map`, { params }).pipe(
+      map((events) => events.map((event) => this.toFeedEvent(event))),
     );
   }
 

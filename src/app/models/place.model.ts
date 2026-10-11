@@ -9,3 +9,11 @@ export interface Place {
     label: string;
     coordinates: Coordinates;
 }
+
+/** The area a map shows, in decimal degrees. */
+export interface MapArea {
+    south: number;
+    west: number;
+    north: number;
+    east: number;
+}

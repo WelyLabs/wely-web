@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { EventFeedComponent } from './event-feed';
 import { EventService } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
@@ -39,6 +39,8 @@ describe('EventFeedComponent', () => {
 
         await TestBed.configureTestingModule({
             imports: [EventFeedComponent, NoopAnimationsModule],
+            // The map is its own deferred chunk: it stays a placeholder here and is tested on its own.
+            deferBlockBehavior: DeferBlockBehavior.Manual,
             providers: [
                 { provide: EventService, useValue: eventServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
@@ -177,6 +179,38 @@ describe('EventFeedComponent', () => {
     it('shows nothing for an organiser the social service does not know', () => {
         // Better an absent line than a UUID: the card still reads as a card.
         expect(component.organiserName('unknown-id')).toBe('');
+    });
+
+    describe('views', () => {
+        it('view_shouldStartOnTheCards', () => {
+            expect(component.view()).toBe('swipe');
+            expect(fixture.nativeElement.querySelector('.swipe-container')).not.toBeNull();
+        });
+
+        it('showView_shouldSwapTheCardsForTheMap', async () => {
+            (fixture.nativeElement.querySelectorAll('.view-switch button')[1] as HTMLButtonElement).click();
+            fixture.detectChanges();
+
+            expect(component.view()).toBe('map');
+            expect(fixture.nativeElement.querySelector('.swipe-container')).toBeNull();
+            const [map] = await fixture.getDeferBlocks();
+            expect(map).toBeDefined();
+            expect(fixture.nativeElement.querySelector('.map-placeholder')).not.toBeNull();
+        });
+
+        it('showView_shouldBringTheCardsBack', () => {
+            component.showView('map');
+            fixture.detectChanges();
+
+            component.showView('swipe');
+            fixture.detectChanges();
+
+            expect(fixture.nativeElement.querySelector('.swipe-container')).not.toBeNull();
+        });
+
+        it('organiserNames_shouldBeSharedWithTheMap', () => {
+            expect(component.organiserNames().get('Org 1')).toBe('madie');
+        });
     });
 
     describe('touch', () => {

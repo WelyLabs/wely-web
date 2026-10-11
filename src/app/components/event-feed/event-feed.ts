@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
+import { ExploreMapComponent } from '../explore-map/explore-map';
 
 /** Horizontal travel, in pixels, past which a drag counts as a swipe rather than a nudge. */
 const SWIPE_THRESHOLD_PX = 100;
@@ -35,7 +36,7 @@ const RETURN_TRANSITION = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 @Component({
   selector: 'app-event-feed',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, ExploreMapComponent],
   templateUrl: './event-feed.html',
   styleUrl: './event-feed.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -56,7 +57,10 @@ export class EventFeedComponent implements OnInit {
    * UUID verbatim under the title. The social service already answers with every user and
    * their name, so the names are resolved here once rather than one request per card.
    */
-  private readonly organiserNames = signal<Map<string, string>>(new Map());
+  readonly organiserNames = signal<ReadonlyMap<string, string>>(new Map());
+
+  /** Cards to swipe, or every upcoming event on a map. */
+  readonly view = signal<'swipe' | 'map'>('swipe');
 
   /** The top card plus the two stacked behind it. */
   readonly currentEvents = computed(() => this.events().slice(0, VISIBLE_CARDS));
@@ -95,6 +99,10 @@ export class EventFeedComponent implements OnInit {
       .subscribe(users =>
         this.organiserNames.set(new Map(users.map(user => [user.userId, user.userName]))),
       );
+  }
+
+  showView(view: 'swipe' | 'map'): void {
+    this.view.set(view);
   }
 
   /** The organiser's name, or nothing while the names are still on their way. */

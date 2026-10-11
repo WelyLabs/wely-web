@@ -231,4 +231,22 @@ describe('EventService', () => {
             eventId: null, title: null, location: null, description: null
         }]);
     });
+
+    it('getMapEvents_shouldAskForTheAreaAndConvertTheDates', () => {
+        let result: unknown;
+        service.getMapEvents({ south: 45.7, west: 4.77, north: 45.81, east: 4.92 }).subscribe(events => result = events);
+
+        const req = httpMock.expectOne(r => r.url === `${apiUrl}/map` && r.params.get('south') === '45.7'
+            && r.params.get('west') === '4.77' && r.params.get('north') === '45.81' && r.params.get('east') === '4.92');
+        expect(req.request.method).toBe('GET');
+        req.flush([{ id: '1', title: 'Concert', organizerId: 'lea', startDate: '2026-10-16T19:00:00Z', endDate: null,
+            location: 'Le Transbordeur', image: '', description: '', coordinates: { latitude: 45.784, longitude: 4.8608 } }]);
+
+        expect(result).toEqual([expect.objectContaining({
+            id: '1',
+            startDate: new Date('2026-10-16T19:00:00Z'),
+            endDate: new Date('2026-10-16T20:00:00Z'),
+            coordinates: { latitude: 45.784, longitude: 4.8608 }
+        })]);
+    });
 });

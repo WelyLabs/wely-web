@@ -1,0 +1,53 @@
+<div class="explore">
+    <div class="map" #map>
+        @if (mapState() === 'loading') {
+            <span class="map-status">Chargement de la carte…</span>
+        } @else if (mapState() === 'failed') {
+            <span class="map-status">La carte n'a pas pu se charger.</span>
+        }
+    </div>
+
+    @if (mapState() === 'ready') {
+        <button type="button" class="locate" (click)="locateMe()" aria-label="Autour de moi" title="Autour de moi">
+            <mat-icon>my_location</mat-icon>
+        </button>
+
+        @if (loadFailed()) {
+            <div class="notice">Impossible de charger les événements de cette zone.</div>
+        } @else if (truncated()) {
+            <div class="notice">Beaucoup d'événements ici : zoomez pour tous les voir.</div>
+        }
+    }
+
+    @if (selected(); as place) {
+        <div class="sheet" role="dialog" aria-label="Événements à cet endroit">
+            <button type="button" class="close" (click)="select(null)" aria-label="Fermer">
+                <mat-icon>close</mat-icon>
+            </button>
+            @for (event of place.events; track event.id) {
+                <article class="event">
+                    <div class="date-badge">
+                        <span class="month">{{ event.startDate | date:'MMM' }}</span>
+                        <span class="day">{{ event.startDate | date:'dd' }}</span>
+                    </div>
+                    <div class="info">
+                        @if (organiserName(event); as organiser) {
+                            <span class="organizer">{{ organiser }}</span>
+                        }
+                        <h3>{{ event.title }}</h3>
+                        <span class="when">{{ event.startDate | date:'EEEE d MMMM, HH:mm' }}</span>
+                        <span class="where"><mat-icon>location_on</mat-icon>{{ event.location }}</span>
+                        <div class="actions">
+                            <button type="button" class="join" [class.joined]="isJoined(event)"
+                                [disabled]="joining() === event.id" (click)="toggleJoin(event)">
+                                <mat-icon>{{ isJoined(event) ? 'check' : 'add' }}</mat-icon>
+                                {{ isJoined(event) ? 'Inscrit' : 'Rejoindre' }}
+                            </button>
+                            <button type="button" class="details" (click)="openDetails(event)">Voir le détail</button>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
