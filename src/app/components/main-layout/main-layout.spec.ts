@@ -244,4 +244,10 @@ describe('MainLayoutComponent', () => {
         component.dismissIfBackdrop({ target: backdrop, currentTarget: backdrop } as unknown as Event);
         expect(component.showMobileMenu()).toBe(false);
     });
+
+    it('navItems_shouldLeadToMessages', () => {
+        expect(component.navItems.map(item => item.route)).toEqual(['/calendar', '/feed', '/users', '/conversations']);
+        expect(component.navItems.find(item => item.route === '/conversations')?.label).toBe('Messages');
+    });
 });
+

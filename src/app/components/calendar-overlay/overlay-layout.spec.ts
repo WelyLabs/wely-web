@@ -94,4 +94,12 @@ describe('layoutDay', () => {
 
         expect(commonFree).toBeNull();
     });
+
+    it('summarizeDay_shouldNotMarkADayFreeFromMorningToNight', () => {
+        // Nobody has plans: the whole 8:00–23:00 is free, which says nothing worth a pill.
+        const { commonFree } = summarizeDay(wednesday, [], [{ start: at(13, 22), end: at(15, 2) }]);
+
+        expect(commonFree).toBeNull();
+    });
 });
+

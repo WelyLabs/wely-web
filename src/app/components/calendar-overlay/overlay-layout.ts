@@ -82,7 +82,11 @@ export interface FriendLoad {
 /** A month cell's view of the overlay: each friend's load, and the longest common free stretch. */
 export interface DaySummary {
     loads: FriendLoad[];
-    /** Null unless it lasts at least {@link MIN_COMMON_FREE_MS}. */
+    /**
+     * Null unless it lasts at least {@link MIN_COMMON_FREE_MS}, and null too when it is the whole of
+     * 8:00–23:00: on a day nobody has plans, the pill said « 8–23 h » on nearly every cell of the
+     * month and stood out on none. The empty load bars already say that day is open.
+     */
     commonFree: Period | null;
 }
 
@@ -180,8 +184,8 @@ export function summarizeDay(day: Date, lanes: readonly FriendLane[], free: read
         .reduce<Period | null>((best, period) =>
             !best || period.end.getTime() - period.start.getTime() > best.end.getTime() - best.start.getTime()
                 ? period : best, null);
-    const commonFree = longest && longest.end.getTime() - longest.start.getTime() >= MIN_COMMON_FREE_MS
-        ? longest : null;
+    const length = longest ? longest.end.getTime() - longest.start.getTime() : 0;
+    const commonFree = longest && length >= MIN_COMMON_FREE_MS && length < usefulMs ? longest : null;
 
     return { loads, commonFree };
 }

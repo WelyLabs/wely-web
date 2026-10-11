@@ -52,7 +52,9 @@ export class MainLayoutComponent implements OnInit {
   readonly navItems = [
     { label: 'Calendrier', icon: 'calendar_today', route: '/calendar' },
     { label: 'Découvrir', icon: 'event_note', route: '/feed' },
-    { label: 'Utilisateurs', icon: 'people', route: '/users' }
+    { label: 'Utilisateurs', icon: 'people', route: '/users' },
+    // Messages had no entry: the page was only reachable from a friend's card.
+    { label: 'Messages', icon: 'chat_bubble_outline', route: '/conversations' }
   ];
 
   /**
