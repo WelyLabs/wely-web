@@ -17,6 +17,52 @@
         padding: 16px;
     }
 
+    &.map-view {
+        .feed-header {
+            margin-bottom: 20px;
+        }
+    }
+
+    .map-placeholder {
+        width: 100%;
+        height: calc(100dvh - 220px);
+    }
+
+    .view-switch {
+        display: inline-flex;
+        gap: 4px;
+        margin-top: 16px;
+        padding: 4px;
+        border-radius: 999px;
+        background: var(--bg-subtle);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 999px;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+
+            mat-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+            }
+
+            &.active {
+                background: var(--bg-card);
+                box-shadow: var(--shadow-sm);
+                color: var(--text-primary);
+            }
+        }
+    }
+
     .feed-header {
         margin-bottom: 48px;
 
