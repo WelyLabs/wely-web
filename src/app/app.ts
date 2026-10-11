@@ -4,10 +4,12 @@ import { LoggerService } from './core/logging/logger.service';
 import { RouterOutlet } from '@angular/router';
 import { KeycloakService, KeycloakEventTypeLegacy } from 'keycloak-angular';
 import { UserService } from './services/user.service';
+import { AuthService } from './core/auth/auth.service';
+import { StartupErrorComponent } from './components/shared/startup-error/startup-error';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, StartupErrorComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -17,10 +19,18 @@ export class App implements OnInit {
   private readonly keycloakService = inject(KeycloakService);
   private readonly userService = inject(UserService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+
+  /** Keycloak could not be initialised: there is no session to follow or profile to load. */
+  protected readonly startupFailed = this.authService.startupFailed;
 
   protected readonly title = signal('calendar-app');
 
   ngOnInit(): void {
+    if (this.startupFailed()) {
+      return;
+    }
+
     // takeUntilDestroyed rather than a Subscription bag: the root component outlives the
     // session, so this is about saying what the lifetime is, not about reclaiming memory.
     this.keycloakService.keycloakEvents$

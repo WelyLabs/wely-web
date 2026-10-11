@@ -17,7 +17,8 @@ describe('initializeKeycloak', () => {
             loadAndSetCurrentUser: vi.fn()
         };
         authServiceMock = {
-            scheduleTokenRefresh: vi.fn()
+            scheduleTokenRefresh: vi.fn(),
+            markStartupFailed: vi.fn()
         };
     });
 
@@ -54,5 +55,17 @@ describe('initializeKeycloak', () => {
         expect(keycloakMock.init).toHaveBeenCalled();
         expect(userServiceMock.loadAndSetCurrentUser).toHaveBeenCalled();
         // Should not throw
+    });
+
+    it('should record the failure instead of rejecting when Keycloak cannot initialise', async () => {
+        // A rejected initializer stops Angular from starting: the 2026-10-10 blank page.
+        keycloakMock.init.mockRejectedValue({ error: 'unknown_error' });
+
+        const initFn = initializeKeycloak(keycloakMock, userServiceMock, authServiceMock, loggerMock);
+
+        await expect(initFn()).resolves.toBeUndefined();
+        expect(authServiceMock.markStartupFailed).toHaveBeenCalled();
+        expect(authServiceMock.scheduleTokenRefresh).not.toHaveBeenCalled();
+        expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
     });
 });

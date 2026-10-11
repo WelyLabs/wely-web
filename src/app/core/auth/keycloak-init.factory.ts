@@ -27,25 +27,33 @@ export function initializeKeycloak(
     logger: LoggerService
 ) {
     return async () => {
-        // Initialize Keycloak
-        const authenticated = await keycloak.init({
-            config: {
-                url: KEYCLOAK_CONFIG.url,
-                realm: KEYCLOAK_CONFIG.realm,
-                clientId: KEYCLOAK_CONFIG.clientId
-            },
-            initOptions: {
-                onLoad: environment.keycloakSilentCheckSso ? 'check-sso' : undefined,
-                silentCheckSsoRedirectUri: environment.keycloakSilentCheckSso
-                    ? window.location.origin + '/assets/silent-check-sso.html'
-                    : undefined,
-                checkLoginIframe: false,
-                locale: getBrowserLocale()
-            },
-            enableBearerInterceptor: true,
-            bearerPrefix: 'Bearer',
-            bearerExcludedUrls: ['/assets', '/clients/public']
-        });
+        // A rejected initializer stops Angular from starting at all, leaving a blank page.
+        // The failure is recorded instead, and the root component shows an error screen.
+        let authenticated: boolean;
+        try {
+            authenticated = await keycloak.init({
+                config: {
+                    url: KEYCLOAK_CONFIG.url,
+                    realm: KEYCLOAK_CONFIG.realm,
+                    clientId: KEYCLOAK_CONFIG.clientId
+                },
+                initOptions: {
+                    onLoad: environment.keycloakSilentCheckSso ? 'check-sso' : undefined,
+                    silentCheckSsoRedirectUri: environment.keycloakSilentCheckSso
+                        ? window.location.origin + '/assets/silent-check-sso.html'
+                        : undefined,
+                    checkLoginIframe: false,
+                    locale: getBrowserLocale()
+                },
+                enableBearerInterceptor: true,
+                bearerPrefix: 'Bearer',
+                bearerExcludedUrls: ['/assets', '/clients/public']
+            });
+        } catch (error) {
+            logger.error(SCOPE, 'Keycloak initialisation failed', error);
+            authService.markStartupFailed();
+            return;
+        }
 
         // If user is authenticated, preload user data and start refresh timer
         if (authenticated) {

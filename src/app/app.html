@@ -1,1 +1,5 @@
-<router-outlet></router-outlet>
+@if (startupFailed()) {
+  <app-startup-error />
+} @else {
+  <router-outlet></router-outlet>
+}

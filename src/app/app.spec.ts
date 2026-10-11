@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 import { KeycloakService, KeycloakEventTypeLegacy } from 'keycloak-angular';
 import { UserService } from './services/user.service';
+import { AuthService } from './core/auth/auth.service';
 import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -80,6 +81,19 @@ describe('App', () => {
 
     app.ngOnInit();
 
+    expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it('should show the startup error screen, and nothing that needs a session, when Keycloak failed', () => {
+    TestBed.inject(AuthService).markStartupFailed();
+    const fixture = TestBed.createComponent(App);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('app-startup-error')).not.toBeNull();
+    expect(element.querySelector('router-outlet')).toBeNull();
+    expect(keycloakMock.isLoggedIn).not.toHaveBeenCalled();
     expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
   });
 });
