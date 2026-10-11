@@ -914,5 +914,23 @@ describe('CalendarComponent', () => {
         });
     });
 
+    describe('French display', () => {
+        it('weekDays_shouldBeFrench_mondayFirst', () => {
+            expect(component.weekDays).toEqual(['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']);
+        });
+
+        it('formatTimeRange_shouldUseThe24HourClock', () => {
+            const format = (component as unknown as { formatTimeRange: (a: Date, b: Date) => string }).formatTimeRange;
+
+            expect(format(new Date(2026, 9, 14, 9, 5), new Date(2026, 9, 14, 14, 30))).toBe('09:05 – 14:30');
+        });
+
+        it('startCreatingEvent_shouldLeaveTheTitleEmpty_forThePlaceholderToShow', () => {
+            component.startCreatingEvent(new MouseEvent('click'), new Date(2026, 9, 14));
+
+            expect(component.popoverData().title).toBe('');
+        });
+    });
+
 });
 

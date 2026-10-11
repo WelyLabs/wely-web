@@ -27,7 +27,7 @@
                     <span>{{ draft().startDate | date:'EEE d MMM, HH:mm' }}</span>
                     <span class="hours">→ {{ draft().endDate | date:'EEE d MMM, HH:mm' }}</span>
                 } @else {
-                    <span>{{ draft().startDate | date:'EEEE, d MMMM' }}</span>
+                    <span>{{ draft().startDate | date:'EEEE d MMMM' }}</span>
                     <span class="hours">{{ draft().startDate | date:'HH:mm' }} - {{ draft().endDate | date:'HH:mm' }}</span>
                 }
             </div>

@@ -32,7 +32,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
     private readonly logger = inject(LoggerService);
 
     readonly messages = input<ChatMessage[]>([]);
-    readonly placeholder = input('Type a message...');
+    readonly placeholder = input('Écrivez votre message...');
     readonly loading = input(false);
     readonly historyLoading = input(false);
     readonly hasMore = input(true);

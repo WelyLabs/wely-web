@@ -20,23 +20,23 @@
             date: 'yyyy' }}
           }
           @if (viewMode() === 'day') {
-            {{ currentDate() | date: 'MMM d, yyyy' }}
+            {{ currentDate() | date: 'd MMMM yyyy' }}
           }
         </h2>
       </div>
 
       <div class="header-controls">
         <div class="view-toggle">
-          <button [class.active]="viewMode() === 'month'" (click)="toggleView('month')">Month</button>
-          <button [class.active]="viewMode() === 'week'" (click)="toggleView('week')">Week</button>
-          <button [class.active]="viewMode() === 'day'" (click)="toggleView('day')">Day</button>
+          <button [class.active]="viewMode() === 'month'" (click)="toggleView('month')">Mois</button>
+          <button [class.active]="viewMode() === 'week'" (click)="toggleView('week')">Semaine</button>
+          <button [class.active]="viewMode() === 'day'" (click)="toggleView('day')">Jour</button>
         </div>
 
         <div class="nav-buttons">
-          <button (click)="navigate(-1)" aria-label="Previous">
+          <button (click)="navigate(-1)" aria-label="Précédent">
             <mat-icon>chevron_left</mat-icon>
           </button>
-          <button (click)="navigate(1)" aria-label="Next">
+          <button (click)="navigate(1)" aria-label="Suivant">
             <mat-icon>chevron_right</mat-icon>
           </button>
         </div>
@@ -133,7 +133,7 @@
                 <!-- Selection Overlay -->
                 <div class="selection-overlay" [ngStyle]="getSelectionStyle(day.date)">
                   <div class="selection-box">
-                    <span class="selection-time">New Event</span>
+                    <span class="selection-time">Nouvel événement</span>
                   </div>
                 </div>
                 <!-- Overlaid friends and common free time, under the user's own events and never in the way of a drag -->
@@ -176,7 +176,7 @@
     (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
     (touchend)="onDetailsTouchEnd($event)" (touchcancel)="onDetailsTouchCancel($event)">
     <div class="details-header">
-      <h3>{{ selectedDate() | date:'EEEE, d MMMM yyyy' }}</h3>
+      <h3>{{ selectedDate() | date:'EEEE d MMMM yyyy' }}</h3>
       <button type="button" aria-label="Fermer" (click)="closeDetails()">
         <mat-icon>close</mat-icon>
       </button>

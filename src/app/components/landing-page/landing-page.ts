@@ -21,7 +21,7 @@ export interface PreviewEvent {
     span: number;
 }
 
-const WEEKDAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const WEEKDAY_LABELS = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
 const MS_PER_DAY = 86_400_000;
 
 /** The seven days of the week holding `today`, Monday first, as the app's week view lays them out. */

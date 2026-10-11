@@ -50,9 +50,9 @@ export class MainLayoutComponent implements OnInit {
   readonly sidenav = viewChild<MatSidenav>('sidenav');
 
   readonly navItems = [
-    { label: 'Calendar', icon: 'calendar_today', route: '/calendar' },
-    { label: 'Event Feed', icon: 'event_note', route: '/feed' },
-    { label: 'Users', icon: 'people', route: '/users' }
+    { label: 'Calendrier', icon: 'calendar_today', route: '/calendar' },
+    { label: 'Découvrir', icon: 'event_note', route: '/feed' },
+    { label: 'Utilisateurs', icon: 'people', route: '/users' }
   ];
 
   /**

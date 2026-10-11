@@ -129,7 +129,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   readonly currentDate = signal(new Date());
   readonly days = signal<CalendarDay[]>([]);
-  readonly weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  readonly weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   readonly hours = Array.from({ length: 24 }, (_, i) => i);
   readonly currentTimePosition = signal(0);
   readonly viewMode = signal<'month' | 'week' | 'day'>('month');
@@ -145,7 +145,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly arrowOffset = signal(50);
   readonly isMobilePopover = signal(false);
   readonly popoverData = signal<EventCreateRequest>({
-    title: 'New Event',
+    title: '',
     description: '',
     location: '',
     startDate: new Date(),
@@ -522,15 +522,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   private formatTimeRange(start: Date, end: Date): string {
-    const format = (d: Date) => {
-      let hours = d.getHours();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      const minutes = d.getMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes} ${ampm}`;
-    };
-    return `${format(start)} - ${format(end)}`;
+    // 24-hour clock, as read in France: it printed "2:00 PM".
+    const format = (d: Date) =>
+      `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    return `${format(start)} – ${format(end)}`;
   }
 
   generateCalendar(): void {
@@ -945,7 +940,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const finalEndDate = endDate || new Date(baseDate.getTime() + 30 * 60000);
 
     this.popoverData.set({
-      title: 'New Event',
+      title: '',
       description: '',
       location: '',
       startDate: baseDate,

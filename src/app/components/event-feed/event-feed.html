@@ -1,7 +1,7 @@
 <div class="feed-container">
   <div class="feed-header">
-    <h1>Discover Events</h1>
-    <p>Swipe right to add to your calendar, left to skip.</p>
+    <h1>Découvrir</h1>
+    <p>Glissez à droite pour l'ajouter à votre calendrier, à gauche pour passer.</p>
   </div>
 
   @if (currentEvents().length > 0) {
@@ -20,11 +20,11 @@
           <!-- Swipe Overlays -->
           <div class="swipe-overlay swipe-overlay-left" [style.opacity]="i === 0 ? leftOverlayOpacity() : 0">
             <mat-icon>close</mat-icon>
-            <span>Skip</span>
+            <span>Passer</span>
           </div>
           <div class="swipe-overlay swipe-overlay-right" [style.opacity]="i === 0 ? rightOverlayOpacity() : 0">
             <mat-icon>favorite</mat-icon>
-            <span>Add to Calendar</span>
+            <span>Ajouter</span>
           </div>
           <div class="card-image" [style.background-image]="'url(' + event.image + ')'"
             [attr.aria-label]="'Image pour ' + event.title" role="img">
@@ -52,10 +52,10 @@
   <!-- Action Buttons -->
   @if (currentEvents().length > 0) {
     <div class="action-buttons">
-      <button mat-fab color="warn" (click)="swipeLeft()" aria-label="Skip event">
+      <button mat-fab color="warn" (click)="swipeLeft()" aria-label="Passer cet événement">
         <mat-icon>close</mat-icon>
       </button>
-      <button mat-fab class="add-button" (click)="swipeRight()" aria-label="Add to calendar">
+      <button mat-fab class="add-button" (click)="swipeRight()" aria-label="Ajouter à mon calendrier">
         <mat-icon>favorite</mat-icon>
       </button>
     </div>
@@ -65,8 +65,8 @@
   @if (currentEvents().length === 0) {
     <div class="empty-state">
       <mat-icon>event_available</mat-icon>
-      <h2>No more events!</h2>
-      <p>You've reviewed all available events. Check back later for more.</p>
+      <h2>Plus aucun événement !</h2>
+      <p>Vous avez vu tous les événements disponibles. Revenez plus tard pour en découvrir d'autres.</p>
     </div>
   }
 </div>

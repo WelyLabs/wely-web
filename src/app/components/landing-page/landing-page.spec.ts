@@ -96,7 +96,7 @@ describe('buildWeek', () => {
         const week = buildWeek(new Date(2026, 9, 7)); // Wednesday 7 October 2026
 
         expect(week.map(day => day.date)).toEqual([5, 6, 7, 8, 9, 10, 11]);
-        expect(week.map(day => day.label)).toEqual(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']);
+        expect(week.map(day => day.label)).toEqual(['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']);
         expect(week.filter(day => day.isToday).map(day => day.date)).toEqual([7]);
     });
 
@@ -104,7 +104,7 @@ describe('buildWeek', () => {
         const week = buildWeek(new Date(2026, 9, 11)); // Sunday
 
         expect(week[0].date).toBe(5);
-        expect(week[6]).toEqual({ label: 'SUN', date: 11, isToday: true });
+        expect(week[6]).toEqual({ label: 'DIM', date: 11, isToday: true });
     });
 
     it('should cross a month boundary', () => {

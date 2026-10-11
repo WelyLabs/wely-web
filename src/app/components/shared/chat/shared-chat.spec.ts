@@ -88,7 +88,7 @@ describe('SharedChatComponent', () => {
         expect(component.loading()).toBe(false);
         expect(component.historyLoading()).toBe(false);
         expect(component.hasMore()).toBe(true);
-        expect(component.placeholder()).toBe('Type a message...');
+        expect(component.placeholder()).toBe('Écrivez votre message...');
     });
 
     it('should ask for more history when the top sentinel comes into view', () => {
