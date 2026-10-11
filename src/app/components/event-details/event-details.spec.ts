@@ -73,6 +73,21 @@ describe('EventDetailsComponent', () => {
         expect(component.isFeedEvent()).toBe(true);
     });
 
+    it('coordinates_shouldBeThoseOfAnEventPickedOnTheMap', () => {
+        const point = { latitude: 45.784, longitude: 4.8608 };
+        Object.assign(eventServiceMock, { feedEvents$: of([{ ...mockFeedEvent, coordinates: point }]) });
+
+        fixture.detectChanges();
+
+        expect(component.coordinates()).toEqual(point);
+    });
+
+    it('coordinates_shouldBeNullForATypedLocation', () => {
+        fixture.detectChanges();
+
+        expect(component.coordinates()).toBeNull();
+    });
+
     it('should load calendar event from history state', () => {
         const mockCalendarEvent = { id: '2', title: 'Cal Event', time: '10:00', startDate: new Date(), description: '...' };
         vi.spyOn(window.history, 'state', 'get').mockReturnValue({ event: mockCalendarEvent });

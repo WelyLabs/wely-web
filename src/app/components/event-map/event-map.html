@@ -1,0 +1,10 @@
+<div class="event-map">
+    <div class="map" #map [attr.aria-label]="'Carte : ' + label()" role="img">
+        @if (failed()) {
+            <span class="map-status">La carte n'a pas pu se charger.</span>
+        }
+    </div>
+    <a class="external" [href]="externalUrl()" target="_blank" rel="noopener noreferrer">
+        <mat-icon>open_in_new</mat-icon>Ouvrir dans OpenStreetMap
+    </a>
+</div>

@@ -16,6 +16,7 @@ interface CalendarEvent {
 }
 
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
+import { EventMapComponent } from '../event-map/event-map';
 
 @Component({
   selector: 'app-event-details',
@@ -24,7 +25,8 @@ import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
-    SharedChatComponent
+    SharedChatComponent,
+    EventMapComponent
 ],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
@@ -51,6 +53,7 @@ export class EventDetailsComponent implements OnInit {
 
   readonly image = computed(() => this.feedEvent()?.image);
   readonly location = computed(() => this.feedEvent()?.location);
+  readonly coordinates = computed(() => this.feedEvent()?.coordinates ?? null);
   readonly organizer = computed(() => this.feedEvent()?.organizerId);
 
   /** Only a calendar event carries a time string; a feed event carries its own dates. */

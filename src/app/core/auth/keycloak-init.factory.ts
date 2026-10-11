@@ -1,3 +1,4 @@
+import { HttpRequest } from '@angular/common/http';
 import { KeycloakService } from 'keycloak-angular';
 import { KEYCLOAK_CONFIG } from './keycloak.config';
 import { UserService } from '../../services/user.service';
@@ -18,6 +19,11 @@ function getBrowserLocale(): string {
     const code = language.split('-')[0].toLowerCase();
 
     return (SUPPORTED_LOCALES as readonly string[]).includes(code) ? code : DEFAULT_LOCALE;
+}
+
+/** Whether a request goes to our gateway, the only place the access token may be sent. */
+export function isOwnApiRequest(request: HttpRequest<unknown>): boolean {
+    return request.url.startsWith(environment.apiUrl);
 }
 
 export function initializeKeycloak(
@@ -47,7 +53,9 @@ export function initializeKeycloak(
                 },
                 enableBearerInterceptor: true,
                 bearerPrefix: 'Bearer',
-                bearerExcludedUrls: ['/assets', '/clients/public']
+                bearerExcludedUrls: ['/assets', '/clients/public'],
+                // Only our API gets the token: never a third party such as the geocoder.
+                shouldAddToken: isOwnApiRequest
             });
         } catch (error) {
             logger.error(SCOPE, 'Keycloak initialisation failed', error);

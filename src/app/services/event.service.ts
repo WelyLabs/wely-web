@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { Coordinates } from '../models/place.model';
 
 /** Who may see an event besides those taking part: everyone, the organizer's friends, or nobody. */
 export type Visibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
@@ -11,6 +12,8 @@ export interface EventCreateRequest {
   startDate: Date;
   endDate?: Date;
   location: string;
+  /** Set when the location was picked on the map. */
+  coordinates?: Coordinates | null;
   image?: string;
   description?: string;
   subscribeByDefault: boolean;
@@ -25,6 +28,8 @@ export interface FeedEvent {
   startDate: Date;
   endDate: Date;
   location: string;
+  /** Absent when the location was typed rather than picked on the map. */
+  coordinates?: Coordinates | null;
   image: string;
   description: string;
   visibility?: Visibility;

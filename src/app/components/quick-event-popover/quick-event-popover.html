@@ -18,7 +18,21 @@
             <label class="visually-hidden" for="quick-event-location">Lieu de l'événement</label>
             <input id="quick-event-location" type="text" [ngModel]="draft().location"
                 (ngModelChange)="update('location', $event)" placeholder="Ajouter un lieu">
+            <button type="button" class="map-toggle" [class.open]="pickingLocation()" [class.pinned]="pickedPlace()"
+                [attr.aria-expanded]="pickingLocation()" (click)="toggleLocationPicker()"
+                [attr.aria-label]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'"
+                [title]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'">
+                <mat-icon>map</mat-icon>
+            </button>
         </div>
+        @if (pickingLocation()) {
+            <!-- Its own chunk: MapLibre is only downloaded by those who open the map. -->
+            @defer (on immediate) {
+                <app-location-picker [value]="pickedPlace()" (picked)="onPlacePicked($event)" />
+            } @placeholder {
+                <div class="location-placeholder"></div>
+            }
+        }
 
         <div class="form-group date-group">
             <mat-icon>schedule</mat-icon>

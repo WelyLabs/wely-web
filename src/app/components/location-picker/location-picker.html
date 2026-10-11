@@ -1,0 +1,27 @@
+<div class="location-picker">
+    <div class="search">
+        <mat-icon>search</mat-icon>
+        <label class="visually-hidden" for="location-search">Rechercher une adresse</label>
+        <input id="location-search" type="text" autocomplete="off" placeholder="Rechercher une adresse"
+            [ngModel]="query()" (ngModelChange)="onQueryChange($event)">
+    </div>
+
+    @if (showSuggestions() && suggestions().length > 0) {
+        <ul class="suggestions" role="listbox" aria-label="Adresses trouvées">
+            @for (place of suggestions(); track $index) {
+                <li role="option" aria-selected="false" tabindex="0" (click)="choose(place)" (keydown.enter)="choose(place)">
+                    <mat-icon>place</mat-icon>{{ place.label }}
+                </li>
+            }
+        </ul>
+    }
+
+    <div class="location-map" #map>
+        @if (mapState() === 'loading') {
+            <span class="map-status">Chargement de la carte…</span>
+        } @else if (mapState() === 'failed') {
+            <span class="map-status">La carte n'a pas pu se charger. Le lieu reste modifiable à la main.</span>
+        }
+    </div>
+    <small class="hint">Cliquez sur la carte ou déplacez l'épingle.</small>
+</div>

@@ -277,6 +277,37 @@
         }
     }
 
+    .map-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+
+        mat-icon {
+            color: var(--text-tertiary);
+        }
+
+        &:hover,
+        &.open {
+            background: var(--brand-tint);
+        }
+
+        &.open mat-icon,
+        &.pinned mat-icon {
+            color: var(--primary-blue);
+        }
+    }
+
+    .location-placeholder {
+        height: 260px;
+    }
+
     .find-slot-toggle {
         display: flex;
         align-items: center;

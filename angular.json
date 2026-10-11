@@ -35,7 +35,15 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              {
+                "input": "node_modules/maplibre-gl/dist/maplibre-gl.css",
+                "bundleName": "maplibre",
+                "inject": false
+              }
+            ],
+            "allowedCommonJsDependencies": [
+              "maplibre-gl"
             ]
           },
           "configurations": {

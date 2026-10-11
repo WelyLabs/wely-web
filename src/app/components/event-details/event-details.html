@@ -42,6 +42,14 @@
                   </div>
                 </div>
               }
+              @if (coordinates(); as point) {
+                <!-- Its own chunk, fetched when scrolled into view: MapLibre weighs about 250 kB. -->
+                @defer (on viewport) {
+                  <app-event-map [coordinates]="point" [label]="location() ?? ''" />
+                } @placeholder {
+                  <div class="event-map-placeholder"></div>
+                }
+              }
               @if (organizer()) {
                 <div class="info-row">
                   <mat-icon>person</mat-icon>
