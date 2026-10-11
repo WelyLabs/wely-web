@@ -11,6 +11,10 @@ Frontend de la plateforme [Wely Calendar](https://github.com/WelyLabs/wely-platf
     <td width="50%"><img src="docs/screenshots/find-slot.jpg" alt="Recherche d'un créneau commun depuis le formulaire d'événement"></td>
     <td width="50%"><img src="docs/screenshots/friends.jpg" alt="Page Amis avec les niveaux de proximité"></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/conversations.jpg" alt="Liste des conversations, nommées d'après l'autre participant"></td>
+    <td width="50%"></td>
+  </tr>
 </table>
 
 > Captures du 11 octobre 2026, environnement `dev`, compte de démonstration. Plus de captures dans le [README de la plateforme](https://github.com/WelyLabs/wely-platform#lapplication).
