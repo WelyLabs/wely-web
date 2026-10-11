@@ -17,15 +17,25 @@
         padding: 16px;
     }
 
+    // The map takes the height left under the header: a fixed calc() guessed the header's
+    // size and pushed the bottom of the map, and its event sheet, below the screen.
     &.map-view {
+        height: 100%;
+        box-sizing: border-box;
+
         .feed-header {
             margin-bottom: 20px;
+        }
+
+        app-explore-map,
+        .map-placeholder {
+            flex: 1;
+            min-height: 360px;
         }
     }
 
     .map-placeholder {
         width: 100%;
-        height: calc(100dvh - 220px);
     }
 
     .view-switch {
