@@ -44,10 +44,26 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
       density: 0,
     ));
 
-// Include theme styles for core and each component used in your app.
-// Alternatively, you can import and @include the theme mixins for each component
-// that you are using.
-@include mat.all-component-themes($calendar-app-theme);
+// Themes for the Material components the app uses, and those only: all-component-themes put
+// every component's styles in styles.css, some sixty of which no screen renders. A component
+// added later needs its mixin here, or it shows unstyled.
+@include mat.core-theme($calendar-app-theme);
+@include mat.button-theme($calendar-app-theme);
+@include mat.icon-button-theme($calendar-app-theme);
+@include mat.fab-theme($calendar-app-theme);
+@include mat.icon-theme($calendar-app-theme);
+@include mat.card-theme($calendar-app-theme);
+@include mat.chips-theme($calendar-app-theme);
+@include mat.dialog-theme($calendar-app-theme);
+@include mat.form-field-theme($calendar-app-theme);
+@include mat.input-theme($calendar-app-theme);
+@include mat.list-theme($calendar-app-theme);
+@include mat.menu-theme($calendar-app-theme);
+@include mat.sidenav-theme($calendar-app-theme);
+@include mat.slider-theme($calendar-app-theme);
+@include mat.snack-bar-theme($calendar-app-theme);
+@include mat.tabs-theme($calendar-app-theme);
+@include mat.toolbar-theme($calendar-app-theme);
 
 /* Modern Startup Theme Variables */
 :root {

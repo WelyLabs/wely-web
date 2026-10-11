@@ -1,5 +1,3 @@
-import 'zone.js';
-import 'zone.js/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent, CalendarEvent } from './calendar';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
@@ -392,7 +390,7 @@ describe('CalendarComponent', () => {
             column.parentElement.children = columns;
 
             component.viewMode.set('week');
-            component.selectionDate = component.days()[3].date;
+            component.selectionDate.set(component.days()[3].date);
             stubDom(rect(0, 0, 1400, 900), columns, '.day-column');
 
             place(click(0, 0), component.days()[3].date);
@@ -411,7 +409,7 @@ describe('CalendarComponent', () => {
             column.parentElement.children = columns;
 
             component.viewMode.set('week');
-            component.selectionDate = null;
+            component.selectionDate.set(null);
             stubDom(rect(0, 0, 1400, 900), columns, '.day-column');
 
             place(click(0, 0), component.days()[3].date);
@@ -438,11 +436,11 @@ describe('CalendarComponent', () => {
         const wednesday = new Date(2026, 9, 14);
 
         const dragFrom = (day: Date, hour: number) => {
-            component.isSelectingRange = true;
-            component.selectionDate = day;
-            component.selectionEndDate = day;
-            component.selectionStartHour = hour;
-            component.selectionEndHour = hour + 0.5;
+            component.isSelectingRange.set(true);
+            component.selectionDate.set(day);
+            component.selectionEndDate.set(day);
+            component.selectionStartHour.set(hour);
+            component.selectionEndHour.set(hour + 0.5);
         };
 
         it('selectionRange_shouldRunContinuouslyAcrossDays_whenDraggedToALaterDay', () => {
@@ -743,4 +741,26 @@ describe('CalendarComponent', () => {
         });
     });
 
+    describe('hold to select', () => {
+        it('onTimeMouseDown_shouldShowTheSelectionWhenTheHoldCompletes_withoutAnotherEvent', () => {
+            component.toggleView('week');
+            fixture.detectChanges();
+            vi.useFakeTimers();
+            try {
+                const day = component.days()[2].date;
+                const press = new MouseEvent('mousedown', { clientX: 10, clientY: 0 });
+                Object.defineProperty(press, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
+
+                component.onTimeMouseDown(press, day, 9);
+                vi.advanceTimersByTime(500);
+
+                // Read straight from the signals the template binds: no pointer move needed.
+                expect(component.isSelectingRange()).toBe(true);
+                expect(component.getSelectionStyle(day)).toMatchObject({ display: 'block' });
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+    });
 });
+

@@ -1,5 +1,3 @@
-import 'zone.js';
-import 'zone.js/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MainLayoutComponent } from './main-layout';
 import { Router } from '@angular/router';

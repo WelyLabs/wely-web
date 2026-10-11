@@ -286,12 +286,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   // Range selection, drag to create
-  isSelectingRange = false;
-  selectionStartHour: number | null = null;
-  selectionEndHour: number | null = null;
-  selectionDate: Date | null = null;
+  /**
+   * Signals rather than plain fields: the hold-to-select timer sets them outside any event, and
+   * only a signal makes that render. As fields, the selection appeared on the first finger move
+   * after the hold rather than at the end of it — and without zone.js not even then.
+   */
+  readonly isSelectingRange = signal(false);
+  readonly selectionStartHour = signal<number | null>(null);
+  readonly selectionEndHour = signal<number | null>(null);
+  readonly selectionDate = signal<Date | null>(null);
   /** Day under the pointer: a drag may cross columns, and the range runs continuously from one to the other. */
-  selectionEndDate: Date | null = null;
+  readonly selectionEndDate = signal<Date | null>(null);
   private selectionTimeout?: ReturnType<typeof setTimeout>;
   private readonly SELECTION_DELAY = 400; // ms
 
@@ -735,19 +740,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
       // Lock scroll only after hold is successful
       if (event.cancelable) event.preventDefault();
 
-      this.isSelectingRange = true;
-      this.selectionDate = date;
-      this.selectionEndDate = date;
-      this.selectionStartHour = startHour;
-      this.selectionEndHour = startHour + 0.5;
+      this.isSelectingRange.set(true);
+      this.selectionDate.set(date);
+      this.selectionEndDate.set(date);
+      this.selectionStartHour.set(startHour);
+      this.selectionEndHour.set(startHour + 0.5);
     }, this.SELECTION_DELAY);
   }
 
   onTimeMouseEnter(hour: number, date?: Date) {
-    if (!this.isSelectingRange) return;
-    this.selectionEndHour = hour;
+    if (!this.isSelectingRange()) return;
+    this.selectionEndHour.set(hour);
     if (date) {
-      this.selectionEndDate = date;
+      this.selectionEndDate.set(date);
     }
   }
 
@@ -756,11 +761,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
    * to the day under the pointer, nights included.
    */
   selectionRange(): { start: Date; end: Date } | null {
-    if (!this.selectionDate || this.selectionStartHour === null || this.selectionEndHour === null) {
+    const day = this.selectionDate();
+    const startHour = this.selectionStartHour();
+    const endHour = this.selectionEndHour();
+    if (!day || startHour === null || endHour === null) {
       return null;
     }
-    const anchor = atHour(this.selectionDate, this.selectionStartHour);
-    const current = atHour(this.selectionEndDate ?? this.selectionDate, this.selectionEndHour);
+    const anchor = atHour(day, startHour);
+    const current = atHour(this.selectionEndDate() ?? day, endHour);
     return anchor <= current ? { start: anchor, end: current } : { start: current, end: anchor };
   }
 
@@ -768,7 +776,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const touch = event.touches[0];
 
     // Case 1: Not selected yet, checking for scroll intent
-    if (this.selectionTimeout && !this.isSelectingRange) {
+    if (this.selectionTimeout && !this.isSelectingRange()) {
       const moveDistance = Math.sqrt(
         Math.pow(touch.clientX - this.touchStartPos.x, 2) +
         Math.pow(touch.clientY - this.touchStartPos.y, 2)
@@ -782,7 +790,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isSelectingRange) return;
+    if (!this.isSelectingRange()) return;
 
     // Case 2: Already selecting (drag mode), lock scroll and expand selection
     if (event.cancelable) event.preventDefault();
@@ -800,7 +808,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       if (hourAttr !== null) {
         const hour = parseFloat(hourAttr);
         const day = dayAttr ? new Date(dayAttr) : undefined;
-        if (this.selectionEndHour !== hour || (day && !this.isSameDate(day, this.selectionEndDate ?? day))) {
+        if (this.selectionEndHour() !== hour || (day && !this.isSameDate(day, this.selectionEndDate() ?? day))) {
           this.onTimeMouseEnter(hour, day);
         }
       }
@@ -813,9 +821,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.selectionTimeout = undefined;
     }
 
-    if (!this.isSelectingRange) return;
+    if (!this.isSelectingRange()) return;
 
-    this.isSelectingRange = false;
+    this.isSelectingRange.set(false);
 
     // Drag detection: only open if the range has a length.
     const range = this.selectionRange();
@@ -834,7 +842,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   /** The part of the dragged range that falls on this day, as a box in its column. */
   getSelectionStyle(date: Date) {
     const range = this.selectionRange();
-    if (!range || (!this.isSelectingRange && !this.isPopoverVisible())) {
+    if (!range || (!this.isSelectingRange() && !this.isPopoverVisible())) {
       return { display: 'none' };
     }
 
@@ -993,7 +1001,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       return { ...toContainer(cell.getBoundingClientRect()), columnIndex: index % 7 };
     }
 
-    const activeDate = this.selectionDate || date;
+    const activeDate = this.selectionDate() || date;
     if (!activeDate) {
       return null;
     }
@@ -1021,10 +1029,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   cancelCreatingEvent() {
     this.isPopoverVisible.set(false);
-    this.selectionDate = null;
-    this.selectionEndDate = null;
-    this.selectionStartHour = null;
-    this.selectionEndHour = null;
+    this.selectionDate.set(null);
+    this.selectionEndDate.set(null);
+    this.selectionStartHour.set(null);
+    this.selectionEndHour.set(null);
     this.selectedDate.set(null);
   }
 
@@ -1036,9 +1044,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
         this.isPopoverVisible.set(false);
         this.isDetailsOpen.set(false);
         this.selectedDate.set(null);
-        this.selectionDate = null;
-        this.selectionStartHour = null;
-        this.selectionEndHour = null;
+        this.selectionDate.set(null);
+        this.selectionStartHour.set(null);
+        this.selectionEndHour.set(null);
         this.generateCalendar();
       },
       error: (err) => this.logger.error('CalendarComponent', 'Error creating event:', err)
