@@ -44,6 +44,8 @@
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -240,5 +242,35 @@
         padding: 0 32px;
         height: 48px;
         font-weight: 600;
+    }
+}
+// Phones: the 40px paddings, stacked three deep, left about 150px for the text.
+@media (max-width: 768px) {
+    .details-container {
+        padding: 12px;
+    }
+
+    .details-card {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .header {
+        gap: 8px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+
+        h1 {
+            font-size: 1.5rem;
+        }
+    }
+
+    .event-image {
+        height: 220px;
+        margin-bottom: 16px;
+    }
+
+    .custom-tabs .tab-content {
+        padding: 16px 0;
     }
 }

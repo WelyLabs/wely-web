@@ -10,6 +10,8 @@ import { SocialService } from '../../services/social.service';
 
 /** Horizontal travel, in pixels, past which a drag counts as a swipe rather than a nudge. */
 const SWIPE_THRESHOLD_PX = 100;
+/** How far a finger moves before a touch counts as a swipe or a scroll. */
+const AXIS_LOCK_PX = 10;
 
 /** How far a card is thrown off-screen, and how long the throw animation lasts. */
 const THROW_DISTANCE_PX = 1000;
@@ -65,8 +67,17 @@ export class EventFeedComponent implements OnInit {
   readonly rightOverlayOpacity = signal(0);
 
   private dragStartX = 0;
+  private dragStartY = 0;
   private dragCurrentX = 0;
   private isDragging = false;
+  /**
+   * For a touch, whether the gesture has declared itself: null until the finger has moved
+   * enough, then 'horizontal' (a swipe) or 'vertical' (a scroll, which the card ignores).
+   * Without it, a page scroll drifting 100px sideways subscribed the user.
+   */
+  private touchAxis: 'horizontal' | 'vertical' | null = null;
+  /** A card is flying off: a second tap on ♥ used to subscribe, then unsubscribe, and drop two cards. */
+  private throwing = false;
   private animationFrameId?: number;
 
   ngOnInit(): void {
@@ -103,15 +114,35 @@ export class EventFeedComponent implements OnInit {
   // land in and one of them to be missed.
 
   onCardTouchStart(event: TouchEvent): void {
+    this.dragStartY = event.touches[0].clientY;
+    this.touchAxis = null;
     this.startDrag(event.touches[0].clientX);
   }
 
   onCardTouchMove(event: TouchEvent): void {
-    this.moveDrag(event.touches[0].clientX);
+    const touch = event.touches[0];
+    if (this.isDragging && this.touchAxis === null) {
+      const dx = Math.abs(touch.clientX - this.dragStartX);
+      const dy = Math.abs(touch.clientY - this.dragStartY);
+      if (Math.max(dx, dy) < AXIS_LOCK_PX) {
+        return;
+      }
+      this.touchAxis = dx > dy ? 'horizontal' : 'vertical';
+      if (this.touchAxis === 'vertical') {
+        this.abandonDrag();
+        return;
+      }
+    }
+    this.moveDrag(touch.clientX);
   }
 
   onCardTouchEnd(_event: TouchEvent): void {
     this.endDrag();
+  }
+
+  /** An interrupted touch puts the card back, rather than leaving it tilted mid-drag. */
+  onCardTouchCancel(_event: TouchEvent): void {
+    this.abandonDrag();
   }
 
   onCardMouseDown(event: MouseEvent): void {
@@ -177,6 +208,13 @@ export class EventFeedComponent implements OnInit {
     }
   }
 
+  private abandonDrag(): void {
+    this.cancelPendingFrame();
+    this.isDragging = false;
+    this.cardTransition.set(RETURN_TRANSITION);
+    this.resetCard();
+  }
+
   private cancelPendingFrame(): void {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -194,9 +232,10 @@ export class EventFeedComponent implements OnInit {
 
   private animateSwipeRight(): void {
     const currentEvent = this.currentEvents()[0];
-    if (!currentEvent) {
+    if (!currentEvent || this.throwing) {
       return;
     }
+    this.throwing = true;
 
     this.cardTransform.set(`translateX(${THROW_DISTANCE_PX}px) rotate(${THROW_ROTATION_DEG}deg)`);
     this.rightOverlayOpacity.set(1);
@@ -212,6 +251,10 @@ export class EventFeedComponent implements OnInit {
   }
 
   private animateSwipeLeft(): void {
+    if (!this.currentEvents()[0] || this.throwing) {
+      return;
+    }
+    this.throwing = true;
     this.cardTransform.set(`translateX(-${THROW_DISTANCE_PX}px) rotate(-${THROW_ROTATION_DEG}deg)`);
     this.leftOverlayOpacity.set(1);
 
@@ -222,6 +265,7 @@ export class EventFeedComponent implements OnInit {
     // slice, not shift: the array came from the service's own stream, and shifting it emptied
     // the service's copy as the user swiped.
     this.events.update(events => events.slice(1));
+    this.throwing = false;
     this.resetCard();
   }
 

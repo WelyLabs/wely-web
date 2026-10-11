@@ -9,6 +9,7 @@
                 <li [title]="entry.userName + ' est « ' + entry.closeness + ' » : vous voyez ' + entry.discloses">
                     <span class="swatch" [style.background]="entry.color"></span>
                     {{ entry.userName }} · {{ entry.closeness }}
+                    <span class="discloses">: {{ entry.discloses }}</span>
                 </li>
             }
             <li class="free">

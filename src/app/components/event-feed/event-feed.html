@@ -13,6 +13,7 @@
           [style.transform]="i === 0 ? cardTransform() : getStackTransform(i)"
           [style.transition]="i === 0 ? cardTransition() : ''" (touchstart)="i === 0 ? onCardTouchStart($event) : null"
           (touchmove)="i === 0 ? onCardTouchMove($event) : null" (touchend)="i === 0 ? onCardTouchEnd($event) : null"
+          (touchcancel)="i === 0 ? onCardTouchCancel($event) : null"
           (mousedown)="i === 0 ? onCardMouseDown($event) : null"
           (mousemove)="i === 0 ? onCardMouseMove($event) : null" (mouseup)="i === 0 ? onCardMouseUp($event) : null"
           (mouseleave)="i === 0 ? onCardMouseUp($event) : null">

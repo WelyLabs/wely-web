@@ -4,7 +4,7 @@ import { EventService } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('EventFeedComponent', () => {
@@ -179,4 +179,55 @@ describe('EventFeedComponent', () => {
         expect(component.organiserName('unknown-id')).toBe('');
     });
 
+    describe('touch', () => {
+        const touch = (x: number, y: number) => ({ touches: [{ clientX: x, clientY: y }] } as unknown as TouchEvent);
+
+        beforeEach(() => {
+            vi.stubGlobal('requestAnimationFrame', (callback: () => void) => { callback(); return 1; });
+            vi.stubGlobal('cancelAnimationFrame', () => undefined);
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+            vi.useRealTimers();
+        });
+
+        it('swipeRight_shouldIgnoreASecondTapWhileTheCardIsFlying', () => {
+            vi.useFakeTimers();
+
+            component.swipeRight();
+            component.swipeRight();
+            vi.advanceTimersByTime(600);
+
+            expect(eventServiceMock.toggleSubscription).toHaveBeenCalledTimes(1);
+        });
+
+        it('onCardTouchMove_shouldLeaveAVerticalScrollAlone', () => {
+            component.onCardTouchStart(touch(100, 100));
+            component.onCardTouchMove(touch(110, 160));
+            component.onCardTouchMove(touch(260, 400));
+            component.onCardTouchEnd({} as TouchEvent);
+
+            expect(component.cardTransform()).toBe('');
+            expect(eventServiceMock.toggleSubscription).not.toHaveBeenCalled();
+        });
+
+        it('onCardTouchMove_shouldFollowAHorizontalSwipe', () => {
+            component.onCardTouchStart(touch(100, 100));
+            component.onCardTouchMove(touch(160, 104));
+
+            expect(component.cardTransform()).toContain('translateX(60px)');
+        });
+
+        it('onCardTouchCancel_shouldPutTheCardBack', () => {
+            component.onCardTouchStart(touch(100, 100));
+            component.onCardTouchMove(touch(160, 104));
+
+            component.onCardTouchCancel({} as TouchEvent);
+
+            expect(component.cardTransform()).toBe('');
+            expect(component.rightOverlayOpacity()).toBe(0);
+        });
+    });
 });
+

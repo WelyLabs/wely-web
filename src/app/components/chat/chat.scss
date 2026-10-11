@@ -79,8 +79,15 @@
         }
     }
 
+    @media (max-width: 768px) {
+        padding: 0 8px;
+        gap: 8px;
+    }
+
     .user-info {
         flex: 1;
+        // min-width 0 so a long name shrinks and ellipsises instead of widening the header.
+        min-width: 0;
         display: flex;
         align-items: center;
         gap: 12px;
@@ -100,6 +107,8 @@
         }
 
         .text-info {
+            min-width: 0;
+
             .chat-title {
                 margin: 0;
                 font-size: 18px;
@@ -109,11 +118,6 @@
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 150px; // Limit width for mobile truncation
-
-                @media (min-width: 769px) {
-                    max-width: none;
-                }
             }
 
             .status-text {
@@ -131,24 +135,6 @@
                     background: currentColor;
                     border-radius: 50%;
                 }
-            }
-        }
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 8px;
-
-        @media (max-width: 768px) {
-            margin-right: 0; // Avatar is hidden, no need for margin
-        }
-
-        button {
-            color: var(--text-tertiary);
-
-            &:hover {
-                color: var(--primary-blue);
-                background: var(--bg-subtle);
             }
         }
     }

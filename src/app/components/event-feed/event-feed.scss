@@ -19,6 +19,10 @@
 
     .feed-header {
         margin-bottom: 48px;
+
+        @media (max-width: 768px) {
+            margin-bottom: 16px;
+        }
         color: var(--text-primary);
         text-align: center;
         max-width: 600px;
@@ -54,8 +58,10 @@
         touch-action: pan-y;
         overflow: visible;
 
+        // Shorter than the visible height on small phones, so the buttons under the card stay
+        // above the bottom bar.
         @media (max-width: 768px) {
-            height: 550px;
+            height: min(550px, 60dvh);
         }
     }
 
@@ -134,7 +140,7 @@
             flex-shrink: 0;
 
             @media (max-width: 768px) {
-                height: 300px;
+                height: 45%; // A share of the card, which now follows the screen height
             }
 
             .date-badge {

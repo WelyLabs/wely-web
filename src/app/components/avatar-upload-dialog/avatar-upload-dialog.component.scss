@@ -1,7 +1,13 @@
 .dialog-container {
     padding: 24px;
-    min-width: 400px;
+    // Never wider than the dialog panel: a fixed 400px pushed the cropper and « Enregistrer »
+    // off the side of a phone.
+    min-width: min(400px, 100%);
     max-width: 500px;
+
+    @media (max-width: 600px) {
+        padding: 16px;
+    }
     overflow: hidden;
     animation: dialog-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -39,8 +45,9 @@
         color: var(--text-secondary);
         transition: all 0.2s ease;
         border-radius: 50%;
-        width: 32px;
-        height: 32px;
+        // 40px: a finger-sized target; it was 32.
+        width: 40px;
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;

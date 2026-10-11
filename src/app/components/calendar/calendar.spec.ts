@@ -3,7 +3,7 @@ import { CalendarComponent, CalendarEvent } from './calendar';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SocialService } from '../../services/social.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { throwError } from 'rxjs';
@@ -241,6 +241,72 @@ describe('CalendarComponent', () => {
             expect(component['isDragging']).toBe(false);
             expect(touchMoveEvent.preventDefault).not.toHaveBeenCalled();
         });
+
+        /** A panel holding an events list, scrolled to the given offset. */
+        const panelWithList = (scrollTop: number) => {
+            const panel = document.createElement('div');
+            const list = document.createElement('div');
+            list.className = 'events-list';
+            Object.defineProperty(list, 'scrollTop', { value: scrollTop });
+            panel.appendChild(list);
+            return { panel, list };
+        };
+
+        it('onDetailsTouchMove_shouldLetAScrolledListScrollBackUp', () => {
+            const { panel, list } = panelWithList(120);
+            component.onDetailsTouchStart({ touches: [{ clientY: 100 }], currentTarget: panel, target: list } as any);
+
+            const move = { touches: [{ clientY: 160 }], preventDefault: vi.fn(), currentTarget: panel } as any;
+            component.onDetailsTouchMove(move);
+
+            expect(component['isDragging']).toBe(false);
+            expect(move.preventDefault).not.toHaveBeenCalled();
+        });
+
+        it('onDetailsTouchMove_shouldDragAListAtItsTop', () => {
+            const { panel, list } = panelWithList(0);
+            component.onDetailsTouchStart({ touches: [{ clientY: 100 }], currentTarget: panel, target: list } as any);
+
+            component.onDetailsTouchMove({ touches: [{ clientY: 160 }], preventDefault: vi.fn(), currentTarget: panel } as any);
+
+            expect(component['isDragging']).toBe(true);
+        });
+
+        it('onDetailsTouchEnd_shouldCloseThePanel_afterALongSwipeDown', () => {
+            const { panel } = panelWithList(0);
+            component.isDetailsOpen.set(true);
+            component.selectedDate.set(new Date(2026, 9, 14));
+            component.onDetailsTouchStart({ touches: [{ clientY: 100 }], currentTarget: panel, target: panel } as any);
+            component.onDetailsTouchMove({ touches: [{ clientY: 250 }], preventDefault: vi.fn(), currentTarget: panel } as any);
+
+            component.onDetailsTouchEnd({ currentTarget: panel } as any);
+
+            expect(component.isDetailsOpen()).toBe(false);
+            expect(panel.style.transform).toBe('');
+        });
+
+        it('onDetailsTouchEnd_shouldKeepThePanelOpen_afterAShortSwipe', () => {
+            const { panel } = panelWithList(0);
+            component.isDetailsOpen.set(true);
+            component.onDetailsTouchStart({ touches: [{ clientY: 100 }], currentTarget: panel, target: panel } as any);
+            component.onDetailsTouchMove({ touches: [{ clientY: 150 }], preventDefault: vi.fn(), currentTarget: panel } as any);
+
+            component.onDetailsTouchEnd({ currentTarget: panel } as any);
+
+            expect(component.isDetailsOpen()).toBe(true);
+        });
+
+        it('onDetailsTouchCancel_shouldPutThePanelBack', () => {
+            const { panel } = panelWithList(0);
+            component.onDetailsTouchStart({ touches: [{ clientY: 100 }], currentTarget: panel, target: panel } as any);
+            component.onDetailsTouchMove({ touches: [{ clientY: 160 }], preventDefault: vi.fn(), currentTarget: panel } as any);
+            expect(panel.style.transform).toBe('translateY(60px)');
+
+            component.onDetailsTouchCancel({ currentTarget: panel } as any);
+
+            expect(panel.style.transform).toBe('');
+            expect(component['isDragging']).toBe(false);
+        });
     });
     /**
      * Characterisation tests for the popover geometry, written before refactoring
@@ -319,6 +385,16 @@ describe('CalendarComponent', () => {
 
             expect(component.isMobilePopover()).toBe(true);
             expect(component.popoverPosition()).toEqual({ x: 0, y: 0, arrowSide: 'top' });
+        });
+
+        it('centres the popover on a phone held sideways, too short to anchor it', () => {
+            Object.defineProperty(window, 'innerWidth', { value: 844, configurable: true });
+            Object.defineProperty(window, 'innerHeight', { value: 390, configurable: true });
+            stubDom(rect(0, 0, 844, 390), []);
+
+            place(click(100, 200), component.days()[10].date);
+
+            expect(component.isMobilePopover()).toBe(true);
         });
 
         it('opens to the right of a cell in the left half of the month grid', () => {
@@ -762,5 +838,81 @@ describe('CalendarComponent', () => {
             }
         });
     });
+
+    describe('mobile touch', () => {
+        const day = () => component.days()[10];
+        const touch = (x: number, y: number) => ({ touches: [{ clientX: x, clientY: y }], cancelable: false } as unknown as TouchEvent);
+
+        afterEach(() => vi.useRealTimers());
+
+        it('onMonthDayTouchMove_shouldTreatAMovingFingerAsAScroll_notAHold', () => {
+            vi.useFakeTimers();
+            const open = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
+            component.onMonthDayMouseDown(touch(100, 100), day());
+
+            component.onMonthDayTouchMove(touch(100, 140));
+            vi.advanceTimersByTime(1000);
+
+            expect(open).not.toHaveBeenCalled();
+        });
+
+        it('onMonthDayTouchMove_shouldKeepTheHold_whenTheFingerBarelyMoves', () => {
+            vi.useFakeTimers();
+            const open = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
+            component.onMonthDayMouseDown(touch(100, 100), day());
+
+            component.onMonthDayTouchMove(touch(103, 104));
+            vi.advanceTimersByTime(1000);
+
+            expect(open).toHaveBeenCalled();
+        });
+
+        it('onPopoverBackdropClick_shouldIgnoreTheClickOfTheFingerThatOpenedIt', () => {
+            vi.useFakeTimers();
+            component.isPopoverVisible.set(true);
+            (component as unknown as { popoverOpenedAt: number }).popoverOpenedAt = Date.now();
+
+            component.onPopoverBackdropClick();
+            expect(component.isPopoverVisible()).toBe(true);
+
+            vi.advanceTimersByTime(600);
+            component.onPopoverBackdropClick();
+            expect(component.isPopoverVisible()).toBe(false);
+        });
+
+        it('onTimeTouchCancel_shouldDropAHalfMadeSelection', () => {
+            component.isSelectingRange.set(true);
+            component.selectionDate.set(new Date(2026, 9, 14));
+            component.selectionStartHour.set(9);
+            component.selectionEndHour.set(10);
+
+            component.onTimeTouchCancel();
+
+            expect(component.isSelectingRange()).toBe(false);
+            expect(component.selectionRange()).toBeNull();
+        });
+
+        it('onTimeTouchCancel_shouldStopAPendingHold', () => {
+            vi.useFakeTimers();
+            component.toggleView('week');
+            const press = new MouseEvent('mousedown', { clientX: 10, clientY: 0 });
+            Object.defineProperty(press, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
+            component.onTimeMouseDown(press, component.days()[2].date, 9);
+
+            component.onTimeTouchCancel();
+            vi.advanceTimersByTime(1000);
+
+            expect(component.isSelectingRange()).toBe(false);
+        });
+
+        it('cancelCreatingEvent_shouldEndASelectionInProgress', () => {
+            component.isSelectingRange.set(true);
+
+            component.cancelCreatingEvent();
+
+            expect(component.isSelectingRange()).toBe(false);
+        });
+    });
+
 });
 

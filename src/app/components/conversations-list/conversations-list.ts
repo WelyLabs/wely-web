@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DestroyRef } from '@angular/core';
 import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -18,7 +18,8 @@ import { UserService } from '../../services/user.service';
 @Component({
     selector: 'app-conversations-list',
     standalone: true,
-    imports: [CommonModule, MatButtonModule, MatIconModule, MatListModule, MatRippleModule],
+    // RouterLink: without it the routerLink attributes on « Nouveau » and « Trouver des amis » were inert.
+    imports: [CommonModule, MatButtonModule, MatIconModule, MatListModule, MatRippleModule, RouterLink],
     templateUrl: './conversations-list.html',
     styleUrl: './conversations-list.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

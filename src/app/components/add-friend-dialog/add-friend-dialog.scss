@@ -1,12 +1,9 @@
 .dialog-container {
-    min-width: 400px;
+    // Never wider than the dialog panel, which is 95vw on a phone.
+    min-width: min(400px, 100%);
     max-width: 500px;
     animation: dialog-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-
-    @media (max-width: 600px) {
-        min-width: 300px;
-    }
 }
 
 @keyframes dialog-enter {

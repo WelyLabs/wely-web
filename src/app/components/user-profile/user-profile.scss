@@ -54,11 +54,14 @@
             cursor: pointer;
             transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
-            &:hover {
-                transform: translateY(-4px);
+            // Hover only where there is one: on touch, the effect stuck after a tap.
+            @media (hover: hover) {
+                &:hover {
+                    transform: translateY(-4px);
 
-                .avatar-overlay {
-                    opacity: 1;
+                    .avatar-overlay {
+                        opacity: 1;
+                    }
                 }
             }
 
@@ -104,6 +107,23 @@
                 transition: opacity 0.3s;
                 color: white;
 
+                // No hover on touch: a permanent camera badge says the photo can be changed.
+                @media (hover: none) {
+                    top: auto;
+                    left: auto;
+                    right: 0;
+                    bottom: 0;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    background: var(--accent-gradient);
+                    opacity: 1;
+
+                    span {
+                        display: none;
+                    }
+                }
+
                 mat-icon {
                     font-size: 24px;
                     width: 24px;
@@ -127,11 +147,13 @@
                 font-weight: 900;
                 letter-spacing: -2px;
                 color: var(--text-primary);
+                overflow-wrap: anywhere;
             }
 
             .badges {
                 display: flex;
-                gap: 24px;
+                flex-wrap: wrap;
+                gap: 8px 24px;
 
                 span {
                     display: flex;
@@ -288,6 +310,14 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 12px;
+
+        // A long e-mail breaks instead of spilling out of the card.
+        .value {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            text-align: right;
+        }
         padding-bottom: 16px;
         border-bottom: 1px solid var(--border-default);
 
@@ -463,6 +493,17 @@
                     right: 6px;
                     bottom: 6px;
                     border-radius: 18px;
+
+                    // Keep the touch badge in its corner on small screens too.
+                    @media (hover: none) {
+                        top: auto;
+                        left: auto;
+                        right: -4px;
+                        bottom: -4px;
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                    }
 
                     mat-icon {
                         font-size: 20px;

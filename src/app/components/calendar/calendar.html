@@ -62,7 +62,8 @@
             (click)="selectDate(day)" (keydown.enter)="selectDate(day)" (keydown.space)="selectDate(day)"
             (mousedown)="onMonthDayMouseDown($event, day)"
             (touchstart)="onMonthDayMouseDown($event, day)" (mouseup)="onMonthDayMouseUp()"
-            (touchend)="onMonthDayMouseUp()">
+            (touchmove)="onMonthDayTouchMove($event)" (touchend)="onMonthDayMouseUp()"
+            (touchcancel)="onMonthDayMouseUp()">
             <div class="day-content">
               <span class="day-number">{{ day.date | date:'d' }}</span>
               @if (day.hasEvents) {
@@ -139,7 +140,7 @@
                 @if (overlayFor(day.date); as overlay) {
                   <app-calendar-overlay [blocks]="overlay.blocks" [free]="overlay.free" />
                 }
-                <div class="hours-container" (mouseup)="onTimeMouseUp($event)"
+                <div class="hours-container" (mouseup)="onTimeMouseUp($event)" (touchcancel)="onTimeTouchCancel()"
                   (touchend)="onTimeMouseUp($event)" (touchmove)="onTouchMove($event)">
                   @for (hour of hours; track hour) {
                     <div class="hour-cell" [attr.data-hour]="hour" [attr.data-day]="day.date.toISOString()"
@@ -173,10 +174,10 @@
   <!-- Details Section (Month View Only) -->
   <div class="details-section" [class.visible]="isDetailsOpen() && viewMode() === 'month'"
     (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
-    (touchend)="onDetailsTouchEnd($event)">
+    (touchend)="onDetailsTouchEnd($event)" (touchcancel)="onDetailsTouchCancel($event)">
     <div class="details-header">
       <h3>{{ selectedDate() | date:'EEEE, d MMMM yyyy' }}</h3>
-      <button (click)="closeDetails()">
+      <button type="button" aria-label="Fermer" (click)="closeDetails()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -209,7 +210,7 @@
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
          Presentational dismiss target: it is not a control and cannot take focus. Keyboard
          dismissal is handled by the component's Escape listener. -->
-    <div class="popover-backdrop" (click)="cancelCreatingEvent()"></div>
+    <div class="popover-backdrop" (click)="onPopoverBackdropClick()"></div>
   }
   @if (isPopoverVisible()) {
     <app-quick-event-popover [data]="popoverData()" [position]="popoverPosition()"

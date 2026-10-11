@@ -51,9 +51,11 @@
       <div class="input-glass-container">
         <label class="visually-hidden" for="chat-message-input">Votre message</label>
         <input id="chat-message-input" type="text" [ngModel]="newMessage()" (ngModelChange)="newMessage.set($event)"
-          [placeholder]="placeholder()" (keyup.enter)="sendMessage()"
-          [disabled]="loading()" class="modern-input">
-        <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage().trim() || loading()">
+          [placeholder]="placeholder()" (keyup.enter)="sendMessage()" enterkeyhint="send" class="modern-input">
+        <!-- Neither is disabled while a message is in flight: disabling the focused input blurred it,
+             which dropped the phone keyboard after every send, and kept it disabled for good if the
+             server never acknowledged. Messages in flight show as pending in the list instead. -->
+        <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage().trim()">
           <mat-icon>send</mat-icon>
         </button>
       </div>

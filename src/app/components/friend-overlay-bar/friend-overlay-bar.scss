@@ -33,6 +33,17 @@
         border-radius: 3px;
     }
 
+    // What the closeness shows is in the tooltip on desktop; touch screens have no hover, so
+    // there it is written out.
+    .discloses {
+        display: none;
+
+        @media (hover: none) {
+            display: inline;
+            color: var(--text-tertiary);
+        }
+    }
+
     .free .swatch {
         background: color-mix(in srgb, var(--success) 35%, transparent);
     }

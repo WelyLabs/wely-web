@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ConversationsListComponent } from './conversations-list';
 import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
-import { Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConversationSummary, ConversationType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -38,18 +38,17 @@ describe('ConversationsListComponent', () => {
         userServiceMock = {
             getCurrentUserValue: vi.fn().mockReturnValue({ id: 'me' })
         };
-        routerMock = {
-            navigate: vi.fn()
-        };
-
+        // A real router: the template's routerLinks need one, and navigate is spied on instead.
         await TestBed.configureTestingModule({
             imports: [ConversationsListComponent, NoopAnimationsModule],
             providers: [
+                provideRouter([]),
                 { provide: ChatService, useValue: chatServiceMock },
-                { provide: UserService, useValue: userServiceMock },
-                { provide: Router, useValue: routerMock }
+                { provide: UserService, useValue: userServiceMock }
             ]
         }).compileComponents();
+        routerMock = TestBed.inject(Router);
+        vi.spyOn(routerMock, 'navigate').mockResolvedValue(true);
 
         fixture = TestBed.createComponent(ConversationsListComponent);
         component = fixture.componentInstance;
@@ -135,4 +134,16 @@ describe('ConversationsListComponent', () => {
         expect(component.getAvatarInitial('Dave')).toBe('D');
         expect(component.getAvatarInitial('')).toBe('?');
     });
+
+    it('template_shouldOpenTheUserSearchFromTheNewConversationButton', () => {
+        // Without RouterLink in the component's imports, the routerLink attribute was inert and
+        // the click went nowhere.
+        const navigate = vi.spyOn(routerMock, 'navigateByUrl').mockResolvedValue(true);
+
+        (fixture.nativeElement.querySelector('.new-conv-btn') as HTMLButtonElement).click();
+
+        expect(navigate).toHaveBeenCalled();
+        expect(String(navigate.mock.calls[0][0])).toBe('/users');
+    });
 });
+

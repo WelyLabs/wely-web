@@ -2,7 +2,8 @@
     padding: 60px 40px;
     max-width: 1400px;
     margin: 0 auto;
-    min-height: 100vh;
+    // No min-height: 100vh — inside the layout's scroll area, already shorter than the screen,
+    // it made the page scroll by the bottom bar's height even when empty.
 }
 
 /* Header Section */
@@ -59,7 +60,8 @@
                 border: 1px solid var(--border-default);
                 border-radius: 14px;
                 padding: 0 44px 0 44px;
-                font-size: 15px;
+                // 16px: below that, iOS Safari zooms the page on focus.
+                font-size: 16px;
                 font-family: inherit;
                 font-weight: 500;
                 color: var(--text-primary);
@@ -144,6 +146,7 @@
         border: none;
         background: transparent;
         padding: 8px 24px;
+        min-height: 40px;
         border-radius: 12px;
         font-size: 14px;
         font-weight: 700;
@@ -172,7 +175,8 @@
 
 .users-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    // min(): a card column never wider than the screen, on the narrowest phones too.
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 24px;
 }
 
