@@ -3,6 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+/** Who may see an event besides those taking part: everyone, the organizer's friends, or nobody. */
+export type Visibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
+
 export interface EventCreateRequest {
   title: string;
   startDate: Date;
@@ -11,6 +14,8 @@ export interface EventCreateRequest {
   image?: string;
   description?: string;
   subscribeByDefault: boolean;
+  /** FRIENDS when left out. */
+  visibility?: Visibility;
 }
 
 export interface FeedEvent {
@@ -22,6 +27,25 @@ export interface FeedEvent {
   location: string;
   image: string;
   description: string;
+  visibility?: Visibility;
+}
+
+/**
+ * One event of a friend's calendar, as much as the friendship allows: always when, the rest
+ * only if disclosed.
+ */
+export interface FriendCalendarEntry {
+  start: Date;
+  end: Date;
+  eventId: string | null;
+  title: string | null;
+  location: string | null;
+  description: string | null;
+}
+
+interface FriendCalendarEntryPayload extends Omit<FriendCalendarEntry, 'start' | 'end'> {
+  start: string | number[];
+  end: string | number[];
 }
 
 /**
@@ -114,6 +138,18 @@ export class EventService {
         return start && end ? [{ start, end }] : [];
       })),
     );
+  }
+
+  /** A friend's events between `from` and `to`, disclosed according to how close you are. */
+  getFriendCalendar(friendId: string, from: Date, to: Date): Observable<FriendCalendarEntry[]> {
+    const params = { from: from.toISOString(), to: to.toISOString() };
+    return this.http
+      .get<FriendCalendarEntryPayload[]>(`${this.apiUrl}/users/${friendId}/calendar`, { params })
+      .pipe(map((entries) => entries.flatMap((entry) => {
+        const start = this.toDate(entry.start);
+        const end = this.toDate(entry.end);
+        return start && end ? [{ ...entry, start, end }] : [];
+      })));
   }
 
   private toFeedEvent(payload: EventPayload): FeedEvent {

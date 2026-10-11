@@ -10,6 +10,21 @@
           <mat-icon>chat</mat-icon>
           <span>Chatter</span>
         </button>
+        @for (option of closenessOptions(); track option.closeness) {
+          <button mat-menu-item (click)="onClosenessClick(option.closeness)">
+            <mat-icon>favorite_border</mat-icon>
+            <span class="closeness-option">
+              <span>{{ option.label }}</span>
+              <small>{{ option.hint }}</small>
+            </span>
+          </button>
+        }
+        @if (outgoingProposal()) {
+          <button mat-menu-item (click)="onWithdrawProposalClick()">
+            <mat-icon>undo</mat-icon>
+            <span>Retirer ma proposition</span>
+          </button>
+        }
         <button mat-menu-item (click)="onRemoveFriendClick()" class="destructive-item">
           <mat-icon>person_remove</mat-icon>
           <span>Supprimer</span>
@@ -32,7 +47,25 @@
 
   <div class="user-details">
     <h3 class="name">{{ user().userName }}</h3>
+    @if (closenessLabel(); as label) {
+      <span class="closeness-badge" [attr.data-closeness]="friendship()!.closeness">
+        <mat-icon>favorite</mat-icon>{{ label }}
+      </span>
+    }
+    @if (outgoingProposal(); as proposal) {
+      <span class="closeness-pending">Vous avez proposé « {{ proposal }} » · en attente</span>
+    }
   </div>
+
+  @if (incomingProposal(); as proposal) {
+    <div class="closeness-proposal">
+      <span>Propose de passer à « {{ proposal }} »</span>
+      <div class="request-buttons">
+        <button mat-button class="decline-btn" (click)="onAnswerClick(false)">Refuser</button>
+        <button mat-flat-button class="accept-btn" (click)="onAnswerClick(true)">Accepter</button>
+      </div>
+    </div>
+  }
 
   <div class="actions">
     <!-- Not friends yet -->

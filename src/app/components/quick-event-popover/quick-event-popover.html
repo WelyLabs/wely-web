@@ -50,6 +50,18 @@
                 (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
         </div>
 
+        <div class="form-group visibility-group">
+            <div class="visibility-choices" role="radiogroup" aria-label="Visibilité">
+                @for (option of visibilityOptions; track option.value) {
+                    <button type="button" role="radio" class="visibility-chip" [class.active]="visibility() === option.value"
+                        [attr.aria-checked]="visibility() === option.value" (click)="update('visibility', option.value)">
+                        <mat-icon>{{ option.icon }}</mat-icon>{{ option.label }}
+                    </button>
+                }
+            </div>
+            <small class="visibility-hint">{{ visibilityHint() }}</small>
+        </div>
+
         <div class="form-group checkbox-group">
             <label class="checkbox-container">
                 <input type="checkbox" [ngModel]="draft().subscribeByDefault" (ngModelChange)="update('subscribeByDefault', $event)">

@@ -211,4 +211,24 @@ describe('EventService', () => {
 
         expect(result).toEqual([{ start: new Date('2026-10-16T14:00:00Z'), end: new Date('2026-10-16T18:00:00Z') }]);
     });
+
+    it('reads a friend calendar for a period and converts its dates', () => {
+        let result: unknown;
+        const from = new Date('2026-10-12T00:00:00Z');
+        const to = new Date('2026-10-19T00:00:00Z');
+        service.getFriendCalendar('bob', from, to).subscribe(entries => result = entries);
+
+        const req = httpMock.expectOne(r => r.url === `${apiUrl}/users/bob/calendar`
+            && r.params.get('from') === from.toISOString() && r.params.get('to') === to.toISOString());
+        expect(req.request.method).toBe('GET');
+        req.flush([
+            { start: '2026-10-14T18:00:00Z', end: '2026-10-14T20:00:00Z', eventId: null, title: null, location: null, description: null },
+            { start: null, end: null, eventId: null, title: 'broken', location: null, description: null }
+        ]);
+
+        expect(result).toEqual([{
+            start: new Date('2026-10-14T18:00:00Z'), end: new Date('2026-10-14T20:00:00Z'),
+            eventId: null, title: null, location: null, description: null
+        }]);
+    });
 });

@@ -16,7 +16,9 @@ import { FriendshipFilter, SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
 import { UserWithStatusDTO } from '../../models/user.model';
 import { Conversation } from '../../models/chat.model';
-import { UserCardComponent } from '../user-card/user-card';
+import { ClosenessAnswer, ClosenessChange, UserCardComponent } from '../user-card/user-card';
+import { FriendSummary } from '../../models/friendship.model';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AddFriendDialogComponent } from '../add-friend-dialog/add-friend-dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
 
@@ -54,6 +56,9 @@ export class UserSearchComponent implements OnInit {
     readonly tabLabels = ['Amis', 'Demandes envoyées', 'Demandes reçues'];
 
     private readonly users = signal<UserWithStatusDTO[]>([]);
+
+    /** On the friends tab, the closeness of each friendship, by user id. */
+    readonly friendships = signal<ReadonlyMap<string, FriendSummary>>(new Map());
 
     readonly searchQuery = signal('');
     readonly isLoading = signal(false);
@@ -132,6 +137,11 @@ export class UserSearchComponent implements OnInit {
         this.error.set(null);
 
         const friendsMode = this.isFriendsMode();
+        if (friendsMode && this.filterForActiveTab() === 'FRIENDS') {
+            this.loadFriendships();
+            return;
+        }
+        this.friendships.set(new Map());
         const request$ = friendsMode
             ? this.socialService.searchUsers(this.filterForActiveTab())
             : this.socialService.searchUsers();
@@ -156,6 +166,48 @@ export class UserSearchComponent implements OnInit {
                     this.isLoading.set(false);
                 }
             });
+    }
+
+    /** The friends tab reads the friendships, which carry the closeness the cards show. */
+    private loadFriendships(): void {
+        this.socialService.listFriendships()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (friendships) => {
+                    this.friendships.set(new Map(friendships.map(friendship => [friendship.userId, friendship])));
+                    this.users.set(friendships.map(friendship => ({
+                        userId: friendship.userId,
+                        userName: friendship.userName,
+                        profilePicUrl: friendship.profilePicUrl,
+                        relationStatus: 'FRIENDS'
+                    })));
+                    this.isLoading.set(false);
+                },
+                error: (err) => {
+                    this.logger.error('UserSearchComponent', 'Error loading friendships:', err);
+                    this.error.set('Impossible de charger vos amis');
+                    this.isLoading.set(false);
+                }
+            });
+    }
+
+    friendshipOf(user: UserWithStatusDTO): FriendSummary | null {
+        return this.friendships().get(user.userId) ?? null;
+    }
+
+    onClosenessChange(change: ClosenessChange): void {
+        this.runThenReload(
+            this.socialService.requestCloseness(change.user.userId, change.closeness),
+            'Error changing closeness:',
+            'Impossible de changer la proximité'
+        );
+    }
+
+    onClosenessAnswer(answer: ClosenessAnswer): void {
+        const request$ = answer.accept
+            ? this.socialService.acceptCloseness(answer.user.userId)
+            : this.socialService.declineCloseness(answer.user.userId);
+        this.runThenReload(request$, 'Error answering closeness proposal:', 'Impossible de répondre à la proposition');
     }
 
     /**
@@ -244,7 +296,10 @@ export class UserSearchComponent implements OnInit {
                 error: (err: unknown) => {
                     this.logger.error('UserSearchComponent', logMessage, err);
                     this.isLoading.set(false);
-                    this.error.set(userMessage);
+                    // 409: the friend changed the friendship at the same time.
+                    this.error.set(err instanceof HttpErrorResponse && err.status === 409
+                        ? 'Votre ami a modifié votre relation au même moment. Rechargez et réessayez.'
+                        : userMessage);
                 }
             });
     }

@@ -1,0 +1,34 @@
+:host {
+    display: contents;
+}
+
+.friend-block {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    border-left: 3px solid #a855f7;
+    background: rgba(168, 85, 247, 0.12);
+    font-size: 11px;
+    color: #7e22ce;
+
+    &.busy {
+        background: repeating-linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0 6px, rgba(168, 85, 247, 0.18) 6px 12px);
+        font-style: italic;
+    }
+}
+
+.friend-block-title {
+    font-weight: 700;
+}
+
+.friend-block-location {
+    opacity: 0.8;
+}

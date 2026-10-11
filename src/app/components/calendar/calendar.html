@@ -26,6 +26,10 @@
       </div>
 
       <div class="header-controls">
+        @if (viewMode() !== 'month' && friendships().length > 0) {
+          <app-friend-overlay-picker [friendships]="friendships()" [selected]="overlayFriendId()"
+            (selectedChange)="overlayFriendId.set($event)" />
+        }
         <div class="view-toggle">
           <button [class.active]="viewMode() === 'month'" (click)="toggleView('month')">Month</button>
           <button [class.active]="viewMode() === 'week'" (click)="toggleView('week')">Week</button>
@@ -42,6 +46,12 @@
         </div>
       </div>
     </div>
+
+    @if (viewMode() !== 'month' && (overlayLegend() || overlayError())) {
+      <p class="friend-overlay-legend" [class.error]="overlayError()">
+        {{ overlayError() ?? overlayLegend() }}
+      </p>
+    }
 
     <!-- Month View Layout -->
     @if (viewMode() === 'month') {
@@ -127,6 +137,8 @@
                     <span class="selection-time">New Event</span>
                   </div>
                 </div>
+                <!-- Overlaid friend's calendar, under the user's own events and never in the way of a drag -->
+                <app-friend-blocks [blocks]="friendBlocksFor(day.date)" />
                 <div class="hours-container" (mouseup)="onTimeMouseUp($event)"
                   (touchend)="onTimeMouseUp($event)" (touchmove)="onTouchMove($event)">
                   @for (hour of hours; track hour) {
