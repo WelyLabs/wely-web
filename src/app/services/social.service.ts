@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { RelationStatus, UserNodeDTO, UserWithStatusDTO } from '../models/user.model';
+import { Closeness, FriendSummary, Friendship } from '../models/friendship.model';
 
 /** Filters the social service accepts on its user listing. */
 export type FriendshipFilter = 'FRIENDS' | 'PENDING_INCOMING' | 'PENDING_OUTGOING';
@@ -31,6 +32,24 @@ export class SocialService {
     listFriends(): Observable<UserNodeDTO[]> {
         const params = new HttpParams().set('friendshipStatus', 'FRIENDS');
         return this.http.get<UserNodeDTO[]>(`${this.apiUrl}/users`, { params });
+    }
+
+    /** My friends, each with the closeness of the friendship and any proposal pending. */
+    listFriendships(): Observable<FriendSummary[]> {
+        return this.http.get<FriendSummary[]>(`${this.apiUrl}/relationships`);
+    }
+
+    /** Proposes a higher closeness, or steps down to a lower one at once. */
+    requestCloseness(friendId: string, closeness: Closeness): Observable<Friendship> {
+        return this.http.put<Friendship>(`${this.apiUrl}/relationships/${friendId}/closeness`, { closeness });
+    }
+
+    acceptCloseness(friendId: string): Observable<Friendship> {
+        return this.http.put<Friendship>(`${this.apiUrl}/relationships/${friendId}/closeness/accept`, {});
+    }
+
+    declineCloseness(friendId: string): Observable<Friendship> {
+        return this.http.put<Friendship>(`${this.apiUrl}/relationships/${friendId}/closeness/decline`, {});
     }
 
     /** Sends a friend request by public tag, `Name#1234`. */

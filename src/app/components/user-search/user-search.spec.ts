@@ -8,6 +8,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { HttpErrorResponse } from '@angular/common/http';
+import { throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BreakpointObserver } from '@angular/cdk/layout';
 
@@ -35,7 +37,11 @@ describe('UserSearchComponent', () => {
             sendFriendRequest: vi.fn().mockReturnValue(of({})),
             acceptFriend: vi.fn().mockReturnValue(of({})),
             rejectFriend: vi.fn().mockReturnValue(of({})),
-            removeFriend: vi.fn().mockReturnValue(of({}))
+            removeFriend: vi.fn().mockReturnValue(of({})),
+            listFriendships: vi.fn().mockReturnValue(of([])),
+            requestCloseness: vi.fn().mockReturnValue(of({})),
+            acceptCloseness: vi.fn().mockReturnValue(of({})),
+            declineCloseness: vi.fn().mockReturnValue(of({}))
         };
         chatServiceMock = {
             getConversation: vi.fn().mockReturnValue(of({ id: 'conv1' }))
@@ -289,5 +295,75 @@ describe('UserSearchComponent', () => {
         component.onChat({ userId: 'user-1' } as any);
         errorSubject.error('err');
         expect(component.error()).toBe('Impossible d\'ouvrir la discussion');
+    });
+
+    describe('friends tab', () => {
+        const lea = { userId: 'lea', userName: 'lea', hashtag: 6000, closeness: 'CLOSE', proposal: 'INTIMATE', proposedByFriend: true };
+        const friendCard = { userId: 'lea', userName: 'lea', relationStatus: 'FRIENDS' } as any;
+
+        beforeEach(() => {
+            socialServiceMock.listFriendships.mockReturnValue(of([lea]));
+            component.isFriendsMode.set(true);
+            component.onTabChange(0);
+        });
+
+        it('loadUsers_shouldReadTheFriendshipsOnTheFriendsTab', () => {
+            expect(socialServiceMock.listFriendships).toHaveBeenCalled();
+            expect(socialServiceMock.searchUsers).not.toHaveBeenCalledWith('FRIENDS');
+            expect(component.filteredUsers()).toEqual([{ userId: 'lea', userName: 'lea', profilePicUrl: undefined, relationStatus: 'FRIENDS' }]);
+        });
+
+        it('friendshipOf_shouldGiveEachCardItsFriendship', () => {
+            expect(component.friendshipOf(friendCard)).toEqual(lea);
+            expect(component.friendshipOf({ ...friendCard, userId: 'someone' })).toBeNull();
+        });
+
+        it('loadUsers_shouldForgetTheFriendshipsOnAnotherTab', () => {
+            component.onTabChange(1);
+
+            expect(component.friendshipOf(friendCard)).toBeNull();
+        });
+
+        it('loadUsers_shouldReportAFailureToLoadFriendships', () => {
+            socialServiceMock.listFriendships.mockReturnValue(throwError(() => new Error('down')));
+
+            component.loadUsers();
+
+            expect(component.error()).toBe('Impossible de charger vos amis');
+            expect(component.isLoading()).toBe(false);
+        });
+
+        it('onClosenessChange_shouldRequestTheLevelThenReload', () => {
+            socialServiceMock.listFriendships.mockClear();
+
+            component.onClosenessChange({ user: friendCard, closeness: 'INTIMATE' });
+
+            expect(socialServiceMock.requestCloseness).toHaveBeenCalledWith('lea', 'INTIMATE');
+            expect(socialServiceMock.listFriendships).toHaveBeenCalled();
+        });
+
+        it('onClosenessAnswer_shouldAcceptOrDecline', () => {
+            component.onClosenessAnswer({ user: friendCard, accept: true });
+            component.onClosenessAnswer({ user: friendCard, accept: false });
+
+            expect(socialServiceMock.acceptCloseness).toHaveBeenCalledWith('lea');
+            expect(socialServiceMock.declineCloseness).toHaveBeenCalledWith('lea');
+        });
+
+        it('onClosenessChange_shouldExplainAConcurrentChange', () => {
+            socialServiceMock.requestCloseness.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+
+            component.onClosenessChange({ user: friendCard, closeness: 'INTIMATE' });
+
+            expect(component.error()).toContain('au même moment');
+        });
+
+        it('onClosenessAnswer_shouldReportAnyOtherFailure', () => {
+            socialServiceMock.acceptCloseness.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+            component.onClosenessAnswer({ user: friendCard, accept: true });
+
+            expect(component.error()).toBe('Impossible de répondre à la proposition');
+        });
     });
 });

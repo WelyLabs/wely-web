@@ -1,0 +1,10 @@
+<label class="friend-overlay-picker">
+    <mat-icon>layers</mat-icon>
+    <span class="visually-hidden">Superposer le calendrier d'un ami</span>
+    <select [ngModel]="selected()" (ngModelChange)="selectedChange.emit($event)">
+        <option [ngValue]="null">Superposer un ami…</option>
+        @for (friend of friendships(); track friend.userId) {
+            <option [ngValue]="friend.userId">{{ friend.userName }} · {{ closenessLabel(friend) }}</option>
+        }
+    </select>
+</label>

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { EventCreateRequest } from '../../services/event.service';
+import { EventCreateRequest, Visibility } from '../../services/event.service';
 import { FindSlotComponent, TimeWindow } from '../find-slot/find-slot';
 
 /** Where the popover sits relative to the slot that opened it. */
@@ -18,6 +18,13 @@ export interface DragOffset {
     x: number;
     y: number;
 }
+
+/** The visibility choices, in the order shown. */
+export const VISIBILITY_OPTIONS: readonly { value: Visibility; label: string; icon: string; hint: string }[] = [
+    { value: 'FRIENDS', label: 'Amis', icon: 'group', hint: 'Vos amis le voient dans leur fil' },
+    { value: 'PUBLIC', label: 'Public', icon: 'public', hint: 'Tout le monde le voit' },
+    { value: 'PRIVATE', label: 'Privé', icon: 'lock', hint: 'Vos amis ne voient que « occupé »' }
+];
 
 /** Elements that keep their own pointer behaviour instead of starting a drag. */
 const INTERACTIVE = 'input, textarea, button, select, label, a, [role="option"]';
@@ -71,6 +78,11 @@ export class QuickEventPopoverComponent {
      * is only ever read, and `save` carries the draft out explicitly.
      */
     readonly draft = linkedSignal(() => ({ ...this.data() }));
+
+    readonly visibilityOptions = VISIBILITY_OPTIONS;
+    readonly visibility = computed<Visibility>(() => this.draft().visibility ?? 'FRIENDS');
+    readonly visibilityHint = computed(() =>
+        VISIBILITY_OPTIONS.find(option => option.value === this.visibility())?.hint ?? '');
 
     /** Back to where the popover opened, next to its slot, whenever a new slot is opened. */
     readonly offset = linkedSignal<EventCreateRequest, DragOffset>({ source: this.data, computation: () => ({ x: 0, y: 0 }) });

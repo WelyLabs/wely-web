@@ -1,12 +1,15 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of, switchMap } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
+import { EventService, FeedEvent, EventCreateRequest, FriendCalendarEntry } from '../../services/event.service';
+import { SocialService } from '../../services/social.service';
+import { CLOSENESS_LABELS, FriendSummary } from '../../models/friendship.model';
 
 /** How often the now-line is repositioned. */
 const TIME_MARKER_REFRESH_MS = 60000;
@@ -29,6 +32,20 @@ function atHour(day: Date, hour: number): Date {
   return date;
 }
 
+/** Midnight at the start of the given day. */
+function startOfDay(day: Date): Date {
+  const date = new Date(day);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+/** What the friend's closeness discloses, for the legend under the header. */
+const OVERLAY_LEGENDS: Readonly<Record<string, string>> = {
+  FRIEND: 'vous voyez ses moments occupés, et le détail de ce que vous pouvez voir vous-même',
+  CLOSE: 'vous voyez aussi le titre des événements de personnes que vous ne connaissez pas',
+  INTIMATE: 'vous voyez tout, sauf ses événements privés'
+};
+
 /** Six rows of seven, so the month grid never changes height between months. */
 const MONTH_GRID_CELLS = 42;
 const DAYS_IN_WEEK = 7;
@@ -50,6 +67,8 @@ export interface CalendarEvent {
 }
 
 import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
+import { FriendBlock, FriendBlocksComponent } from '../friend-blocks/friend-blocks';
+import { FriendOverlayPickerComponent } from '../friend-overlay-picker/friend-overlay-picker';
 
 /** How many event titles a month cell names before it starts counting the rest. */
 const MONTH_CELL_EVENTS = 3;
@@ -73,7 +92,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent],
+  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, FriendBlocksComponent, FriendOverlayPickerComponent],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -84,6 +103,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly el = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly socialService = inject(SocialService);
 
   readonly currentDate = signal(new Date());
   readonly days = signal<CalendarDay[]>([]);
@@ -136,6 +156,82 @@ export class CalendarComponent implements OnInit, OnDestroy {
    */
   readonly events = signal<CalendarEvent[]>([]);
 
+  /** Friends whose calendar can be laid over the week or day view. */
+  readonly friendships = signal<FriendSummary[]>([]);
+  readonly overlayFriendId = signal<string | null>(null);
+  readonly overlayError = signal<string | null>(null);
+  readonly overlayFriend = computed(() =>
+    this.friendships().find(friend => friend.userId === this.overlayFriendId()) ?? null);
+  readonly overlayLegend = computed(() => {
+    const friend = this.overlayFriend();
+    return friend ? `${friend.userName} est « ${CLOSENESS_LABELS[friend.closeness]} » : ${OVERLAY_LEGENDS[friend.closeness]}.` : null;
+  });
+
+  /** Which friend, over which days: equal requests do not refetch when the days are merely rebuilt. */
+  private readonly overlayRequest = computed(() => {
+    const friendId = this.overlayFriendId();
+    const days = this.days();
+    if (!friendId || this.viewMode() === 'month' || days.length === 0) {
+      return null;
+    }
+    const from = startOfDay(days[0].date);
+    const to = startOfDay(days[days.length - 1].date);
+    to.setDate(to.getDate() + 1);
+    return { friendId, from, to };
+  }, {
+    equal: (a, b) => a === b || (!!a && !!b && a.friendId === b.friendId
+      && a.from.getTime() === b.from.getTime() && a.to.getTime() === b.to.getTime())
+  });
+
+  /** The overlaid friend's entries; switchMap drops the answer for a week already left. */
+  readonly friendEntries = toSignal(toObservable(this.overlayRequest).pipe(
+    switchMap(request => {
+      this.overlayError.set(null);
+      if (!request) {
+        return of<FriendCalendarEntry[]>([]);
+      }
+      return this.eventService.getFriendCalendar(request.friendId, request.from, request.to).pipe(
+        catchError((err: unknown) => {
+          this.logger.error('CalendarComponent', 'Could not load a friend calendar', err);
+          this.overlayError.set('Impossible de charger ce calendrier.');
+          return of<FriendCalendarEntry[]>([]);
+        }));
+    })), { initialValue: [] });
+
+  /** The friend's entries per day, by `toDateString()`, each cut to the day it is drawn on. */
+  readonly friendBlocks = computed(() => {
+    const hourHeight = this.hourHeight();
+    const byDay = new Map<string, FriendBlock[]>();
+    for (const day of this.days()) {
+      const dayStart = startOfDay(day.date);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const blocks = this.friendEntries()
+        .filter(entry => entry.start < dayEnd && entry.end > dayStart)
+        .map(entry => {
+          const from = Math.max(entry.start.getTime(), dayStart.getTime());
+          const to = Math.min(entry.end.getTime(), dayEnd.getTime());
+          return {
+            top: (from - dayStart.getTime()) / HOUR_MS * hourHeight,
+            height: Math.max((to - from) / HOUR_MS * hourHeight, 4),
+            title: entry.title,
+            location: entry.location
+          };
+        });
+      byDay.set(day.date.toDateString(), blocks);
+    }
+    return byDay;
+  });
+
+  friendBlocksFor(date: Date): FriendBlock[] {
+    return this.friendBlocks().get(date.toDateString()) ?? [];
+  }
+
+  /** Matches the hour rows of the stylesheet: 60px on a phone, 80px otherwise. */
+  private hourHeight(): number {
+    return window.innerWidth <= 768 ? 60 : 80;
+  }
+
   // Range selection, drag to create
   isSelectingRange = false;
   selectionStartHour: number | null = null;
@@ -169,6 +265,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Started once, outside the subscription. It used to be created inside it, so every emission
     // of subscribedEvents$ started another interval and only the last handle was kept — the rest
     // ran until the tab closed, each one repainting the now-line every minute.
+    // Only friends can be overlaid; without wely-social the picker simply stays hidden.
+    this.socialService.listFriendships()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: friendships => this.friendships.set(friendships),
+        error: (err: unknown) => this.logger.error('CalendarComponent', 'Could not load friendships', err)
+      });
+
     this.updateTimePosition();
     this.timeUpdateInterval = setInterval(() => this.updateTimePosition(), TIME_MARKER_REFRESH_MS);
   }
@@ -670,8 +774,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const start = (from - dayStart.getTime()) / HOUR_MS;
     const duration = (to - from) / HOUR_MS;
 
-    const isMobile = window.innerWidth <= 768;
-    const hourHeight = isMobile ? 60 : 80;
+    const hourHeight = this.hourHeight();
 
     // Ensure at least a small line (4px) is visible
     const height = Math.max(duration * hourHeight, 4);

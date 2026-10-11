@@ -279,4 +279,31 @@ describe('QuickEventPopoverComponent', () => {
             expect(card().style.translate).toBe('60px -50px');
         });
     });
+
+    describe('visibility', () => {
+        it('visibility_shouldDefaultToFriends', () => {
+            expect(component.visibility()).toBe('FRIENDS');
+            expect(component.visibilityHint()).toContain('amis');
+        });
+
+        it('update_shouldCarryTheChosenVisibilityIntoTheSavedDraft', () => {
+            const emitted: EventCreateRequest[] = [];
+            component.save.subscribe(value => emitted.push(value));
+            component.update('title', 'Secret');
+
+            component.update('visibility', 'PRIVATE');
+            component.onSave();
+
+            expect(component.visibility()).toBe('PRIVATE');
+            expect(emitted[0].visibility).toBe('PRIVATE');
+        });
+
+        it('template_shouldMarkTheActiveChoice', () => {
+            component.update('visibility', 'PUBLIC');
+            fixture.detectChanges();
+
+            const active = fixture.nativeElement.querySelector('.visibility-chip.active') as HTMLElement;
+            expect(active.textContent).toContain('Public');
+        });
+    });
 });

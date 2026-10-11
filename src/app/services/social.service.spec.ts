@@ -99,4 +99,40 @@ describe('SocialService', () => {
         expect(req.request.method).toBe('DELETE');
         req.flush({});
     });
+
+    it('should list friendships', () => {
+        const friendships = [{ userId: 'u-1', userName: 'Alice', hashtag: 1, closeness: 'CLOSE', proposal: null, proposedByFriend: false }];
+        let received: unknown;
+        service.listFriendships().subscribe(list => received = list);
+
+        const req = httpMock.expectOne(`${apiUrl}/relationships`);
+        expect(req.request.method).toBe('GET');
+        req.flush(friendships);
+        expect(received).toEqual(friendships);
+    });
+
+    it('should request a closeness level', () => {
+        service.requestCloseness('u-1', 'INTIMATE').subscribe();
+
+        const req = httpMock.expectOne(`${apiUrl}/relationships/u-1/closeness`);
+        expect(req.request.method).toBe('PUT');
+        expect(req.request.body).toEqual({ closeness: 'INTIMATE' });
+        req.flush({});
+    });
+
+    it('should accept a proposed closeness', () => {
+        service.acceptCloseness('u-1').subscribe();
+
+        const req = httpMock.expectOne(`${apiUrl}/relationships/u-1/closeness/accept`);
+        expect(req.request.method).toBe('PUT');
+        req.flush({});
+    });
+
+    it('should decline a proposed closeness', () => {
+        service.declineCloseness('u-1').subscribe();
+
+        const req = httpMock.expectOne(`${apiUrl}/relationships/u-1/closeness/decline`);
+        expect(req.request.method).toBe('PUT');
+        req.flush({});
+    });
 });

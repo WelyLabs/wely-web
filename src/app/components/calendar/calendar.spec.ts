@@ -6,6 +6,9 @@ import { EventService, FeedEvent, EventCreateRequest } from '../../services/even
 import { Router } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { SocialService } from '../../services/social.service';
+import { FriendSummary } from '../../models/friendship.model';
+import { throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('CalendarComponent', () => {
@@ -13,6 +16,10 @@ describe('CalendarComponent', () => {
     let fixture: ComponentFixture<CalendarComponent>;
     let eventServiceMock: Partial<EventService>;
     let routerMock: Partial<Router>;
+    let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
+    const friendships: FriendSummary[] = [
+        { userId: 'lea', userName: 'lea', hashtag: 6000, closeness: 'CLOSE', proposal: null, proposedByFriend: false }
+    ];
 
     const mockEvents: FeedEvent[] = [
         { id: '101', title: 'External Event', organizerId: 'org1', startDate: new Date(), endDate: new Date(), location: 'Loc', image: 'img', description: '...' }
@@ -23,16 +30,22 @@ describe('CalendarComponent', () => {
         eventServiceMock = {
             refreshEvents: vi.fn(),
             subscribedEvents$: of(mockEvents),
-            createEvent: vi.fn().mockReturnValue(of(mockEvents[0]))
+            createEvent: vi.fn().mockReturnValue(of(mockEvents[0])),
+            getFriendCalendar: vi.fn().mockReturnValue(of([]))
         };
         routerMock = {
             navigate: vi.fn()
+        };
+
+        socialServiceMock = {
+            listFriendships: vi.fn().mockReturnValue(of(friendships))
         };
 
         await TestBed.configureTestingModule({
             imports: [CalendarComponent, NoopAnimationsModule],
             providers: [
                 { provide: EventService, useValue: eventServiceMock },
+                { provide: SocialService, useValue: socialServiceMock },
                 { provide: Router, useValue: routerMock }
             ]
         }).compileComponents();
@@ -486,6 +499,116 @@ describe('CalendarComponent', () => {
 
             expect(spy).toHaveBeenCalledWith(expect.anything(), undefined,
                 new Date(2026, 9, 12, 18), new Date(2026, 9, 14, 10));
+        });
+    });
+
+    describe('friend overlay', () => {
+        const monday = new Date(2026, 9, 12);
+
+        const showWeekOf = (day: Date) => {
+            component.currentDate.set(day);
+            component.toggleView('week');
+            fixture.detectChanges();
+        };
+
+        it('ngOnInit_shouldLoadTheFriendsThatCanBeOverlaid', () => {
+            expect(component.friendships()).toEqual(friendships);
+        });
+
+        it('ngOnInit_shouldKeepThePickerHidden_whenFriendshipsCannotBeLoaded', () => {
+            socialServiceMock.listFriendships.mockReturnValue(throwError(() => new Error('down')));
+            const other = TestBed.createComponent(CalendarComponent);
+            other.detectChanges();
+
+            expect(other.componentInstance.friendships()).toEqual([]);
+        });
+
+        it('friendEntries_shouldFetchTheFriendsCalendarForTheVisibleWeek', () => {
+            showWeekOf(monday);
+
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+
+            expect(eventServiceMock.getFriendCalendar).toHaveBeenCalledWith('lea', new Date(2026, 9, 12), new Date(2026, 9, 19));
+        });
+
+        it('friendEntries_shouldNotFetch_inMonthView', () => {
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+
+            expect(eventServiceMock.getFriendCalendar).not.toHaveBeenCalled();
+        });
+
+        it('friendEntries_shouldNotRefetch_whenTheSameWeekIsRebuilt', () => {
+            showWeekOf(monday);
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+
+            component.generateCalendar();
+            fixture.detectChanges();
+
+            expect(eventServiceMock.getFriendCalendar).toHaveBeenCalledTimes(1);
+        });
+
+        it('friendBlocksFor_shouldCutAnEntryAcrossMidnightIntoEachDay', () => {
+            (eventServiceMock.getFriendCalendar as ReturnType<typeof vi.fn>).mockReturnValue(of([{
+                start: new Date(2026, 9, 17, 20), end: new Date(2026, 9, 18, 2),
+                eventId: null, title: null, location: null, description: null
+            }]));
+            showWeekOf(monday);
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+            const hourHeight = window.innerWidth <= 768 ? 60 : 80;
+
+            expect(component.friendBlocksFor(new Date(2026, 9, 17))).toEqual([
+                { top: 20 * hourHeight, height: 4 * hourHeight, title: null, location: null }]);
+            expect(component.friendBlocksFor(new Date(2026, 9, 18))).toEqual([
+                { top: 0, height: 2 * hourHeight, title: null, location: null }]);
+            expect(component.friendBlocksFor(new Date(2026, 9, 14))).toEqual([]);
+        });
+
+        it('template_shouldDrawBusyBlocksAndDisclosedTitles', () => {
+            (eventServiceMock.getFriendCalendar as ReturnType<typeof vi.fn>).mockReturnValue(of([
+                { start: new Date(2026, 9, 14, 18), end: new Date(2026, 9, 14, 20), eventId: null, title: 'Poterie', location: null, description: null },
+                { start: new Date(2026, 9, 15, 19), end: new Date(2026, 9, 15, 21), eventId: null, title: null, location: null, description: null }
+            ]));
+            showWeekOf(monday);
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+
+            const blocks = Array.from(fixture.nativeElement.querySelectorAll('.friend-block')) as HTMLElement[];
+            expect(blocks.map(block => block.textContent?.trim())).toEqual(['Poterie', 'Occupé']);
+            expect(blocks[1].classList).toContain('busy');
+        });
+
+        it('overlayLegend_shouldExplainWhatTheClosenessShows', () => {
+            component.overlayFriendId.set('lea');
+
+            expect(component.overlayLegend()).toContain('« Proche »');
+        });
+
+        it('overlayError_shouldBeShown_whenTheCalendarCannotBeLoaded', () => {
+            (eventServiceMock.getFriendCalendar as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() => new Error('403')));
+            showWeekOf(monday);
+
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+
+            expect(component.overlayError()).toBe('Impossible de charger ce calendrier.');
+            expect(component.friendEntries()).toEqual([]);
+        });
+
+        it('overlayFriendId_shouldClearTheBlocks_whenSetBackToNone', () => {
+            (eventServiceMock.getFriendCalendar as ReturnType<typeof vi.fn>).mockReturnValue(of([
+                { start: new Date(2026, 9, 14, 18), end: new Date(2026, 9, 14, 20), eventId: null, title: null, location: null, description: null }]));
+            showWeekOf(monday);
+            component.overlayFriendId.set('lea');
+            fixture.detectChanges();
+
+            component.overlayFriendId.set(null);
+            fixture.detectChanges();
+
+            expect(component.friendBlocksFor(new Date(2026, 9, 14))).toEqual([]);
         });
     });
 
