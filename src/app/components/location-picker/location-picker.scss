@@ -1,0 +1,93 @@
+.location-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--text-secondary, #6b7280);
+    }
+
+    input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        font-size: 14px;
+        outline: none;
+        color: inherit;
+    }
+}
+
+.suggestions {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            background: rgba(59, 130, 246, 0.08);
+            outline: none;
+        }
+
+        mat-icon {
+            flex-shrink: 0;
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            color: var(--brand-blue, #3b82f6);
+        }
+    }
+}
+
+.location-map {
+    position: relative;
+    height: 220px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #e8eef3;
+    // The popover is dragged by its background: the map keeps the pointer to itself.
+    touch-action: none;
+    cursor: crosshair;
+}
+
+.map-status {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary, #6b7280);
+}
+
+.hint {
+    font-size: 11px;
+    color: var(--text-secondary, #6b7280);
+}
+

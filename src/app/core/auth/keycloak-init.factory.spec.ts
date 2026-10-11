@@ -1,5 +1,7 @@
 import { LoggerService } from '../logging/logger.service';
-import { initializeKeycloak } from './keycloak-init.factory';
+import { initializeKeycloak, isOwnApiRequest } from './keycloak-init.factory';
+import { HttpRequest } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -67,5 +69,27 @@ describe('initializeKeycloak', () => {
         expect(authServiceMock.markStartupFailed).toHaveBeenCalled();
         expect(authServiceMock.scheduleTokenRefresh).not.toHaveBeenCalled();
         expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
+    });
+});
+
+describe('isOwnApiRequest', () => {
+    it('isOwnApiRequest_shouldSignCallsToOurApi', () => {
+        expect(isOwnApiRequest(new HttpRequest('GET', `${environment.apiUrl}/events-service/events`))).toBe(true);
+    });
+
+    it('isOwnApiRequest_shouldNeverSendTheTokenToAThirdParty', () => {
+        expect(isOwnApiRequest(new HttpRequest('GET', 'https://photon.komoot.io/api/?q=Lyon'))).toBe(false);
+    });
+});
+
+describe('initializeKeycloak bearer options', () => {
+    it('initializeKeycloak_shouldRestrictTheTokenToOurApi', async () => {
+        const keycloak = { init: vi.fn().mockResolvedValue(false) };
+        const auth = { scheduleTokenRefresh: vi.fn(), markStartupFailed: vi.fn() };
+        const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
+        await initializeKeycloak(keycloak as never, {} as never, auth as never, logger as never)();
+
+        expect(keycloak.init.mock.calls[0][0].shouldAddToken).toBe(isOwnApiRequest);
     });
 });

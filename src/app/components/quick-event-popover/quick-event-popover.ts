@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { EventCreateRequest, Visibility } from '../../services/event.service';
 import { FindSlotComponent, TimeWindow } from '../find-slot/find-slot';
+import { LocationPickerComponent } from '../location-picker/location-picker';
+import { Place } from '../../models/place.model';
 
 /** Where the popover sits relative to the slot that opened it. */
 export interface PopoverPosition {
@@ -27,7 +29,7 @@ export const VISIBILITY_OPTIONS: readonly { value: Visibility; label: string; ic
 ];
 
 /** Elements that keep their own pointer behaviour instead of starting a drag. */
-const INTERACTIVE = 'input, textarea, button, select, label, a, [role="option"]';
+const INTERACTIVE = 'input, textarea, button, select, label, a, [role="option"], .location-map';
 
 /**
  * Bounds a drag delta so the popover stays on screen: `before` and `after` are the room left
@@ -64,7 +66,7 @@ interface DragState {
 @Component({
     selector: 'app-quick-event-popover',
     standalone: true,
-    imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, FindSlotComponent],
+    imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, FindSlotComponent, LocationPickerComponent],
     templateUrl: './quick-event-popover.html',
     styleUrl: './quick-event-popover.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -146,6 +148,23 @@ export class QuickEventPopoverComponent {
         const { startDate, endDate } = this.draft();
         return !!endDate && startDate.toDateString() !== endDate.toDateString();
     });
+
+    /** Whether the map is open under the location field; closed again on each new slot. */
+    readonly pickingLocation = linkedSignal({ source: this.data, computation: () => false });
+
+    /** The place picked on the map, if any, for the map to show when it opens again. */
+    readonly pickedPlace = computed<Place | null>(() => {
+        const { location, coordinates } = this.draft();
+        return coordinates ? { label: location, coordinates } : null;
+    });
+
+    toggleLocationPicker(): void {
+        this.pickingLocation.update(open => !open);
+    }
+
+    onPlacePicked(place: Place): void {
+        this.draft.update(draft => ({ ...draft, location: place.label, coordinates: place.coordinates }));
+    }
 
     toggleFindSlot(): void {
         this.findingSlot.update(open => !open);

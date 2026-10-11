@@ -160,6 +160,60 @@ describe('QuickEventPopoverComponent', () => {
         });
     });
 
+    describe('picking the location on a map', () => {
+        const place = { label: 'Le Transbordeur, Villeurbanne', coordinates: { latitude: 45.784, longitude: 4.8608 } };
+
+        it('toggleLocationPicker_shouldShowThenHideTheMap', () => {
+            component.toggleLocationPicker();
+            expect(component.pickingLocation()).toBe(true);
+
+            component.toggleLocationPicker();
+            expect(component.pickingLocation()).toBe(false);
+        });
+
+        it('pickingLocation_shouldCloseWhenANewSlotIsOpened', () => {
+            component.toggleLocationPicker();
+
+            fixture.componentRef.setInput('data', request());
+
+            expect(component.pickingLocation()).toBe(false);
+        });
+
+        it('onPlacePicked_shouldFillTheLocationAndKeepThePoint', () => {
+            component.onPlacePicked(place);
+
+            expect(component.draft()).toMatchObject({ location: place.label, coordinates: place.coordinates });
+            expect(component.pickedPlace()).toEqual(place);
+        });
+
+        it('pickedPlace_shouldBeNullForATypedLocation', () => {
+            component.update('location', 'Chez moi');
+
+            expect(component.pickedPlace()).toBeNull();
+        });
+
+        it('onSave_shouldSendTheCoordinates', () => {
+            const saved = vi.fn();
+            component.save.subscribe(saved);
+            component.update('title', 'Concert');
+            component.onPlacePicked(place);
+
+            component.onSave();
+
+            expect(saved).toHaveBeenCalledWith(expect.objectContaining({ coordinates: place.coordinates }));
+        });
+
+        it('onPointerDown_shouldLeaveTheMapItsOwnDrag', () => {
+            const map = document.createElement('div');
+            map.className = 'location-map';
+            const event = { button: 0, target: map, preventDefault: vi.fn() } as unknown as PointerEvent;
+
+            component.onPointerDown(event);
+
+            expect(component.dragging()).toBe(false);
+        });
+    });
+
     describe('spansSeveralDays', () => {
         it('should be false for a slot within one day', () => {
             expect(component.spansSeveralDays()).toBe(false);
