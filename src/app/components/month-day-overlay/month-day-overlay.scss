@@ -1,0 +1,42 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    width: 100%;
+}
+
+.loads {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.load {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+
+    .fill {
+        display: block;
+        height: 100%;
+    }
+}
+
+.free-pill {
+    align-self: center;
+    padding: 1px 6px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.18);
+    color: #15803d;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(34, 197, 94, 0.3);
+    }
+}

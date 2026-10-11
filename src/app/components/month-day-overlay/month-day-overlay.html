@@ -1,0 +1,16 @@
+@if (summary().loads.length > 0) {
+    <div class="loads">
+        @for (load of summary().loads; track load.friendName) {
+            <span class="load" [title]="loadLabel(load)" [attr.aria-label]="loadLabel(load)">
+                <span class="fill" [style.width.%]="load.ratio * 100" [style.background]="load.color"></span>
+            </span>
+        }
+    </div>
+}
+@if (summary().commonFree; as free) {
+    <button type="button" class="free-pill" (click)="onOpen($event)" (mousedown)="$event.stopPropagation()"
+        (touchstart)="$event.stopPropagation()"
+        [title]="'Tous libres de ' + (free.start | date:'HH:mm') + ' à ' + (free.end | date:'HH:mm')">
+        {{ free.start | date:'H' }}–{{ free.end | date:'H' }} h
+    </button>
+}

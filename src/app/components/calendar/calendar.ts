@@ -74,7 +74,8 @@ export interface CalendarEvent {
 
 import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
 import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
-import { DayLayout, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, layoutDay } from '../calendar-overlay/overlay-layout';
+import { DayLayout, DaySummary, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, layoutDay, summarizeDay } from '../calendar-overlay/overlay-layout';
+import { MonthDayOverlayComponent } from '../month-day-overlay/month-day-overlay';
 import { FriendOverlayBarComponent } from '../friend-overlay-bar/friend-overlay-bar';
 
 /** How many event titles a month cell names before it starts counting the rest. */
@@ -99,7 +100,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent],
+  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent, MonthDayOverlayComponent],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -175,7 +176,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly overlayRequest = computed(() => {
     const friendIds = this.overlayFriendIds();
     const days = this.days();
-    if (friendIds.length === 0 || this.viewMode() === 'month' || days.length === 0) {
+    if (friendIds.length === 0 || days.length === 0) {
       return null;
     }
     const from = startOfDay(days[0].date);
@@ -205,22 +206,50 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return data.free === null ? 'Les créneaux communs n\'ont pas pu être calculés.' : null;
   });
 
-  /** Each visible day's overlay, by `toDateString()`: friends' lanes and the common free time. */
-  readonly dayLayouts = computed(() => {
-    const data = this.overlayData();
+  /** One lane per overlaid friend, in mention order, with the entries fetched for them. */
+  private readonly overlayLanes = computed<FriendLane[]>(() => {
     const colors = this.overlayColors();
-    const lanes: FriendLane[] = data.calendars.map(calendar => ({
+    return this.overlayData().calendars.map(calendar => ({
       friendName: this.nameOf(calendar.friendId),
       color: colors.get(calendar.friendId) ?? OVERLAY_COLORS[0],
       periods: calendar.entries
     }));
+  });
+
+  /** Week and day views: each column's lanes and common free time, by `toDateString()`. */
+  readonly dayLayouts = computed(() => {
+    if (this.viewMode() === 'month') {
+      return new Map<string, DayLayout>();
+    }
+    const lanes = this.overlayLanes();
+    const free = this.overlayData().free ?? [];
     const hourHeight = this.hourHeight();
-    return new Map(this.days().map(day =>
-      [day.date.toDateString(), layoutDay(day.date, lanes, data.free ?? [], hourHeight)]));
+    return new Map(this.days().map(day => [day.date.toDateString(), layoutDay(day.date, lanes, free, hourHeight)]));
+  });
+
+  /** Month view: each cell's friend loads and common free stretch, by `toDateString()`. */
+  readonly daySummaries = computed(() => {
+    if (this.viewMode() !== 'month' || this.overlayFriendIds().length === 0) {
+      return new Map<string, DaySummary>();
+    }
+    const lanes = this.overlayLanes();
+    const free = this.overlayData().free ?? [];
+    return new Map(this.days().map(day => [day.date.toDateString(), summarizeDay(day.date, lanes, free)]));
   });
 
   overlayFor(date: Date): DayLayout {
     return this.dayLayouts().get(date.toDateString()) ?? { blocks: [], free: [] };
+  }
+
+  summaryFor(date: Date): DaySummary | null {
+    return this.daySummaries().get(date.toDateString()) ?? null;
+  }
+
+  /** From a month cell's free-together pill: that day, in day view, where the detail is. */
+  openDay(date: Date): void {
+    this.currentDate.set(new Date(date));
+    this.selectedDate.set(new Date(date));
+    this.toggleView('day');
   }
 
   onOverlayFriendsChange(friendIds: string[]): void {

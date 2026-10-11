@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    @if (viewMode() !== 'month' && friendships().length > 0) {
+    @if (friendships().length > 0) {
       <app-friend-overlay-bar [friendships]="friendships()" [selected]="overlayFriendIds()"
         [colors]="overlayColors()" [error]="overlayError()" (selectedChange)="onOverlayFriendsChange($event)" />
     }
@@ -77,6 +77,9 @@
                     <li class="day-event more">+{{ hidden }}</li>
                   }
                 </ul>
+              }
+              @if (summaryFor(day.date); as summary) {
+                <app-month-day-overlay [summary]="summary" (openDay)="openDay(day.date)" />
               }
             </div>
           </div>

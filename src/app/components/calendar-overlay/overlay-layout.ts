@@ -10,6 +10,17 @@ export const MAX_OVERLAID_FRIENDS = 4;
 export const OVERLAY_COLORS: readonly string[] = ['#a855f7', '#f97316', '#0d9488', '#e11d48'];
 
 const HOUR_MS = 3_600_000;
+
+/**
+ * Common free time only counts between these hours, local time: free at 3 am is true and useless,
+ * and over a week it buried the evenings that matter. The server cannot apply it, not knowing
+ * the user's time zone.
+ */
+export const USEFUL_FROM_HOUR = 8;
+export const USEFUL_TO_HOUR = 23;
+
+/** In the month view, a day is marked as free together from this long a common stretch. */
+export const MIN_COMMON_FREE_MS = 2 * HOUR_MS;
 /** A block never gets thinner than this, so a short event still shows. */
 const MIN_BLOCK_PX = 4;
 
@@ -57,10 +68,41 @@ export interface DayLayout {
     free: FreeBand[];
 }
 
+/** How much of one friend's useful hours a day takes, for the month view. */
+export interface FriendLoad {
+    friendName: string;
+    color: string;
+    /** Busy share of 8:00–23:00, from 0 to 1. */
+    ratio: number;
+}
+
+/** A month cell's view of the overlay: each friend's load, and the longest common free stretch. */
+export interface DaySummary {
+    loads: FriendLoad[];
+    /** Null unless it lasts at least {@link MIN_COMMON_FREE_MS}. */
+    commonFree: Period | null;
+}
+
 function startOfDay(day: Date): Date {
     const date = new Date(day);
     date.setHours(0, 0, 0, 0);
     return date;
+}
+
+/** 8:00 to 23:00 of the given day, local time. */
+export function usefulHours(day: Date): Period {
+    const start = startOfDay(day);
+    start.setHours(USEFUL_FROM_HOUR);
+    const end = startOfDay(day);
+    end.setHours(USEFUL_TO_HOUR);
+    return { start, end };
+}
+
+/** The part of a period inside a window, or null when they do not overlap. */
+function clip(period: Period, window: Period): Period | null {
+    const start = period.start > window.start ? period.start : window.start;
+    const end = period.end < window.end ? period.end : window.end;
+    return start < end ? { start, end } : null;
 }
 
 /** The part of a period that falls on the day, in pixels from midnight; null if none does. */
@@ -95,10 +137,48 @@ export function layoutDay(day: Date, lanes: readonly FriendLane[], free: readonl
         }] : [];
     }));
 
+    const useful = usefulHours(day);
     const bands = free.flatMap(period => {
-        const placed = place(period, dayStart, dayEnd, hourHeight);
+        const inUsefulHours = clip(period, useful);
+        const placed = inUsefulHours && place(inUsefulHours, dayStart, dayEnd, hourHeight);
         return placed ? [placed] : [];
     });
 
     return { blocks, free: bands };
+}
+
+/** Total time covered by periods that may overlap, counted once. */
+function coveredMs(periods: Period[]): number {
+    const sorted = [...periods].sort((a, b) => a.start.getTime() - b.start.getTime());
+    let total = 0;
+    let reach = -Infinity;
+    for (const { start, end } of sorted) {
+        const from = Math.max(start.getTime(), reach);
+        if (end.getTime() > from) {
+            total += end.getTime() - from;
+        }
+        reach = Math.max(reach, end.getTime());
+    }
+    return total;
+}
+
+export function summarizeDay(day: Date, lanes: readonly FriendLane[], free: readonly Period[]): DaySummary {
+    const useful = usefulHours(day);
+    const usefulMs = useful.end.getTime() - useful.start.getTime();
+
+    const loads = lanes.map(lane => ({
+        friendName: lane.friendName,
+        color: lane.color,
+        ratio: coveredMs(lane.periods.flatMap(period => clip(period, useful) ?? [])) / usefulMs
+    }));
+
+    const longest = free
+        .flatMap(period => clip(period, useful) ?? [])
+        .reduce<Period | null>((best, period) =>
+            !best || period.end.getTime() - period.start.getTime() > best.end.getTime() - best.start.getTime()
+                ? period : best, null);
+    const commonFree = longest && longest.end.getTime() - longest.start.getTime() >= MIN_COMMON_FREE_MS
+        ? longest : null;
+
+    return { loads, commonFree };
 }

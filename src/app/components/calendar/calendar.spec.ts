@@ -545,10 +545,72 @@ describe('CalendarComponent', () => {
             expect(findFreeSlots()).toHaveBeenCalledWith({ friendIds: ['lea', 'hugo'], start: from, end: to, durationMinutes: 30 });
         });
 
-        it('fetchOverlay_shouldNotRun_inMonthView', () => {
+        const showMonthOf = (day: Date) => {
+            component.currentDate.set(day);
+            component.toggleView('month');
+            fixture.detectChanges();
+        };
+
+        it('fetchOverlay_shouldCoverTheWholeMonthGrid_inMonthView', () => {
+            showMonthOf(new Date(2026, 9, 1));
+
             overlay('lea');
 
-            expect(getFriendCalendar()).not.toHaveBeenCalled();
+            // October 2026 starts on a Thursday: the grid runs from Monday 28 September, six weeks.
+            const from = new Date(2026, 8, 28);
+            const to = new Date(2026, 10, 9);
+            expect(getFriendCalendar()).toHaveBeenCalledWith('lea', from, to);
+            expect(findFreeSlots()).toHaveBeenCalledWith({ friendIds: ['lea'], start: from, end: to, durationMinutes: 30 });
+        });
+
+        it('summaryFor_shouldGiveEachMonthCellTheLoadsAndTheCommonFreeStretch', () => {
+            getFriendCalendar().mockReturnValue(of([entry(new Date(2026, 9, 14, 8), new Date(2026, 9, 14, 13))]));
+            findFreeSlots().mockReturnValue(of([{ start: new Date(2026, 9, 14, 19), end: new Date(2026, 9, 15, 8) }]));
+            showMonthOf(new Date(2026, 9, 1));
+
+            overlay('lea');
+
+            const summary = component.summaryFor(new Date(2026, 9, 14));
+            expect(summary?.loads.map(load => [load.friendName, load.ratio])).toEqual([['lea', 5 / 15]]);
+            expect(summary?.commonFree).toEqual({ start: new Date(2026, 9, 14, 19), end: new Date(2026, 9, 14, 23) });
+            expect(fixture.nativeElement.querySelectorAll('app-month-day-overlay').length).toBe(42);
+            expect(fixture.nativeElement.querySelectorAll('.free-pill').length).toBe(1);
+        });
+
+        it('summaryFor_shouldBeNull_withoutOverlaidFriends', () => {
+            showMonthOf(new Date(2026, 9, 1));
+
+            expect(component.summaryFor(new Date(2026, 9, 14))).toBeNull();
+            expect(fixture.nativeElement.querySelector('app-month-day-overlay')).toBeNull();
+        });
+
+        it('overlayFor_shouldBeEmpty_inMonthView', () => {
+            getFriendCalendar().mockReturnValue(of([entry(new Date(2026, 9, 14, 8), new Date(2026, 9, 14, 13))]));
+            showMonthOf(new Date(2026, 9, 1));
+
+            overlay('lea');
+
+            expect(component.overlayFor(new Date(2026, 9, 14))).toEqual({ blocks: [], free: [] });
+        });
+
+        it('openDay_shouldShowThatDayInDayView', () => {
+            showMonthOf(new Date(2026, 9, 1));
+
+            component.openDay(new Date(2026, 9, 14));
+
+            expect(component.viewMode()).toBe('day');
+            expect(component.days().map(day => day.date)).toEqual([new Date(2026, 9, 14)]);
+        });
+
+        it('overlayFor_shouldOnlyShowTheCommonFreeTimeBetweenEightAndEleven', () => {
+            findFreeSlots().mockReturnValue(of([{ start: new Date(2026, 9, 13, 23), end: new Date(2026, 9, 14, 10) }]));
+            showWeekOf(monday);
+
+            overlay('lea');
+
+            const hourHeight = window.innerWidth <= 768 ? 60 : 80;
+            expect(component.overlayFor(new Date(2026, 9, 14)).free).toEqual([{ top: 8 * hourHeight, height: 2 * hourHeight }]);
+            expect(component.overlayFor(new Date(2026, 9, 13)).free).toEqual([]);
         });
 
         it('fetchOverlay_shouldNotRefetch_whenTheSameWeekIsRebuilt', () => {

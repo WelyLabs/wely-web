@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FriendLane, layoutDay } from './overlay-layout';
+import { FriendLane, layoutDay, summarizeDay, usefulHours } from './overlay-layout';
 
 describe('layoutDay', () => {
     const HOUR = 80;
@@ -47,13 +47,51 @@ describe('layoutDay', () => {
         expect(blocks[0].height).toBe(4);
     });
 
-    it('layoutDay_shouldPlaceTheCommonFreeTimeAcrossTheColumn', () => {
+    it('layoutDay_shouldPlaceTheCommonFreeTimeWithinUsefulHoursOnly', () => {
         const { free } = layoutDay(wednesday, [], [
             { start: at(13, 22), end: at(14, 9) },
-            { start: at(14, 20), end: at(14, 23) },
+            { start: at(14, 20), end: at(15, 1) },
+            { start: at(14, 2), end: at(14, 6) },
             { start: at(16, 9), end: at(16, 10) }
         ], HOUR);
 
-        expect(free).toEqual([{ top: 0, height: 9 * HOUR }, { top: 20 * HOUR, height: 3 * HOUR }]);
+        expect(free).toEqual([{ top: 8 * HOUR, height: HOUR }, { top: 20 * HOUR, height: 3 * HOUR }]);
+    });
+
+    it('usefulHours_shouldRunFromEightToEleven', () => {
+        expect(usefulHours(wednesday)).toEqual({ start: at(14, 8), end: at(14, 23) });
+    });
+
+    it('summarizeDay_shouldGiveEachFriendTheShareOfUsefulHoursTheyAreBusy', () => {
+        const { loads } = summarizeDay(wednesday, [
+            lane('lea', '#a', [at(14, 9), at(14, 12), 'x'], [at(14, 11), at(14, 14), null]),
+            lane('hugo', '#b', [at(14, 0), at(14, 7), null]),
+            lane('sarah', '#c', [at(14, 20), at(15, 2), null])
+        ], []);
+
+        expect(loads.map(load => [load.friendName, load.color, load.ratio])).toEqual([
+            ['lea', '#a', 5 / 15],
+            ['hugo', '#b', 0],
+            ['sarah', '#c', 3 / 15]
+        ]);
+    });
+
+    it('summarizeDay_shouldKeepTheLongestCommonFreeStretch_ofTwoHoursOrMore', () => {
+        const { commonFree } = summarizeDay(wednesday, [], [
+            { start: at(14, 8), end: at(14, 9) },
+            { start: at(14, 19), end: at(15, 3) }
+        ]);
+
+        expect(commonFree).toEqual({ start: at(14, 19), end: at(14, 23) });
+    });
+
+    it('summarizeDay_shouldNotMarkADay_whenTheCommonFreeTimeIsShorterThanTwoHours', () => {
+        const { commonFree } = summarizeDay(wednesday, [], [
+            // 21:30 to 6:00 is long, but only 1h30 of it falls before 23:00.
+            { start: new Date(2026, 9, 14, 21, 30), end: at(15, 6) },
+            { start: at(14, 10), end: new Date(2026, 9, 14, 11, 45) }
+        ]);
+
+        expect(commonFree).toBeNull();
     });
 });
