@@ -249,5 +249,13 @@ describe('MainLayoutComponent', () => {
         expect(component.navItems.map(item => item.route)).toEqual(['/calendar', '/feed', '/users', '/conversations']);
         expect(component.navItems.find(item => item.route === '/conversations')?.label).toBe('Messages');
     });
+
+    it('template_shouldNotRepeatMessagesInTheProfileMenus', () => {
+        fixture.detectChanges();
+        const menus = fixture.nativeElement.querySelectorAll('.user-menu, .mobile-menu-items') as NodeListOf<HTMLElement>;
+
+        menus.forEach(menu => expect(menu.querySelector('[routerlink="/conversations"]')).toBeNull());
+        expect(fixture.nativeElement.textContent).not.toContain('Mes Discussions');
+    });
 });
 
