@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Route, Type } from '@angular/router';
+import { Type } from '@angular/core';
+import { Route } from '@angular/router';
 import { routes } from './app.routes';
 import { authGuard } from './core/guards/auth.guard';
 import { LandingPageComponent } from './components/landing-page/landing-page';

@@ -107,7 +107,9 @@ describe('AuthService', () => {
 
     it('should retry token update later on failure', async () => {
         // 1. Setup failure mock
-        (keycloakMock.updateToken as any).mockReturnValue(Promise.reject('error'));
+        // Rejected when called, like the real updateToken: a promise rejected up front sits
+        // unhandled until the timer fires, which native promises report (zone.js's did not).
+        (keycloakMock.updateToken as any).mockImplementation(() => Promise.reject('error'));
         (keycloakMock.getKeycloakInstance as any).mockClear();
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
