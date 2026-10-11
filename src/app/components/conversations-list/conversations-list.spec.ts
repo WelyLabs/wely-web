@@ -192,11 +192,15 @@ describe('ConversationsListComponent', () => {
         it('loadPresence_shouldShowTheDotOnlyForAPartnerOnline', () => {
             chatServiceMock.getPresence.mockImplementation((id: string) => of({ userId: id, online: id === 'lea', lastSeenAt: null }));
 
-            load([withLea(), withLea({ id: 'c-bob', participantIds: ['me', 'bob'] })]);
+            // Fixed dates: the list sorts by them, and two "now"s a millisecond apart flipped the order.
+            load([
+                withLea({ updatedAt: '2026-10-11T18:00:00Z' }),
+                withLea({ id: 'c-bob', participantIds: ['me', 'bob'], updatedAt: '2026-10-11T17:00:00Z' })
+            ]);
 
             expect(chatServiceMock.getPresence).toHaveBeenCalledWith('lea');
             expect(chatServiceMock.getPresence).toHaveBeenCalledWith('bob');
-            expect(component.rows().map(row => row.online)).toEqual([true, false]);
+            expect(component.rows().map(row => [row.conversation.id, row.online])).toEqual([['c-lea', true], ['c-bob', false]]);
             expect(fixture.nativeElement.querySelectorAll('.status-indicator.online').length).toBe(1);
         });
 
