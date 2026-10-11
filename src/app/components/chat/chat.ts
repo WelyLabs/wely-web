@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of, switchMap, timer } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { ActivatedRoute } from '@angular/router';
@@ -8,8 +9,38 @@ import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
 import { ChatService, PendingMessage } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, Message } from '../../models/chat.model';
+import { Conversation, Message, Presence } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
+
+/** How often the other participant's presence is re-read: wely-chat refreshes it every 30 s. */
+const PRESENCE_POLL_MS = 30_000;
+
+/**
+ * "En ligne", or when the person was last seen, in French: "Vu à 14:32" today, "Vu hier à 09:10",
+ * "Vu le 3 oct." before. Null when there is nothing to say.
+ */
+export function presenceLabel(presence: Presence | null, now: Date = new Date()): string | null {
+    if (!presence) {
+        return null;
+    }
+    if (presence.online) {
+        return 'En ligne';
+    }
+    if (!presence.lastSeenAt) {
+        return null;
+    }
+    const seen = new Date(presence.lastSeenAt);
+    const time = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(seen);
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (seen.toDateString() === now.toDateString()) {
+        return `Vu à ${time}`;
+    }
+    if (seen.toDateString() === yesterday.toDateString()) {
+        return `Vu hier à ${time}`;
+    }
+    return `Vu le ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(seen)}`;
+}
 
 /** How long the browser is given to settle before a whole batch of history is prepended. */
 const HISTORY_PREPEND_DELAY_MS = 50;
@@ -57,6 +88,23 @@ export class ChatComponent implements OnInit {
     readonly chatMessages = signal<ChatMessage[]>([]);
 
     readonly conversationTitle = computed(() => this.conversation()?.title ?? null);
+
+    /** The other participant, once the conversation is loaded. */
+    private readonly partnerId = signal<string | null>(null);
+
+    /**
+     * Their presence, re-read every {@link PRESENCE_POLL_MS} while the conversation is open. It
+     * used to be a hardcoded « En ligne ». A failed read shows nothing rather than a stale answer.
+     */
+    readonly partnerPresence = toSignal(toObservable(this.partnerId).pipe(
+        switchMap(partnerId => partnerId
+            ? timer(0, PRESENCE_POLL_MS).pipe(switchMap(() =>
+                this.chatService.getPresence(partnerId).pipe(catchError(() => of(null)))))
+            : of(null))
+    ), { initialValue: null });
+
+    readonly presenceText = computed(() => presenceLabel(this.partnerPresence()));
+    readonly isPartnerOnline = computed(() => this.partnerPresence()?.online === true);
 
     ngOnInit(): void {
         const currentUser = this.userService.getCurrentUserValue();
@@ -130,6 +178,7 @@ export class ChatComponent implements OnInit {
             this.friendId = conversation.participantIds
                 .find(id => id !== this.currentUserId) ?? null;
         }
+        this.partnerId.set(this.friendId);
 
         this.hasMoreHistory.set(conversation.bucketIndex > 0);
         this.messages.set(sorted);

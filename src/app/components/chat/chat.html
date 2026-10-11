@@ -11,7 +11,9 @@
         </div>
         <div class="text-info">
           <h2 class="chat-title">{{ conversationTitle() ?? 'Chargement...' }}</h2>
-          <span class="status-text">En ligne</span>
+          @if (presenceText(); as status) {
+            <span class="status-text" [class.offline]="!isPartnerOnline()">{{ status }}</span>
+          }
         </div>
       </div>
     </header>

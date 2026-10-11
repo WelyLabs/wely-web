@@ -33,6 +33,14 @@ export interface Conversation {
     bucketIndex: number;
 }
 
+/** Whether a user is connected to the chat right now, and when they were last seen. */
+export interface Presence {
+    userId: string;
+    online: boolean;
+    /** ISO instant; null for someone who never opened the chat. */
+    lastSeenAt: string | null;
+}
+
 export interface MessageBucket {
     conversationId: string;
     bucketIndex: number;

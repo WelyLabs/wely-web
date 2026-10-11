@@ -89,6 +89,17 @@ describe('ChatService', () => {
     await expect(pending).resolves.toEqual([]);
   });
 
+  it('lit la présence d’un participant', async () => {
+    const presence = { userId: 'friend-1', online: true, lastSeenAt: '2026-10-11T18:00:00Z' };
+    const pending = firstValueFrom(service.getPresence('friend-1'));
+
+    const request = httpMock.expectOne(`${apiUrl}/presence/friend-1`);
+    expect(request.request.method).toBe('GET');
+    request.flush(presence);
+
+    await expect(pending).resolves.toEqual(presence);
+  });
+
   it('récupère ou crée une conversation à partir de l’ami visé', async () => {
     const pending = firstValueFrom(service.getConversation('friend-1'));
 

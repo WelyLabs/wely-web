@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ChatComponent } from './chat';
+import { ChatComponent, presenceLabel } from './chat';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
@@ -41,6 +41,7 @@ describe('ChatComponent', () => {
 
         chatServiceMock = {
             getConversationById: vi.fn().mockReturnValue(of(mockConv)),
+            getPresence: vi.fn().mockReturnValue(of({ userId: 'friend', online: true, lastSeenAt: null })),
             getMessages: vi.fn().mockReturnValue(of({ messages: [], bucketIndex: 0 })),
             sendMessage: vi.fn(),
             messages$: chatMessagesSubject.asObservable(),
@@ -224,4 +225,65 @@ describe('ChatComponent', () => {
         component.onLoadMoreMessages();
         expect(chatServiceMock.getMessages).toHaveBeenCalledWith('conv1', 0);
     });
+
+    describe('presence', () => {
+        // The first read is on timer(0, …): a macrotask after the conversation loads.
+        const settle = async (target = fixture) => {
+            await new Promise(resolve => setTimeout(resolve));
+            target.detectChanges();
+        };
+
+        beforeEach(() => settle());
+
+        it('partnerPresence_shouldReadTheOtherParticipant', () => {
+            expect(chatServiceMock.getPresence).toHaveBeenCalledWith('friend');
+            expect(component.presenceText()).toBe('En ligne');
+            expect(component.isPartnerOnline()).toBe(true);
+        });
+
+        it('template_shouldShowTheStatus', () => {
+            fixture.detectChanges();
+            const status = fixture.nativeElement.querySelector('.status-text') as HTMLElement;
+
+            expect(status.textContent?.trim()).toBe('En ligne');
+            expect(status.classList).not.toContain('offline');
+        });
+
+        it('partnerPresence_shouldShowNothing_whenItCannotBeRead', async () => {
+            chatServiceMock.getPresence.mockReturnValue(throwError(() => new Error('404')));
+            const other = TestBed.createComponent(ChatComponent);
+            other.detectChanges();
+            await settle(other);
+
+            expect(other.componentInstance.presenceText()).toBeNull();
+            expect(other.nativeElement.querySelector('.status-text')).toBeNull();
+        });
+    });
+
+    describe('presenceLabel', () => {
+        const now = new Date(2026, 9, 11, 18, 0);
+        const seen = (date: Date) => ({ userId: 'friend', online: false, lastSeenAt: date.toISOString() });
+
+        it('presenceLabel_shouldSayOnline', () => {
+            expect(presenceLabel({ userId: 'friend', online: true, lastSeenAt: null }, now)).toBe('En ligne');
+        });
+
+        it('presenceLabel_shouldGiveTheTime_forToday', () => {
+            expect(presenceLabel(seen(new Date(2026, 9, 11, 14, 32)), now)).toBe('Vu à 14:32');
+        });
+
+        it('presenceLabel_shouldSayYesterday', () => {
+            expect(presenceLabel(seen(new Date(2026, 9, 10, 9, 5)), now)).toBe('Vu hier à 09:05');
+        });
+
+        it('presenceLabel_shouldGiveTheDate_beforeThat', () => {
+            expect(presenceLabel(seen(new Date(2026, 9, 3, 9, 5)), now)).toBe('Vu le 3 oct.');
+        });
+
+        it('presenceLabel_shouldSayNothing_forSomeoneNeverSeenOrUnknown', () => {
+            expect(presenceLabel({ userId: 'friend', online: false, lastSeenAt: null }, now)).toBeNull();
+            expect(presenceLabel(null, now)).toBeNull();
+        });
+    });
 });
+

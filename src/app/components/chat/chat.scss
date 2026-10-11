@@ -135,6 +135,16 @@
                     background: currentColor;
                     border-radius: 50%;
                 }
+
+                // Last seen: grey, without the green dot.
+                &.offline {
+                    color: var(--text-tertiary);
+                    font-weight: 500;
+
+                    &::before {
+                        display: none;
+                    }
+                }
             }
         }
     }

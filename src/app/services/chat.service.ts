@@ -18,13 +18,7 @@ import {
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { Buffer } from 'buffer';
 import { environment } from '../../environments/environment';
-import {
-  Conversation,
-  ConversationSummary,
-  Message,
-  MessageBucket,
-  MessageType,
-} from '../models/chat.model';
+import { Conversation, ConversationSummary, Message, MessageBucket, MessageType, Presence } from '../models/chat.model';
 import { UserService } from './user.service';
 import { LoggerService } from '../core/logging/logger.service';
 
@@ -184,6 +178,11 @@ export class ChatService implements OnDestroy {
 
   getConversationById(conversationId: string): Observable<Conversation> {
     return this.http.get<Conversation>(`${this.apiUrl}/conversations/${conversationId}`);
+  }
+
+  /** A conversation partner's presence. wely-chat answers 404 for anyone else. */
+  getPresence(userId: string): Observable<Presence> {
+    return this.http.get<Presence>(`${this.apiUrl}/presence/${userId}`);
   }
 
   /** Reads one page of history, oldest pages having the lower bucket index. */
