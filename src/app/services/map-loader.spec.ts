@@ -38,6 +38,28 @@ describe('map-loader', () => {
         expect(() => foldAttribution(document.createElement('div'))).not.toThrow();
     });
 
+    it('namedExports_shouldUnwrapTheDefaultOfAProductionBuild', async () => {
+        const { namedExports } = await import('./map-loader');
+        const library = { Map: class {} };
+
+        expect(namedExports({ default: library } as never)).toBe(library);
+    });
+
+    it('namedExports_shouldKeepTheNamedExportsOfTheDevServer', async () => {
+        const { namedExports } = await import('./map-loader');
+        const module = { Map: class {} };
+
+        expect(namedExports(module as never)).toBe(module);
+    });
+
+    it('loadMapLibre_shouldResolveToTheLibraryWrappedInDefault', async () => {
+        const Map = class {};
+        vi.doMock('maplibre-gl', () => ({ default: { Map } }));
+        const { loadMapLibre } = await import('./map-loader');
+
+        expect((await loadMapLibre()).Map).toBe(Map);
+    });
+
     it('toLngLat_shouldPutTheLongitudeFirst', async () => {
         const { toLngLat } = await import('./map-loader');
 

@@ -21,12 +21,20 @@ let library: Promise<MapLibre> | null = null;
 export function loadMapLibre(): Promise<MapLibre> {
     if (!library) {
         addStylesheet();
-        library = import('maplibre-gl').catch(error => {
+        library = import('maplibre-gl').then(namedExports).catch(error => {
             library = null;
             throw error;
         });
     }
     return library;
+}
+
+/**
+ * The library itself, whichever way the bundler wrapped it. MapLibre 5 ships as UMD: the dev
+ * server exposes its named exports, the production build only a `default` holding them.
+ */
+export function namedExports(module: object): MapLibre {
+    return ('Map' in module ? module : (module as { default: MapLibre }).default) as MapLibre;
 }
 
 function addStylesheet(): void {
