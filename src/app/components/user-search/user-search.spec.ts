@@ -1,10 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { UserWithStatusDTO } from '../../models/user.model';
 import { UserSearchComponent } from './user-search';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -28,10 +27,8 @@ describe('UserSearchComponent', () => {
     let routerMock: any;
     let dialogMock: any;
     let breakpointObserverMock: any;
-    let routeDataSubject: Subject<any>;
 
     beforeEach(async () => {
-        routeDataSubject = new Subject();
         socialServiceMock = {
             searchUsers: vi.fn().mockReturnValue(of([])),
             sendFriendRequest: vi.fn().mockReturnValue(of({})),
@@ -61,13 +58,7 @@ describe('UserSearchComponent', () => {
         };
 
         await TestBed.configureTestingModule({
-            imports: [UserSearchComponent, NoopAnimationsModule],
-            providers: [
-                {
-                    provide: ActivatedRoute,
-                    useValue: { data: routeDataSubject.asObservable() }
-                }
-            ]
+            imports: [UserSearchComponent, NoopAnimationsModule]
         }).overrideComponent(UserSearchComponent, {
             set: {
                 providers: [
@@ -90,19 +81,16 @@ describe('UserSearchComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should load users on init and search mode', () => {
-        routeDataSubject.next({ mode: 'search' });
-        expect(socialServiceMock.searchUsers).toHaveBeenCalled();
-        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
-        component.loadUsers();
-        expect(component.filteredUsers().length).toBe(1);
-        expect(component.filteredUsers()[0].relationStatus).toBeUndefined();
+    it('ngOnInit_shouldOpenOnTheFriendsTab', () => {
+        expect(component.activeTabIndex()).toBe(0);
+        expect(socialServiceMock.listFriendships).toHaveBeenCalled();
+        expect(socialServiceMock.searchUsers).not.toHaveBeenCalled();
     });
 
     it('should filter locally as the query changes', () => {
         // filteredUsers is a computed, so setting the query is enough — there is no longer an
         // onSearchChange for the template to remember to call.
-        socialServiceMock.searchUsers.mockReturnValue(of([
+        socialServiceMock.listFriendships.mockReturnValue(of([
             { userId: 'user-1', userName: 'Alice' },
             { userId: 'user-2', userName: 'Bob' }
         ]));
@@ -115,7 +103,7 @@ describe('UserSearchComponent', () => {
     });
 
     it('should ignore case and surrounding spaces in the query', () => {
-        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
+        socialServiceMock.listFriendships.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
 
         component.searchQuery.set('  ALI  ');
@@ -124,7 +112,7 @@ describe('UserSearchComponent', () => {
     });
 
     it('should show everyone again when the query is cleared', () => {
-        socialServiceMock.searchUsers.mockReturnValue(of([
+        socialServiceMock.listFriendships.mockReturnValue(of([
             { userId: 'user-1', userName: 'Alice' },
             { userId: 'user-2', userName: 'Bob' }
         ]));
@@ -140,7 +128,7 @@ describe('UserSearchComponent', () => {
     it('should keep the query when the list is reloaded', () => {
         // The old code reset filteredUsers to the full list on every load, so a search was
         // silently undone whenever a tab change or a friend action refreshed the results.
-        socialServiceMock.searchUsers.mockReturnValue(of([
+        socialServiceMock.listFriendships.mockReturnValue(of([
             { userId: 'user-1', userName: 'Alice' },
             { userId: 'user-2', userName: 'Bob' }
         ]));
@@ -159,7 +147,6 @@ describe('UserSearchComponent', () => {
     });
 
     it('should handle tab changes and inferred status for PENDING_OUTGOING', () => {
-        component.isFriendsMode.set(true);
         component.onTabChange(1);
         expect(component.activeTabIndex()).toBe(1);
         expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_OUTGOING');
@@ -169,7 +156,6 @@ describe('UserSearchComponent', () => {
     });
 
     it('should handle tab changes and inferred status for PENDING_INCOMING', () => {
-        component.isFriendsMode.set(true);
         component.onTabChange(2);
         expect(component.activeTabIndex()).toBe(2);
         expect(socialServiceMock.searchUsers).toHaveBeenCalledWith('PENDING_INCOMING');
@@ -227,6 +213,7 @@ describe('UserSearchComponent', () => {
 
     it('should handle error when loading users', () => {
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        component.activeTabIndex.set(1);
         socialServiceMock.searchUsers.mockReturnValue(new Subject().asObservable()); // Stuck loading
         component.loadUsers();
         expect(component.isLoading()).toBe(true);
@@ -238,15 +225,6 @@ describe('UserSearchComponent', () => {
         expect(component.error()).toBe('Impossible de charger les utilisateurs');
         expect(component.isLoading()).toBe(false);
         expect(consoleSpy).toHaveBeenCalled();
-    });
-
-    it('onAddFriend ne déclenche aucune demande d’ami', () => {
-        // L'événement (addFriend) du template arrive ici, mais rien n'est envoyé :
-        // l'ajout passe en réalité par AddFriendDialogComponent, qui demande un tag.
-        // Stub non implémenté ; ce test constate l'absence d'appel réseau.
-        component.onAddFriend({ userId: 'user-1' } as unknown as UserWithStatusDTO);
-
-        expect(socialServiceMock.sendFriendRequest).not.toHaveBeenCalled();
     });
 
     it('should accept friend and reload', () => {
@@ -303,8 +281,7 @@ describe('UserSearchComponent', () => {
 
         beforeEach(() => {
             socialServiceMock.listFriendships.mockReturnValue(of([lea]));
-            component.isFriendsMode.set(true);
-            component.onTabChange(0);
+                component.onTabChange(0);
         });
 
         it('loadUsers_shouldReadTheFriendshipsOnTheFriendsTab', () => {

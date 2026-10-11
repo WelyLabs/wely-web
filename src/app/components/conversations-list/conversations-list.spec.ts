@@ -140,7 +140,7 @@ describe('ConversationsListComponent', () => {
         expect(component.getAvatarInitial('')).toBe('?');
     });
 
-    it('template_shouldOpenTheUserSearchFromTheNewConversationButton', () => {
+    it('template_shouldOpenTheFriendsFromTheNewConversationButton', () => {
         // Without RouterLink in the component's imports, the routerLink attribute was inert and
         // the click went nowhere.
         const navigate = vi.spyOn(routerMock, 'navigateByUrl').mockResolvedValue(true);
@@ -148,7 +148,7 @@ describe('ConversationsListComponent', () => {
         (fixture.nativeElement.querySelector('.new-conv-btn') as HTMLButtonElement).click();
 
         expect(navigate).toHaveBeenCalled();
-        expect(String(navigate.mock.calls[0][0])).toBe('/users');
+        expect(String(navigate.mock.calls[0][0])).toBe('/friends');
     });
 
     describe('rows', () => {

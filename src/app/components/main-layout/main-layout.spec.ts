@@ -245,17 +245,22 @@ describe('MainLayoutComponent', () => {
         expect(component.showMobileMenu()).toBe(false);
     });
 
-    it('navItems_shouldLeadToMessages', () => {
-        expect(component.navItems.map(item => item.route)).toEqual(['/calendar', '/feed', '/users', '/conversations']);
+    it('navItems_shouldLeadToFriendsAndMessages', () => {
+        expect(component.navItems.map(item => item.route)).toEqual(['/calendar', '/feed', '/friends', '/conversations']);
+        expect(component.navItems.find(item => item.route === '/friends')?.label).toBe('Amis');
         expect(component.navItems.find(item => item.route === '/conversations')?.label).toBe('Messages');
     });
 
-    it('template_shouldNotRepeatMessagesInTheProfileMenus', () => {
+    it('template_shouldNotRepeatTheNavigationInTheProfileMenus', () => {
         fixture.detectChanges();
         const menus = fixture.nativeElement.querySelectorAll('.user-menu, .mobile-menu-items') as NodeListOf<HTMLElement>;
 
-        menus.forEach(menu => expect(menu.querySelector('[routerlink="/conversations"]')).toBeNull());
+        menus.forEach(menu => {
+            expect(menu.querySelector('[routerlink="/conversations"]')).toBeNull();
+            expect(menu.querySelector('[routerlink="/friends"]')).toBeNull();
+        });
         expect(fixture.nativeElement.textContent).not.toContain('Mes Discussions');
+        expect(fixture.nativeElement.textContent).not.toContain('Mes Amis');
     });
 });
 

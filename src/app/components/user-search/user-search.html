@@ -1,17 +1,8 @@
 <div class="user-search-container">
   <div class="search-header">
     <div class="title-group">
-      <h1>
-        @if (isFriendsMode()) {
-          Mes Amis
-        }
-        @if (!isFriendsMode()) {
-          Recherche
-        }
-      </h1>
-      <p class="subtitle">
-        {{ isFriendsMode() ? 'Gérez vos relations et contacts' : 'Découvrez de nouveaux membres' }}
-      </p>
+      <h1>Mes Amis</h1>
+      <p class="subtitle">Gérez vos relations et contacts</p>
     </div>
 
     <div class="header-actions">
@@ -30,25 +21,20 @@
       </div>
 
       <!-- Add Friend Action -->
-      @if (isFriendsMode()) {
-        <button mat-flat-button class="invite-btn" (click)="openAddFriendDialog()">
-          <mat-icon>person_add</mat-icon>
-          <span>Inviter</span>
-        </button>
-      }
+      <button mat-flat-button class="invite-btn" (click)="openAddFriendDialog()">
+        <mat-icon>person_add</mat-icon>
+        <span>Inviter</span>
+      </button>
     </div>
   </div>
 
-  <!-- Segmented Tabs for Friends Mode -->
-  @if (isFriendsMode()) {
-    <div class="tabs-segment-wrapper">
-      <div class="tabs-segment">
-        <button [class.active]="activeTabIndex() === 0" (click)="onTabChange(0)">Amis</button>
-        <button [class.active]="activeTabIndex() === 1" (click)="onTabChange(1)">Invités</button>
-        <button [class.active]="activeTabIndex() === 2" (click)="onTabChange(2)">Reçus</button>
-      </div>
+  <div class="tabs-segment-wrapper">
+    <div class="tabs-segment">
+      <button [class.active]="activeTabIndex() === 0" (click)="onTabChange(0)">Amis</button>
+      <button [class.active]="activeTabIndex() === 1" (click)="onTabChange(1)">Invités</button>
+      <button [class.active]="activeTabIndex() === 2" (click)="onTabChange(2)">Reçus</button>
     </div>
-  }
+  </div>
 
   <!-- Content Sections -->
   <div class="results-content">
@@ -77,8 +63,8 @@
             @for (user of filteredUsers(); track user.userId; let i = $index) {
               <app-user-card [user]="user" [friendship]="friendshipOf(user)"
                 (closenessChange)="onClosenessChange($event)" (closenessAnswer)="onClosenessAnswer($event)"
-                [showFriendBadge]="!isFriendsMode()" [style.animation-delay]="(i * 0.05) + 's'"
-                (addFriend)="onAddFriend($event)" (acceptFriend)="onAcceptFriend($event)"
+                [showFriendBadge]="false" [style.animation-delay]="(i * 0.05) + 's'"
+                (acceptFriend)="onAcceptFriend($event)"
                 (declineFriend)="onDeclineFriend($event)" (removeFriend)="onRemoveFriend($event)"
                 (chat)="onChat($event)">
               </app-user-card>

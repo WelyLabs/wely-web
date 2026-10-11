@@ -36,7 +36,6 @@ describe('routes', () => {
     it.each([
         ['calendar', CalendarComponent],
         ['feed', EventFeedComponent],
-        ['users', UserSearchComponent],
         ['friends', UserSearchComponent],
         ['event/:type/:id', EventDetailsComponent],
         ['profile', UserProfileComponent],
@@ -49,7 +48,7 @@ describe('routes', () => {
         expect(await load(route)).toBe(component);
     });
 
-    it('routes_shouldOpenTheFriendsTabsOnTheFriendsPath', () => {
-        expect(child('friends').data).toEqual({ mode: 'friends' });
+    it('routes_shouldSendTheOldUserDirectoryToTheFriendsPage', () => {
+        expect(child('users').redirectTo).toBe('friends');
     });
 });

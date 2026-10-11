@@ -11,7 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { FriendshipFilter, SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
 import { UserWithStatusDTO } from '../../models/user.model';
@@ -43,7 +43,6 @@ export class UserSearchComponent implements OnInit {
     private readonly logger = inject(LoggerService);
     private readonly socialService = inject(SocialService);
     private readonly chatService = inject(ChatService);
-    private readonly route = inject(ActivatedRoute);
     private readonly breakpointObserver = inject(BreakpointObserver);
     private readonly dialog = inject(MatDialog);
     private readonly router = inject(Router);
@@ -70,9 +69,6 @@ export class UserSearchComponent implements OnInit {
         { initialValue: false }
     );
 
-    /** Set by the route: `/friends` shows relationships, `/users` shows everyone. */
-    readonly isFriendsMode = signal(false);
-
     /**
      * Derived rather than recomputed by hand in two methods, which had to agree on what an empty
      * query means and on resetting the list after every load.
@@ -88,12 +84,7 @@ export class UserSearchComponent implements OnInit {
     });
 
     ngOnInit(): void {
-        this.route.data
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(data => {
-                this.isFriendsMode.set(data['mode'] === 'friends');
-                this.loadUsers();
-            });
+        this.loadUsers();
     }
 
     nextTab(): void {
@@ -136,28 +127,19 @@ export class UserSearchComponent implements OnInit {
         this.isLoading.set(true);
         this.error.set(null);
 
-        const friendsMode = this.isFriendsMode();
-        if (friendsMode && this.filterForActiveTab() === 'FRIENDS') {
+        const filter = this.filterForActiveTab();
+        if (filter === 'FRIENDS') {
             this.loadFriendships();
             return;
         }
         this.friendships.set(new Map());
-        const request$ = friendsMode
-            ? this.socialService.searchUsers(this.filterForActiveTab())
-            : this.socialService.searchUsers();
 
-        request$
+        this.socialService.searchUsers(filter)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (users) => {
-                    // In friends mode the API answers without a relation status, because the tab
-                    // already decided what it is: the filter that was asked for is the answer.
-                    if (friendsMode) {
-                        const inferredStatus = this.filterForActiveTab();
-                        this.users.set(users.map(user => ({ ...user, relationStatus: inferredStatus })));
-                    } else {
-                        this.users.set(users);
-                    }
+                    // The API answers without a relation status: the tab's filter is the answer.
+                    this.users.set(users.map(user => ({ ...user, relationStatus: filter })));
                     this.isLoading.set(false);
                 },
                 error: (err) => {
@@ -208,18 +190,6 @@ export class UserSearchComponent implements OnInit {
             ? this.socialService.acceptCloseness(answer.user.userId)
             : this.socialService.declineCloseness(answer.user.userId);
         this.runThenReload(request$, 'Error answering closeness proposal:', 'Impossible de répondre à la proposition');
-    }
-
-    /**
-     * Not implemented.
-     *
-     * <p>A friend request is sent by tag through {@link AddFriendDialogComponent}, not from a
-     * card: the search results do not carry the hashtag that `wely-social` needs to identify a
-     * user. The card's Add button therefore does nothing yet, and this traces rather than
-     * pretending to succeed.
-     */
-    onAddFriend(user: UserWithStatusDTO): void {
-        this.logger.debug('UserSearchComponent', 'Add friend:', user);
     }
 
     onAcceptFriend(user: UserWithStatusDTO): void {

@@ -19,17 +19,14 @@ export const routes: Routes = [
         children: [
             { path: 'calendar', loadComponent: () => import('./components/calendar/calendar').then(m => m.CalendarComponent) },
             { path: 'feed', loadComponent: () => import('./components/event-feed/event-feed').then(m => m.EventFeedComponent) },
-            { path: 'users', loadComponent: () => import('./components/user-search/user-search').then(m => m.UserSearchComponent) },
             {
                 path: 'event/:type/:id',
                 loadComponent: () => import('./components/event-details/event-details').then(m => m.EventDetailsComponent)
             },
             { path: 'profile', loadComponent: () => import('./components/user-profile/user-profile').then(m => m.UserProfileComponent) },
-            {
-                path: 'friends',
-                loadComponent: () => import('./components/user-search/user-search').then(m => m.UserSearchComponent),
-                data: { mode: 'friends' }
-            },
+            { path: 'friends', loadComponent: () => import('./components/user-search/user-search').then(m => m.UserSearchComponent) },
+            // The user directory is gone: friends are added by tag or through events. Old links land on the friends page.
+            { path: 'users', redirectTo: 'friends' },
             {
                 path: 'conversations',
                 loadComponent: () => import('./components/conversations-list/conversations-list').then(m => m.ConversationsListComponent)

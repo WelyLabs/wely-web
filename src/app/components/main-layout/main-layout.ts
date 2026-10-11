@@ -52,8 +52,8 @@ export class MainLayoutComponent implements OnInit {
   readonly navItems = [
     { label: 'Calendrier', icon: 'calendar_today', route: '/calendar' },
     { label: 'Découvrir', icon: 'event_note', route: '/feed' },
-    { label: 'Utilisateurs', icon: 'people', route: '/users' },
-    // Messages is a primary feature: here rather than in the profile menu, where it was hidden behind a hover.
+    // Friends and Messages are primary features: here rather than in the profile menu, hidden behind a hover.
+    { label: 'Amis', icon: 'people', route: '/friends' },
     { label: 'Messages', icon: 'chat_bubble_outline', route: '/conversations' }
   ];
 
