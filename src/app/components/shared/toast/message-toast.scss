@@ -43,7 +43,7 @@
     background: var(--accent-gradient);
     border-radius: 14px;
     color: white;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-blue) 25%, transparent);
     flex-shrink: 0;
 
     mat-icon {

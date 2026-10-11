@@ -30,13 +30,13 @@
     padding: 1px 6px;
     border: none;
     border-radius: 999px;
-    background: rgba(34, 197, 94, 0.18);
-    color: #15803d;
+    background: color-mix(in srgb, var(--success) 18%, transparent);
+    color: var(--success-ink);
     font-size: 10px;
     font-weight: 700;
     cursor: pointer;
 
     &:hover {
-        background: rgba(34, 197, 94, 0.3);
+        background: color-mix(in srgb, var(--success) 30%, transparent);
     }
 }

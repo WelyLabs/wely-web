@@ -6,8 +6,11 @@
 /** At most this many friends side by side: past four, a lane is too narrow to read. */
 export const MAX_OVERLAID_FRIENDS = 4;
 
-/** One colour per lane, in the order friends were mentioned. */
-export const OVERLAY_COLORS: readonly string[] = ['#a855f7', '#f97316', '#0d9488', '#e11d48'];
+/**
+ * One colour per lane, in the order friends were mentioned. The first friend gets the brand
+ * orange; the brand blue is left out, being the colour of the user's own events.
+ */
+export const OVERLAY_COLORS: readonly string[] = ['#f97316', '#8b5cf6', '#0d9488', '#e11d48'];
 
 const HOUR_MS = 3_600_000;
 

@@ -116,12 +116,12 @@
             }
 
             &.swipe-overlay-left {
-                background: rgba(255, 59, 48, 0.9);
+                background: color-mix(in srgb, var(--now-red) 90%, transparent);
                 color: white;
             }
 
             &.swipe-overlay-right {
-                background: rgba(52, 199, 89, 0.9);
+                background: color-mix(in srgb, var(--success) 90%, transparent);
                 color: white;
             }
         }
@@ -240,20 +240,21 @@
             }
 
             &[color="warn"] {
-                background: #FF3B30;
+                background: var(--now-red);
                 color: white;
 
                 &:hover {
-                    background: #FF2D1F;
+                    background: color-mix(in srgb, var(--now-red) 90%, black);
                 }
             }
 
+            // Joining is the feed's main action: it wears the brand gradient, like every primary button.
             &.add-button {
-                background: #34C759;
+                background: var(--accent-gradient);
                 color: white;
 
                 &:hover {
-                    background: #30B350;
+                    filter: brightness(1.05);
                 }
             }
         }

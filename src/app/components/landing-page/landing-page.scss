@@ -33,7 +33,7 @@ $ease: cubic-bezier(0.16, 1, 0.3, 1);
     background: var(--accent-gradient);
     // Same gradient, interpolated in OKLCH: in sRGB its middle is a dull grey-mauve, which
     // shows at headline size. The login screen does the same; the line above is the fallback.
-    background: linear-gradient(135deg in oklch, #3b82f6 0%, #f97316 100%);
+    background: linear-gradient(135deg in oklch, var(--brand-blue) 0%, var(--brand-orange) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -129,7 +129,7 @@ $ease: cubic-bezier(0.16, 1, 0.3, 1);
     font-weight: 500;
     color: var(--text-secondary);
 
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
 }
 
 h1 {
@@ -260,7 +260,7 @@ h1 {
         font-weight: 700;
     }
 
-    &.today span { background: #ff3b30; color: #fff; }
+    &.today span { background: var(--now-red); color: #fff; }
 }
 
 // The app's inline event card: white, 12px radius, gradient accent bar.

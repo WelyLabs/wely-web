@@ -64,11 +64,11 @@
         }
 
         .destructive-btn {
-            background: #ef4444;
+            background: var(--danger);
             color: white;
 
             &:hover {
-                background: #dc2626;
+                background: var(--danger-ink);
             }
         }
     }

@@ -20,7 +20,7 @@
     color: var(--text-secondary);
 
     &.error {
-        color: #dc2626;
+        color: var(--danger-ink);
     }
 }
 
@@ -62,7 +62,7 @@
     padding: 8px 12px;
     border: none;
     border-radius: 12px;
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--brand-tint);
     color: var(--primary-blue);
     font-size: 13px;
     font-weight: 700;
@@ -89,12 +89,12 @@
     margin-bottom: 4px;
     border: none;
     border-radius: 10px;
-    background: rgba(16, 185, 129, 0.1);
+    background: color-mix(in srgb, var(--success) 10%, transparent);
     text-align: left;
     cursor: pointer;
 
     &:hover {
-        background: rgba(16, 185, 129, 0.2);
+        background: color-mix(in srgb, var(--success) 20%, transparent);
     }
 
     .slot-day {

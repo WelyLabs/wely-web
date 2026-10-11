@@ -8,13 +8,13 @@
     right: 0;
     z-index: 0;
     pointer-events: none;
-    background: rgba(34, 197, 94, 0.14);
-    border-top: 1px dashed rgba(22, 163, 74, 0.5);
-    border-bottom: 1px dashed rgba(22, 163, 74, 0.5);
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    border-top: 1px dashed color-mix(in srgb, var(--success) 50%, transparent);
+    border-bottom: 1px dashed color-mix(in srgb, var(--success) 50%, transparent);
 }
 
 .friend-block {
-    --lane-color: #a855f7;
+    --lane-color: var(--brand-orange);
     position: absolute;
     z-index: 1;
     // Never in the way of drag-to-create on the hour cells.

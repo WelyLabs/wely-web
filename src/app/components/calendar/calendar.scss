@@ -249,7 +249,7 @@
             }
 
             &.selected {
-                background: rgba(59, 130, 246, 0.05);
+                background: var(--brand-wash);
                 box-shadow: inset 0 0 0 2px var(--primary-blue);
             }
 
@@ -284,8 +284,8 @@
                         line-height: 1.3;
                         padding: 1px 5px;
                         border-radius: 4px;
-                        background: rgba(16, 185, 129, 0.12);
-                        color: #047857;
+                        background: var(--success-tint);
+                        color: var(--success-ink);
                         text-align: left;
                         /* One line per event: a cell is not tall enough to wrap, and a wrapped
                            title would push the next day's number out of alignment. */
@@ -304,9 +304,9 @@
 
             &.today {
                 .day-number {
-                    background: #ff3b30;
+                    background: var(--now-red);
                     color: white;
-                    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+                    box-shadow: 0 4px 12px var(--now-red-glow);
                 }
             }
         }
@@ -384,10 +384,10 @@
                 }
 
                 &.today {
-                    background: rgba(255, 59, 48, 0.02);
+                    background: var(--now-red-wash);
 
                     .column-header .date-label {
-                        background: #ff3b30;
+                        background: var(--now-red);
                         color: white;
                     }
                 }
@@ -491,20 +491,20 @@
                                 transform: translate(-4px, -50%);
                                 width: 8px;
                                 height: 8px;
-                                background: #ff3b30;
+                                background: var(--now-red);
                                 border-radius: 50%;
-                                box-shadow: 0 0 8px rgba(255, 59, 48, 0.4);
+                                box-shadow: 0 0 8px var(--now-red-glow);
                             }
 
                             .line {
-                                background: #ff3b30;
+                                background: var(--now-red);
                             }
                         }
 
                         .line {
                             flex: 1;
                             height: 2px;
-                            background: rgba(255, 59, 48, 0.8);
+                            background: var(--now-red-line);
                         }
                     }
 
@@ -518,7 +518,7 @@
                         .selection-box {
                             width: 100%;
                             height: 100%;
-                            background: rgba(59, 130, 246, 0.1);
+                            background: var(--brand-tint);
                             border: 2px solid var(--primary-blue);
                             border-radius: 12px;
                             padding: 8px;

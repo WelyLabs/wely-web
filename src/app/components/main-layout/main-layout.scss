@@ -113,7 +113,7 @@
         transition: all 0.3s ease;
 
         &:hover {
-            background: rgba(59, 130, 246, 0.05);
+            background: color-mix(in srgb, var(--brand-blue) 5%, transparent);
         }
 
         .avatar {
@@ -148,7 +148,7 @@
 
         &:hover .avatar {
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-blue) 40%, transparent);
         }
 
         .info {
@@ -200,7 +200,7 @@
                     }
 
                     &:hover {
-                        background: rgba(59, 130, 246, 0.1);
+                        background: var(--brand-tint);
                         color: var(--primary-blue);
                     }
                 }
@@ -253,18 +253,18 @@
                 }
 
                 &:hover {
-                    background: rgba(59, 130, 246, 0.1);
+                    background: var(--brand-tint);
                 }
 
                 &.logout-item {
-                    color: #ef4444;
+                    color: var(--danger);
 
                     &:hover {
-                        background: rgba(239, 68, 68, 0.1);
+                        background: color-mix(in srgb, var(--danger) 10%, transparent);
                     }
 
                     mat-icon {
-                        color: #ef4444;
+                        color: var(--danger);
                     }
                 }
             }
@@ -408,7 +408,7 @@
 
     &.active .avatar-ring {
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 0 4px var(--brand-tint-strong), 0 8px 16px rgba(0, 0, 0, 0.1);
     }
 }
 
@@ -486,7 +486,7 @@
                 font-size: 18px;
                 font-weight: 700;
                 overflow: hidden;
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                box-shadow: 0 4px 12px var(--brand-glow);
 
                 img {
                     width: 100%;
@@ -524,7 +524,7 @@
                     }
 
                     .copy-btn {
-                        background: rgba(59, 130, 246, 0.1);
+                        background: var(--brand-tint);
                         border: none;
                         padding: 4px;
                         border-radius: 6px;
@@ -578,7 +578,7 @@
                 }
 
                 &:active {
-                    background: rgba(59, 130, 246, 0.1);
+                    background: var(--brand-tint);
                     transform: scale(0.98);
 
                     mat-icon {
@@ -587,15 +587,15 @@
                 }
 
                 &.logout-item {
-                    color: #ef4444;
+                    color: var(--danger);
                     margin-top: 4px;
 
                     mat-icon {
-                        color: #ef4444;
+                        color: var(--danger);
                     }
 
                     &:active {
-                        background: rgba(239, 68, 68, 0.1);
+                        background: color-mix(in srgb, var(--danger) 10%, transparent);
                     }
                 }
             }

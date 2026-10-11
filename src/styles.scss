@@ -8,9 +8,28 @@
 @tailwind components;
 @tailwind utilities;
 
-// Define the palettes for your theme using the Material 2 system
-$calendar-app-primary: mat.m2-define-palette(mat.$m2-indigo-palette);
-$calendar-app-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
+// Material components take Wely's colours rather than the default indigo and pink: the brand
+// blue for primary, the brand orange for accent. Shades are Tailwind's blue and orange, whose
+// 500s are the two ends of --accent-gradient.
+$wely-blue: (
+  50: #eff6ff, 100: #dbeafe, 200: #bfdbfe, 300: #93c5fd, 400: #60a5fa, 500: #3b82f6,
+  600: #2563eb, 700: #1d4ed8, 800: #1e40af, 900: #1e3a8a,
+  A100: #dbeafe, A200: #93c5fd, A400: #3b82f6, A700: #1d4ed8,
+  contrast: (50: rgba(black, 0.87), 100: rgba(black, 0.87), 200: rgba(black, 0.87), 300: rgba(black, 0.87),
+    400: rgba(black, 0.87), 500: white, 600: white, 700: white, 800: white, 900: white,
+    A100: rgba(black, 0.87), A200: rgba(black, 0.87), A400: white, A700: white)
+);
+$wely-orange: (
+  50: #fff7ed, 100: #ffedd5, 200: #fed7aa, 300: #fdba74, 400: #fb923c, 500: #f97316,
+  600: #ea580c, 700: #c2410c, 800: #9a3412, 900: #7c2d12,
+  A100: #ffedd5, A200: #fdba74, A400: #f97316, A700: #c2410c,
+  contrast: (50: rgba(black, 0.87), 100: rgba(black, 0.87), 200: rgba(black, 0.87), 300: rgba(black, 0.87),
+    400: rgba(black, 0.87), 500: white, 600: white, 700: white, 800: white, 900: white,
+    A100: rgba(black, 0.87), A200: rgba(black, 0.87), A400: white, A700: white)
+);
+
+$calendar-app-primary: mat.m2-define-palette($wely-blue, 600, 400, 700);
+$calendar-app-accent: mat.m2-define-palette($wely-orange, 500, 300, 700);
 $calendar-app-warn: mat.m2-define-palette(mat.$m2-red-palette);
 
 // Create the theme object. A theme consists of configurations for individual
@@ -30,8 +49,33 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
 
 /* Modern Startup Theme Variables */
 :root {
+  // Brand: the two ends of the Wely gradient. Every blue and orange of the app derives from them.
+  --brand-blue: #3b82f6;
+  --brand-orange: #f97316;
+  // The gradient's middle, interpolated in OKLCH: what sits between the two, e.g. "close" friends.
+  --brand-mid: color-mix(in oklch, var(--brand-blue), var(--brand-orange));
+  // Solid fills and blue text: the brand blue one step darker, which white text and small type
+  // need to stay readable (5.2:1 against white, where --brand-blue reaches 3.7:1).
   --primary-blue: #2563eb;
-  --primary-orange: #f97316;
+  --primary-orange: var(--brand-orange);
+  // Tints of the brand blue, for selected and hovered states.
+  --brand-tint: color-mix(in srgb, var(--brand-blue) 10%, transparent);
+  --brand-tint-strong: color-mix(in srgb, var(--brand-blue) 20%, transparent);
+  --brand-glow: color-mix(in srgb, var(--brand-blue) 30%, transparent);
+  --brand-wash: color-mix(in srgb, var(--brand-blue) 5%, transparent);
+
+  // Status colours, deliberately apart from the brand.
+  --danger: #ef4444;
+  --danger-ink: #dc2626;
+  --success: #22c55e;
+  --success-ink: #15803d;
+  --warning: #f59e0b;
+  // The now-line and today's date, red as in Apple's calendar.
+  --now-red: #ff3b30;
+  --now-red-line: color-mix(in srgb, var(--now-red) 80%, transparent);
+  --now-red-glow: color-mix(in srgb, var(--now-red) 35%, transparent);
+  --now-red-wash: color-mix(in srgb, var(--now-red) 2%, transparent);
+  --success-tint: color-mix(in srgb, var(--success) 12%, transparent);
 
   // Soft, premium background colors from mockup
   --bg-canvas: #fcfaf7;
@@ -55,8 +99,16 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
   --text-secondary: #6b6b6b;
   --text-tertiary: #a1a1a1;
 
-  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #f97316 100%);
+  // The brand gradient. Fallback in sRGB, then OKLCH where supported: in sRGB its middle is a
+  // dull grey-mauve. Same gradient as the login screen and the landing page.
+  --accent-gradient: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-orange) 100%);
   --sidebar-width: 280px;
+}
+
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  :root {
+    --accent-gradient: linear-gradient(135deg in oklch, var(--brand-blue) 0%, var(--brand-orange) 100%);
+  }
 }
 
 html,

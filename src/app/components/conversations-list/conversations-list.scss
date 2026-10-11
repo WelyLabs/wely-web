@@ -39,7 +39,7 @@
         font-weight: 700;
         font-size: 15px;
         padding: 0 24px;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        box-shadow: 0 4px 12px var(--brand-tint-strong);
         transition: all 0.2s ease;
 
         mat-icon {
@@ -51,7 +51,7 @@
 
         &:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 6px 16px var(--brand-glow);
         }
     }
 }
@@ -97,7 +97,7 @@
     &:hover {
         transform: translateY(-4px) scale(1.01);
         box-shadow: var(--shadow-lg);
-        border-color: rgba(59, 130, 246, 0.2);
+        border-color: var(--brand-tint-strong);
 
         &::after {
             opacity: 1;
@@ -130,7 +130,7 @@
         color: white;
         font-size: 20px;
         font-weight: 800;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-blue) 15%, transparent);
         transition: transform 0.3s ease;
     }
 
@@ -145,8 +145,8 @@
         background: #94a3b8;
 
         &.online {
-            background: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            background: var(--success);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 20%, transparent);
         }
     }
 }
@@ -205,7 +205,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 2px 6px var(--brand-glow);
         }
     }
 }
@@ -270,7 +270,7 @@
     }
 
     .error-icon mat-icon {
-        color: #ef4444;
+        color: var(--danger);
     }
 
     h2 {
