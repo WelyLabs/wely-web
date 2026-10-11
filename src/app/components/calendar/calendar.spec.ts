@@ -1,5 +1,3 @@
-import 'zone.js';
-import 'zone.js/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent, CalendarEvent } from './calendar';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
@@ -392,7 +390,7 @@ describe('CalendarComponent', () => {
             column.parentElement.children = columns;
 
             component.viewMode.set('week');
-            component.selectionDate = component.days()[3].date;
+            component.selectionDate.set(component.days()[3].date);
             stubDom(rect(0, 0, 1400, 900), columns, '.day-column');
 
             place(click(0, 0), component.days()[3].date);
@@ -411,7 +409,7 @@ describe('CalendarComponent', () => {
             column.parentElement.children = columns;
 
             component.viewMode.set('week');
-            component.selectionDate = null;
+            component.selectionDate.set(null);
             stubDom(rect(0, 0, 1400, 900), columns, '.day-column');
 
             place(click(0, 0), component.days()[3].date);
@@ -438,11 +436,11 @@ describe('CalendarComponent', () => {
         const wednesday = new Date(2026, 9, 14);
 
         const dragFrom = (day: Date, hour: number) => {
-            component.isSelectingRange = true;
-            component.selectionDate = day;
-            component.selectionEndDate = day;
-            component.selectionStartHour = hour;
-            component.selectionEndHour = hour + 0.5;
+            component.isSelectingRange.set(true);
+            component.selectionDate.set(day);
+            component.selectionEndDate.set(day);
+            component.selectionStartHour.set(hour);
+            component.selectionEndHour.set(hour + 0.5);
         };
 
         it('selectionRange_shouldRunContinuouslyAcrossDays_whenDraggedToALaterDay', () => {
@@ -699,4 +697,70 @@ describe('CalendarComponent', () => {
         });
     });
 
+    describe('event index', () => {
+        const event = (id: string, start: Date, hours = 1): CalendarEvent => ({
+            id, title: id, time: '', description: '', startDate: start,
+            endDate: new Date(start.getTime() + hours * 3_600_000)
+        });
+
+        beforeEach(() => {
+            component.events.set([
+                event('late', new Date(2026, 9, 14, 18, 30)),
+                event('early', new Date(2026, 9, 14, 9)),
+                event('also-nine', new Date(2026, 9, 14, 9, 45)),
+                event('next-day', new Date(2026, 9, 15, 9))
+            ]);
+        });
+
+        it('getEventsForDay_shouldListTheDaysEventsEarliestFirst', () => {
+            expect(component.getEventsForDay(new Date(2026, 9, 14)).map(e => e.id)).toEqual(['early', 'also-nine', 'late']);
+        });
+
+        it('getEventsForHour_shouldKeepOnlyEventsStartingInThatHour', () => {
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9).map(e => e.id)).toEqual(['early', 'also-nine']);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 10)).toEqual([]);
+        });
+
+        it('getEventsForHour_shouldReturnTheSameArray_untilTheEventsChange', () => {
+            // What spares @for a diff on each of the 168 cells at every change detection.
+            const first = component.getEventsForHour(new Date(2026, 9, 14), 9);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9)).toBe(first);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 3)).toBe(component.getEventsForHour(new Date(2026, 9, 16), 3));
+
+            component.events.set([event('other', new Date(2026, 9, 14, 9))]);
+
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9)).not.toBe(first);
+            expect(component.getEventsForHour(new Date(2026, 9, 14), 9).map(e => e.id)).toEqual(['other']);
+        });
+
+        it('monthCellEvents_shouldNameAtMostThree_andCountTheRest', () => {
+            component.events.update(events => [...events, event('fourth', new Date(2026, 9, 14, 21))]);
+
+            expect(component.monthCellEvents(new Date(2026, 9, 14)).map(e => e.id)).toEqual(['early', 'also-nine', 'late']);
+            expect(component.hiddenEventCount(new Date(2026, 9, 14))).toBe(1);
+        });
+    });
+
+    describe('hold to select', () => {
+        it('onTimeMouseDown_shouldShowTheSelectionWhenTheHoldCompletes_withoutAnotherEvent', () => {
+            component.toggleView('week');
+            fixture.detectChanges();
+            vi.useFakeTimers();
+            try {
+                const day = component.days()[2].date;
+                const press = new MouseEvent('mousedown', { clientX: 10, clientY: 0 });
+                Object.defineProperty(press, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
+
+                component.onTimeMouseDown(press, day, 9);
+                vi.advanceTimersByTime(500);
+
+                // Read straight from the signals the template binds: no pointer move needed.
+                expect(component.isSelectingRange()).toBe(true);
+                expect(component.getSelectionStyle(day)).toMatchObject({ display: 'block' });
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+    });
 });
+

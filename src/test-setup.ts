@@ -1,5 +1,4 @@
-import 'zone.js';
-import 'zone.js/testing';
+import { NgModule, provideZonelessChangeDetection } from '@angular/core';
 import { getTestBed } from '@angular/core/testing';
 import {
     BrowserDynamicTestingModule,
@@ -35,10 +34,14 @@ vi.stubGlobal('ResizeObserver', MockResizeObserver);
 (window as any).IntersectionObserver = MockIntersectionObserver;
 (window as any).ResizeObserver = MockResizeObserver;
 
+/** Tests run without zone change detection, like the application. */
+@NgModule({ providers: [provideZonelessChangeDetection()] })
+class ZonelessTestingModule { }
+
 // Initialize TestBed environment safely
 try {
     getTestBed().initTestEnvironment(
-        BrowserDynamicTestingModule,
+        [BrowserDynamicTestingModule, ZonelessTestingModule],
         platformBrowserDynamicTesting()
     );
     console.log('🚀 [TestSetup] Test Environment initialized.');

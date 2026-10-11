@@ -1,5 +1,3 @@
-import 'zone.js';
-import 'zone.js/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatComponent } from './chat';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';

@@ -38,14 +38,32 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
         accent: $calendar-app-accent,
         warn: $calendar-app-warn,
       ),
-      typography: mat.m2-define-typography-config(),
+      // Outfit, the app's face, rather than Material's default Roboto: one font family to
+      // download instead of two.
+      typography: mat.m2-define-typography-config($font-family: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"),
       density: 0,
     ));
 
-// Include theme styles for core and each component used in your app.
-// Alternatively, you can import and @include the theme mixins for each component
-// that you are using.
-@include mat.all-component-themes($calendar-app-theme);
+// Themes for the Material components the app uses, and those only: all-component-themes put
+// every component's styles in styles.css, some sixty of which no screen renders. A component
+// added later needs its mixin here, or it shows unstyled.
+@include mat.core-theme($calendar-app-theme);
+@include mat.button-theme($calendar-app-theme);
+@include mat.icon-button-theme($calendar-app-theme);
+@include mat.fab-theme($calendar-app-theme);
+@include mat.icon-theme($calendar-app-theme);
+@include mat.card-theme($calendar-app-theme);
+@include mat.chips-theme($calendar-app-theme);
+@include mat.dialog-theme($calendar-app-theme);
+@include mat.form-field-theme($calendar-app-theme);
+@include mat.input-theme($calendar-app-theme);
+@include mat.list-theme($calendar-app-theme);
+@include mat.menu-theme($calendar-app-theme);
+@include mat.sidenav-theme($calendar-app-theme);
+@include mat.slider-theme($calendar-app-theme);
+@include mat.snack-bar-theme($calendar-app-theme);
+@include mat.tabs-theme($calendar-app-theme);
+@include mat.toolbar-theme($calendar-app-theme);
 
 /* Modern Startup Theme Variables */
 :root {
@@ -120,6 +138,25 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * No frosted glass on phones. backdrop-filter re-blurs everything behind an element on every
+ * frame it moves or the content under it scrolls — the bottom bar alone blurred 40px of the
+ * page at each scroll step — and phone GPUs are where that shows as jank. Glass surfaces fall
+ * back to their own, now nearly opaque, background.
+ */
+@media (max-width: 768px), (prefers-reduced-transparency: reduce) {
+  :root {
+    --bg-glass: rgba(255, 255, 255, 0.96);
+  }
+
+  *,
+  *::before,
+  *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }
 
 /* Global Box Sizing Reset */
