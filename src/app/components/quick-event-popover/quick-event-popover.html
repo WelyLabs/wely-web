@@ -19,10 +19,25 @@
         <div class="form-group date-group">
             <mat-icon>schedule</mat-icon>
             <div class="time-range">
-                <span>{{ draft().startDate | date:'EEEE, d MMMM' }}</span>
-                <span class="hours">{{ draft().startDate | date:'HH:mm' }} - {{ draft().endDate | date:'HH:mm' }}</span>
+                @if (spansSeveralDays()) {
+                    <span>{{ draft().startDate | date:'EEE d MMM, HH:mm' }}</span>
+                    <span class="hours">→ {{ draft().endDate | date:'EEE d MMM, HH:mm' }}</span>
+                } @else {
+                    <span>{{ draft().startDate | date:'EEEE, d MMMM' }}</span>
+                    <span class="hours">{{ draft().startDate | date:'HH:mm' }} - {{ draft().endDate | date:'HH:mm' }}</span>
+                }
             </div>
         </div>
+
+        @if (searchWindow(); as window) {
+            <button type="button" class="find-slot-toggle" [class.open]="findingSlot()" (click)="toggleFindSlot()">
+                <mat-icon>group</mat-icon>
+                <span>Avec des amis…</span>
+            </button>
+            @if (findingSlot()) {
+                <app-find-slot [window]="window" (picked)="onSlotPicked($event)" />
+            }
+        }
 
         <div class="form-group notes-group">
             <mat-icon>notes</mat-icon>

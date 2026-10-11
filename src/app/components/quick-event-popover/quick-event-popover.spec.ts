@@ -3,6 +3,9 @@ import { QuickEventPopoverComponent } from './quick-event-popover';
 import { EventCreateRequest } from '../../services/event.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
+import { EventService } from '../../services/event.service';
+import { SocialService } from '../../services/social.service';
 
 describe('QuickEventPopoverComponent', () => {
     let component: QuickEventPopoverComponent;
@@ -22,7 +25,11 @@ describe('QuickEventPopoverComponent', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            imports: [QuickEventPopoverComponent, NoopAnimationsModule]
+            imports: [QuickEventPopoverComponent, NoopAnimationsModule],
+            providers: [
+                { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
+                { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } }
+            ]
         }).compileComponents();
 
         fixture = TestBed.createComponent(QuickEventPopoverComponent);
@@ -104,5 +111,64 @@ describe('QuickEventPopoverComponent', () => {
         expect(component.position()).toEqual({ x: 0, y: 0, arrowSide: 'top' });
         expect(component.arrowOffset()).toBe(50);
         expect(component.isMobile()).toBe(false);
+    });
+
+    describe('finding a slot with friends', () => {
+        it('searchWindow_shouldBeTheSlotThePopoverWasOpenedOn', () => {
+            expect(component.searchWindow()).toEqual({ start: startDate, end: endDate });
+        });
+
+        it('searchWindow_shouldBeNull_whenTheSlotHasNoEnd', () => {
+            fixture.componentRef.setInput('data', { ...request(), endDate: undefined });
+
+            expect(component.searchWindow()).toBeNull();
+        });
+
+        it('toggleFindSlot_shouldShowThenHideThePanel', () => {
+            component.toggleFindSlot();
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('app-find-slot')).not.toBeNull();
+
+            component.toggleFindSlot();
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('app-find-slot')).toBeNull();
+        });
+
+        it('findingSlot_shouldCloseWhenANewSlotIsOpened', () => {
+            component.toggleFindSlot();
+
+            fixture.componentRef.setInput('data', request());
+
+            expect(component.findingSlot()).toBe(false);
+        });
+
+        it('onSlotPicked_shouldMoveTheDraftAndCloseThePanel', () => {
+            const slot = { start: new Date('2025-06-01T14:00:00Z'), end: new Date('2025-06-01T15:30:00Z') };
+            component.update('title', 'Board games');
+            component.toggleFindSlot();
+
+            component.onSlotPicked(slot);
+
+            expect(component.draft()).toMatchObject({ title: 'Board games', startDate: slot.start, endDate: slot.end });
+            expect(component.findingSlot()).toBe(false);
+        });
+
+        it('onSlotPicked_shouldKeepTheSearchWindow', () => {
+            component.onSlotPicked({ start: new Date('2025-06-01T10:15:00Z'), end: new Date('2025-06-01T10:45:00Z') });
+
+            expect(component.searchWindow()).toEqual({ start: startDate, end: endDate });
+        });
+    });
+
+    describe('spansSeveralDays', () => {
+        it('should be false for a slot within one day', () => {
+            expect(component.spansSeveralDays()).toBe(false);
+        });
+
+        it('should be true when the draft ends on another day', () => {
+            fixture.componentRef.setInput('data', { ...request(), endDate: new Date('2025-06-03T11:00:00Z') });
+
+            expect(component.spansSeveralDays()).toBe(true);
+        });
     });
 });

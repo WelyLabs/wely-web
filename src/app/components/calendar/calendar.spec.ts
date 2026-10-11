@@ -417,4 +417,76 @@ describe('CalendarComponent', () => {
         });
     });
 
+    describe('multi-day selection', () => {
+        const monday = new Date(2026, 9, 12);
+        const tuesday = new Date(2026, 9, 13);
+        const wednesday = new Date(2026, 9, 14);
+
+        const dragFrom = (day: Date, hour: number) => {
+            component.isSelectingRange = true;
+            component.selectionDate = day;
+            component.selectionEndDate = day;
+            component.selectionStartHour = hour;
+            component.selectionEndHour = hour + 0.5;
+        };
+
+        it('selectionRange_shouldRunContinuouslyAcrossDays_whenDraggedToALaterDay', () => {
+            dragFrom(monday, 18);
+            component.onTimeMouseEnter(10, wednesday);
+
+            expect(component.selectionRange()).toEqual({
+                start: new Date(2026, 9, 12, 18),
+                end: new Date(2026, 9, 14, 10)
+            });
+        });
+
+        it('selectionRange_shouldOrderTheBounds_whenDraggedBackwards', () => {
+            dragFrom(tuesday, 9);
+            component.onTimeMouseEnter(14, monday);
+
+            expect(component.selectionRange()).toEqual({
+                start: new Date(2026, 9, 12, 14),
+                end: new Date(2026, 9, 13, 9)
+            });
+        });
+
+        it('selectionRange_shouldBeNull_whenNothingIsDragged', () => {
+            expect(component.selectionRange()).toBeNull();
+        });
+
+        it('getSelectionStyle_shouldCoverOnlyThePartOfTheRangeOnEachDay', () => {
+            dragFrom(monday, 18);
+            component.onTimeMouseEnter(10, wednesday);
+            const hourHeight = window.innerWidth <= 768 ? 60 : 80;
+
+            expect(component.getSelectionStyle(monday)).toEqual({
+                display: 'block', top: `${18 * hourHeight}px`, height: `${6 * hourHeight}px`
+            });
+            expect(component.getSelectionStyle(tuesday)).toEqual({
+                display: 'block', top: '0px', height: `${24 * hourHeight}px`
+            });
+            expect(component.getSelectionStyle(wednesday)).toEqual({
+                display: 'block', top: '0px', height: `${10 * hourHeight}px`
+            });
+        });
+
+        it('getSelectionStyle_shouldHideDaysOutsideTheRange', () => {
+            dragFrom(monday, 9);
+            component.onTimeMouseEnter(12, monday);
+
+            expect(component.getSelectionStyle(tuesday)).toEqual({ display: 'none' });
+        });
+
+        it('onTimeMouseUp_shouldOpenTheEventFormOnTheWholeRange', () => {
+            const spy = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
+            dragFrom(monday, 18);
+            component.onTimeMouseEnter(10, wednesday);
+
+            component.onTimeMouseUp(new MouseEvent('mouseup'));
+
+            expect(spy).toHaveBeenCalledWith(expect.anything(), undefined,
+                new Date(2026, 9, 12, 18), new Date(2026, 9, 14, 10));
+        });
+    });
+
 });

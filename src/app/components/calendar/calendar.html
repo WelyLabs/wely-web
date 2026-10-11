@@ -130,10 +130,10 @@
                 <div class="hours-container" (mouseup)="onTimeMouseUp($event)"
                   (touchend)="onTimeMouseUp($event)" (touchmove)="onTouchMove($event)">
                   @for (hour of hours; track hour) {
-                    <div class="hour-cell" [attr.data-hour]="hour"
+                    <div class="hour-cell" [attr.data-hour]="hour" [attr.data-day]="day.date.toISOString()"
                       (mousedown)="onTimeMouseDown($event, day.date, hour)"
                       (touchstart)="onTimeMouseDown($event, day.date, hour)"
-                      (mouseenter)="onTimeMouseEnter(hour)">
+                      (mouseenter)="onTimeMouseEnter(hour, day.date)">
                       <div class="event-container">
                         @for (event of getEventsForHour(day.date, hour); track event) {
                           <div

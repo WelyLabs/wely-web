@@ -1,0 +1,58 @@
+<div class="find-slot">
+    <div class="section-label">Avec qui ?</div>
+    @if (friendsError()) {
+        <p class="message error">Impossible de charger vos amis.</p>
+    } @else if (friends() === null) {
+        <p class="message">Chargement de vos amis…</p>
+    } @else if (friends()!.length === 0) {
+        <p class="message">Ajoutez des amis pour chercher un créneau ensemble.</p>
+    } @else {
+        <ul class="friend-list">
+            @for (friend of friends(); track friend.userId) {
+                <li>
+                    <label class="friend">
+                        <input type="checkbox" [checked]="isSelected(friend.userId)" (change)="toggle(friend.userId)">
+                        <span>{{ friend.userName }}</span>
+                    </label>
+                </li>
+            }
+        </ul>
+    }
+
+    <div class="section-label">Pendant</div>
+    <div class="durations">
+        @for (minutes of durations(); track minutes) {
+            <button type="button" class="chip" [class.active]="minutes === durationMinutes()" (click)="setDuration(minutes)">
+                {{ formatDuration(minutes) }}
+            </button>
+        }
+    </div>
+
+    <button type="button" class="search-btn" [disabled]="!canSearch()" (click)="search()">
+        <mat-icon>travel_explore</mat-icon>
+        {{ searching() ? 'Recherche…' : 'Trouver un créneau' }}
+    </button>
+
+    @if (errorMessage(); as message) {
+        <p class="message error">{{ message }}</p>
+    }
+
+    @if (results(); as ranges) {
+        @if (ranges.length === 0) {
+            <p class="message">Aucun créneau commun sur cette plage.</p>
+        } @else {
+            <ul class="results">
+                @for (range of ranges; track range.start.getTime()) {
+                    <li>
+                        <button type="button" class="slot" (click)="pick(range)">
+                            <span class="slot-day">{{ range.start | date:'EEE d MMM' }}</span>
+                            <span class="slot-hours">
+                                {{ range.start | date:'HH:mm' }} – {{ range.end | date:(sameDay(range) ? 'HH:mm' : 'EEE d MMM HH:mm') }}
+                            </span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
