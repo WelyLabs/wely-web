@@ -222,8 +222,9 @@
 }
 
 // The pins are built by hand and placed by MapLibre, outside this component's template.
+// No position here: MapLibre's own `position: absolute` is what places each pin. Overridden to
+// relative, every pin was pushed sideways by the ones before it.
 :host ::ng-deep .explore-pin {
-    position: relative;
     width: 32px;
     // The rotated drop's tip sits 34px down: anchored at the bottom, it points at the place.
     height: 34px;
