@@ -195,4 +195,20 @@ describe('EventService', () => {
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
         httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
     });
+
+    it('searches free slots and converts the ranges into Dates', () => {
+        const start = new Date('2026-10-16T14:00:00Z');
+        const end = new Date('2026-10-18T20:00:00Z');
+        let result: { start: Date; end: Date }[] | undefined;
+
+        service.findFreeSlots({ friendIds: ['lea'], start, end, durationMinutes: 90 })
+            .subscribe((ranges) => (result = ranges));
+
+        const req = httpMock.expectOne(`${apiUrl}/me/free-slots`);
+        expect(req.request.method).toBe('POST');
+        expect(req.request.body).toEqual({ friendIds: ['lea'], start, end, durationMinutes: 90 });
+        req.flush([{ start: '2026-10-16T14:00:00Z', end: '2026-10-16T18:00:00Z' }]);
+
+        expect(result).toEqual([{ start: new Date('2026-10-16T14:00:00Z'), end: new Date('2026-10-16T18:00:00Z') }]);
+    });
 });

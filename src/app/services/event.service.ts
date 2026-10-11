@@ -37,6 +37,25 @@ interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate'> {
   endDate: string | number[] | null;
 }
 
+/** A search for a slot where the user and some friends are all free. */
+export interface FreeSlotSearch {
+  friendIds: string[];
+  start: Date;
+  end: Date;
+  durationMinutes: number;
+}
+
+/** A period during which everyone searched for is free. */
+export interface FreeRange {
+  start: Date;
+  end: Date;
+}
+
+interface FreeRangePayload {
+  start: string | number[];
+  end: string | number[];
+}
+
 /** Fallback duration when the backend sends no end date. */
 const DEFAULT_DURATION_MS = 3_600_000;
 
@@ -83,6 +102,17 @@ export class EventService {
     return this.http.post<EventPayload>(`${this.apiUrl}/${event.id}/subscribe`, {}).pipe(
       map((updated) => this.toFeedEvent(updated)),
       tap(() => this.refreshEvents()),
+    );
+  }
+
+  /** Free ranges, inside the search period, where the user and every friend are free. */
+  findFreeSlots(search: FreeSlotSearch): Observable<FreeRange[]> {
+    return this.http.post<FreeRangePayload[]>(`${this.apiUrl}/me/free-slots`, search).pipe(
+      map((ranges) => ranges.flatMap((range) => {
+        const start = this.toDate(range.start);
+        const end = this.toDate(range.end);
+        return start && end ? [{ start, end }] : [];
+      })),
     );
   }
 

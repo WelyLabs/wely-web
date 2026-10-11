@@ -15,6 +15,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 | | |
 |---|---|
 | **Calendrier** | Vue mensuelle des événements auxquels l'utilisateur est inscrit |
+| **Trouver un créneau** | Sur une plage glissée dans le calendrier (un ou plusieurs jours), liste les moments où l'utilisateur et les amis choisis sont tous libres, et place l'événement sur celui qu'il retient |
 | **Feed** | Découverte des événements auxquels il n'est pas inscrit |
 | **Social** | Recherche d'utilisateurs, ajout par tag `Pseudo#1234`, demandes d'amis |
 | **Messagerie** | Conversations temps réel via RSocket, historique paginé |

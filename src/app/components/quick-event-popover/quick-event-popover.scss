@@ -191,6 +191,28 @@
         }
     }
 
+    .find-slot-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 0;
+        border: none;
+        background: transparent;
+        font-size: 14px;
+        color: var(--primary-blue);
+        cursor: pointer;
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+
+        &.open span {
+            font-weight: 700;
+        }
+    }
+
     .form-actions {
         display: flex;
         justify-content: flex-end;

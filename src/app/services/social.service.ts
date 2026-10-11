@@ -24,6 +24,15 @@ export class SocialService {
         return this.http.get<UserWithStatusDTO[]>(`${this.apiUrl}/users`, { params });
     }
 
+    /**
+     * Lists the caller's friends. With `FRIENDS` the backend answers plain user nodes, not
+     * `UserWithStatusDTO`, so this gets its own, truthful return type.
+     */
+    listFriends(): Observable<UserNodeDTO[]> {
+        const params = new HttpParams().set('friendshipStatus', 'FRIENDS');
+        return this.http.get<UserNodeDTO[]>(`${this.apiUrl}/users`, { params });
+    }
+
     /** Sends a friend request by public tag, `Name#1234`. */
     sendFriendRequest(userTag: string): Observable<UserNodeDTO> {
         return this.http.post<UserNodeDTO>(`${this.apiUrl}/relationships/request`, { userTag });

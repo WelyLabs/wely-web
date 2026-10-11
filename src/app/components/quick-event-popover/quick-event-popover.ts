@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, input, linkedSignal, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { EventCreateRequest } from '../../services/event.service';
+import { FindSlotComponent, TimeWindow } from '../find-slot/find-slot';
 
 /** Where the popover sits relative to the slot that opened it. */
 export interface PopoverPosition {
@@ -18,7 +19,7 @@ export interface PopoverPosition {
 @Component({
     selector: 'app-quick-event-popover',
     standalone: true,
-    imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
+    imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, FindSlotComponent],
     templateUrl: './quick-event-popover.html',
     styleUrl: './quick-event-popover.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -44,6 +45,30 @@ export class QuickEventPopoverComponent {
      * is only ever read, and `save` carries the draft out explicitly.
      */
     readonly draft = linkedSignal(() => ({ ...this.data() }));
+
+    /** Whether the "find a slot with friends" panel is open; closed again on each new slot. */
+    readonly findingSlot = linkedSignal({ source: this.data, computation: () => false });
+
+    /** The slot the popover was opened on: the window searched for a common free slot. */
+    readonly searchWindow = computed<TimeWindow | null>(() => {
+        const { startDate, endDate } = this.data();
+        return endDate ? { start: startDate, end: endDate } : null;
+    });
+
+    readonly spansSeveralDays = computed(() => {
+        const { startDate, endDate } = this.draft();
+        return !!endDate && startDate.toDateString() !== endDate.toDateString();
+    });
+
+    toggleFindSlot(): void {
+        this.findingSlot.update(open => !open);
+    }
+
+    /** Moves the draft onto the slot picked among the common free ones. */
+    onSlotPicked(slot: TimeWindow): void {
+        this.draft.update(draft => ({ ...draft, startDate: slot.start, endDate: slot.end }));
+        this.findingSlot.set(false);
+    }
 
     /** Written by each field's `ngModelChange`, which is how a signal replaces two-way binding. */
     update<K extends keyof EventCreateRequest>(field: K, value: EventCreateRequest[K]): void {

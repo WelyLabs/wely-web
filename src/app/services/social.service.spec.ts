@@ -50,6 +50,17 @@ describe('SocialService', () => {
         req.flush(mockUsers);
     });
 
+    it('should list friends as user nodes', () => {
+        const friends = [{ userId: 'u-1', userName: 'Alice', hashtag: 1234 }];
+        let received: unknown;
+        service.listFriends().subscribe(users => received = users);
+
+        const req = httpMock.expectOne(req => req.url === `${apiUrl}/users` && req.params.get('friendshipStatus') === 'FRIENDS');
+        expect(req.request.method).toBe('GET');
+        req.flush(friends);
+        expect(received).toEqual(friends);
+    });
+
     it('should send friend request', () => {
         const tag = 'User#1234';
         service.sendFriendRequest(tag).subscribe(res => {

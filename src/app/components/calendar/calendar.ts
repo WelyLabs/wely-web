@@ -20,6 +20,15 @@ function minuteOf(hour: number): number {
   return 0;
 }
 
+const HOUR_MS = 3600000;
+
+/** The given day at a fractional hour on the quarter-hour grid. */
+function atHour(day: Date, hour: number): Date {
+  const date = new Date(day);
+  date.setHours(Math.floor(hour), minuteOf(hour), 0, 0);
+  return date;
+}
+
 /** Six rows of seven, so the month grid never changes height between months. */
 const MONTH_GRID_CELLS = 42;
 const DAYS_IN_WEEK = 7;
@@ -132,6 +141,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
   selectionStartHour: number | null = null;
   selectionEndHour: number | null = null;
   selectionDate: Date | null = null;
+  /** Day under the pointer: a drag may cross columns, and the range runs continuously from one to the other. */
+  selectionEndDate: Date | null = null;
   private selectionTimeout?: ReturnType<typeof setTimeout>;
   private readonly SELECTION_DELAY = 400; // ms
 
@@ -545,14 +556,31 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
       this.isSelectingRange = true;
       this.selectionDate = date;
+      this.selectionEndDate = date;
       this.selectionStartHour = startHour;
       this.selectionEndHour = startHour + 0.5;
     }, this.SELECTION_DELAY);
   }
 
-  onTimeMouseEnter(hour: number) {
+  onTimeMouseEnter(hour: number, date?: Date) {
     if (!this.isSelectingRange) return;
     this.selectionEndHour = hour;
+    if (date) {
+      this.selectionEndDate = date;
+    }
+  }
+
+  /**
+   * The dragged range, earliest end first. It runs continuously from the day the drag started
+   * to the day under the pointer, nights included.
+   */
+  selectionRange(): { start: Date; end: Date } | null {
+    if (!this.selectionDate || this.selectionStartHour === null || this.selectionEndHour === null) {
+      return null;
+    }
+    const anchor = atHour(this.selectionDate, this.selectionStartHour);
+    const current = atHour(this.selectionEndDate ?? this.selectionDate, this.selectionEndHour);
+    return anchor <= current ? { start: anchor, end: current } : { start: current, end: anchor };
   }
 
   onTouchMove(event: TouchEvent) {
@@ -587,10 +615,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     if (target) {
       const hourAttr = target.getAttribute('data-hour');
+      const dayAttr = target.getAttribute('data-day');
       if (hourAttr !== null) {
         const hour = parseFloat(hourAttr);
-        if (this.selectionEndHour !== hour) {
-          this.onTimeMouseEnter(hour);
+        const day = dayAttr ? new Date(dayAttr) : undefined;
+        if (this.selectionEndHour !== hour || (day && !this.isSameDate(day, this.selectionEndDate ?? day))) {
+          this.onTimeMouseEnter(hour, day);
         }
       }
     }
@@ -606,44 +636,39 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     this.isSelectingRange = false;
 
-    // Drag detection: only open if start and end are different (at least 30min or a clear drag)
-    const startHour = this.selectionStartHour || 0;
-    const endHour = this.selectionEndHour || 0;
-    const hasDragged = Math.abs(endHour - startHour) > 0;
+    // Drag detection: only open if the range has a length.
+    const range = this.selectionRange();
 
-    if (this.selectionDate && hasDragged) {
-      const minHour = Math.min(startHour, endHour);
-      const maxHour = Math.max(startHour, endHour);
-
-      // Set up before it is published: calling setHours on the value already inside the signal
-      // would change it without notifying anything, since the reference never changes.
-      const startDate = new Date(this.selectionDate);
-      startDate.setHours(Math.floor(minHour), minuteOf(minHour), 0, 0);
-      this.selectedDate.set(startDate);
-
-      const endDate = new Date(this.selectionDate);
-      endDate.setHours(Math.floor(maxHour), minuteOf(maxHour), 0, 0);
+    if (range && range.end > range.start) {
+      this.selectedDate.set(range.start);
 
       const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
-      this.startCreatingEvent(uiEvent, undefined, startDate, endDate);
+      this.startCreatingEvent(uiEvent, undefined, range.start, range.end);
     } else {
       // Clear if it was just a click
       this.cancelCreatingEvent();
     }
   }
 
+  /** The part of the dragged range that falls on this day, as a box in its column. */
   getSelectionStyle(date: Date) {
-    if (!this.selectionDate || !this.isSameDate(date, this.selectionDate)) {
+    const range = this.selectionRange();
+    if (!range || (!this.isSelectingRange && !this.isPopoverVisible())) {
       return { display: 'none' };
     }
 
-    if (!this.isSelectingRange && !this.isPopoverVisible()) {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    if (range.end <= dayStart || range.start >= dayEnd) {
       return { display: 'none' };
     }
 
-    const start = Math.min(this.selectionStartHour || 0, this.selectionEndHour || 0);
-    const end = Math.max(this.selectionStartHour || 0, this.selectionEndHour || 0);
-    const duration = end - start;
+    const from = Math.max(range.start.getTime(), dayStart.getTime());
+    const to = Math.min(range.end.getTime(), dayEnd.getTime());
+    const start = (from - dayStart.getTime()) / HOUR_MS;
+    const duration = (to - from) / HOUR_MS;
 
     const isMobile = window.innerWidth <= 768;
     const hourHeight = isMobile ? 60 : 80;
@@ -817,6 +842,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   cancelCreatingEvent() {
     this.isPopoverVisible.set(false);
     this.selectionDate = null;
+    this.selectionEndDate = null;
     this.selectionStartHour = null;
     this.selectionEndHour = null;
     this.selectedDate.set(null);
