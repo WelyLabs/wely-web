@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, linkedSignal, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,6 +36,18 @@ const INTERACTIVE = 'input, textarea, button, select, label, a, [role="option"]'
  */
 export function clampDelta(delta: number, before: number, after: number): number {
     return Math.max(-before, Math.min(delta, after));
+}
+
+/** Space kept between the popover and the edge of the screen. */
+const SCREEN_MARGIN_PX = 8;
+
+/**
+ * How far up a box must move to end above the bottom of the screen, without its top going past
+ * the top margin: 0 when it already fits.
+ */
+export function upwardShift(top: number, bottom: number, viewportHeight: number, margin = SCREEN_MARGIN_PX): number {
+    const overflow = bottom - (viewportHeight - margin);
+    return overflow > 0 ? Math.min(overflow, Math.max(top - margin, 0)) : 0;
 }
 
 interface DragState {
@@ -85,9 +97,40 @@ export class QuickEventPopoverComponent {
         VISIBILITY_OPTIONS.find(option => option.value === this.visibility())?.hint ?? '');
 
     /** Back to where the popover opened, next to its slot, whenever a new slot is opened. */
+    private readonly card = viewChild<ElementRef<HTMLElement>>('card');
+
     readonly offset = linkedSignal<EventCreateRequest, DragOffset>({ source: this.data, computation: () => ({ x: 0, y: 0 }) });
     readonly moved = computed(() => this.offset().x !== 0 || this.offset().y !== 0);
     readonly dragging = signal(false);
+
+    constructor() {
+        // The card grows when « Avec des amis… » opens and when results come in: anchored next to a
+        // slot low on the screen, its buttons then ended below the bottom edge. Each growth moves
+        // it back up, through the same offset a drag uses.
+        const destroyRef = inject(DestroyRef);
+        afterNextRender(() => {
+            const card = this.card()?.nativeElement;
+            if (!card || typeof ResizeObserver === 'undefined') {
+                return;
+            }
+            const observer = new ResizeObserver(() => this.keepOnScreen());
+            observer.observe(card);
+            destroyRef.onDestroy(() => observer.disconnect());
+        });
+    }
+
+    /** Moves the card up as far as needed for its bottom to be on screen. Not when centred on a phone. */
+    keepOnScreen(): void {
+        const card = this.card()?.nativeElement;
+        if (!card || this.isMobile() || this.dragging()) {
+            return;
+        }
+        const rect = card.getBoundingClientRect();
+        const shift = upwardShift(rect.top, rect.bottom, window.innerHeight);
+        if (shift > 0) {
+            this.offset.update(offset => ({ x: offset.x, y: offset.y - shift }));
+        }
+    }
     private drag: DragState | null = null;
 
     /** Whether the "find a slot with friends" panel is open; closed again on each new slot. */

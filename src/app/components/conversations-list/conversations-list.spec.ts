@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ConversationsListComponent } from './conversations-list';
 import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
+import { SocialService } from '../../services/social.service';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConversationSummary, ConversationType } from '../../models/chat.model';
@@ -20,6 +21,7 @@ describe('ConversationsListComponent', () => {
     let chatServiceMock: any;
     let userServiceMock: any;
     let routerMock: any;
+    let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
 
     const mockConversations: ConversationSummary[] = [
         {
@@ -33,8 +35,10 @@ describe('ConversationsListComponent', () => {
 
     beforeEach(async () => {
         chatServiceMock = {
-            getAllConversations: vi.fn().mockReturnValue(of(mockConversations))
+            getAllConversations: vi.fn().mockReturnValue(of(mockConversations)),
+            getPresence: vi.fn().mockReturnValue(of({ userId: 'x', online: false, lastSeenAt: null }))
         };
+        socialServiceMock = { listFriendships: vi.fn().mockReturnValue(of([])) };
         userServiceMock = {
             getCurrentUserValue: vi.fn().mockReturnValue({ id: 'me' })
         };
@@ -44,7 +48,8 @@ describe('ConversationsListComponent', () => {
             providers: [
                 provideRouter([]),
                 { provide: ChatService, useValue: chatServiceMock },
-                { provide: UserService, useValue: userServiceMock }
+                { provide: UserService, useValue: userServiceMock },
+                { provide: SocialService, useValue: socialServiceMock }
             ]
         }).compileComponents();
         routerMock = TestBed.inject(Router);
@@ -144,6 +149,64 @@ describe('ConversationsListComponent', () => {
 
         expect(navigate).toHaveBeenCalled();
         expect(String(navigate.mock.calls[0][0])).toBe('/users');
+    });
+
+    describe('rows', () => {
+        const withLea = (overrides: Partial<ConversationSummary> = {}): ConversationSummary => ({
+            id: 'c-lea', participantIds: ['me', 'lea'], type: ConversationType.PRIVATE,
+            title: '', updatedAt: new Date().toISOString(), lastBucketIndex: 0, ...overrides
+        });
+        const lea = { userId: 'lea', userName: 'lea', hashtag: 6000, profilePicUrl: '/demo/avatars/lea.svg',
+            closeness: 'INTIMATE' as const, proposal: null, proposedByFriend: false };
+
+        const load = (conversations: ConversationSummary[]) => {
+            chatServiceMock.getAllConversations.mockReturnValue(of(conversations));
+            component.loadConversations();
+            fixture.detectChanges();
+        };
+
+        it('rows_shouldNameAConversationAfterThePartner_fromTheFriendList', () => {
+            socialServiceMock.listFriendships.mockReturnValue(of([lea]));
+            component.ngOnInit();
+
+            load([withLea()]);
+
+            expect(component.rows()[0]).toMatchObject({ name: 'lea', avatarUrl: '/demo/avatars/lea.svg' });
+            expect(fixture.nativeElement.querySelector('.conv-item .name').textContent).toContain('lea');
+            expect(fixture.nativeElement.querySelector('.avatar-gradient img')).not.toBeNull();
+        });
+
+        it('rows_shouldFallBackToThePartnersLastMessage', () => {
+            load([withLea({ lastMessage: { senderId: 'lea', senderName: 'Léa', content: 'hi' } as never })]);
+
+            expect(component.rows()[0].name).toBe('Léa');
+        });
+
+        it('rows_shouldSayConversation_whenNothingNamesThePartner', () => {
+            load([withLea()]);
+
+            expect(component.rows()[0].name).toBe('Conversation');
+            expect(component.rows()[0].avatarUrl).toBeNull();
+        });
+
+        it('loadPresence_shouldShowTheDotOnlyForAPartnerOnline', () => {
+            chatServiceMock.getPresence.mockImplementation((id: string) => of({ userId: id, online: id === 'lea', lastSeenAt: null }));
+
+            load([withLea(), withLea({ id: 'c-bob', participantIds: ['me', 'bob'] })]);
+
+            expect(chatServiceMock.getPresence).toHaveBeenCalledWith('lea');
+            expect(chatServiceMock.getPresence).toHaveBeenCalledWith('bob');
+            expect(component.rows().map(row => row.online)).toEqual([true, false]);
+            expect(fixture.nativeElement.querySelectorAll('.status-indicator.online').length).toBe(1);
+        });
+
+        it('loadPresence_shouldShowNoDot_whenPresenceCannotBeRead', () => {
+            chatServiceMock.getPresence.mockReturnValue(throwError(() => new Error('404')));
+
+            load([withLea()]);
+
+            expect(component.rows()[0].online).toBe(false);
+        });
     });
 });
 

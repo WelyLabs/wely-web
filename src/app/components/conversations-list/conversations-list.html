@@ -45,19 +45,27 @@
     <!-- Conversation List -->
     @if (!isLoading() && !error() && conversations().length > 0) {
       <div class="conversations-grid">
-        @for (conv of conversations(); track conv.id; let i = $index) {
+        @for (row of rows(); track row.conversation.id; let i = $index) {
+          @let conv = row.conversation;
           <div class="conv-item" role="button" tabindex="0"
             [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)"
             (keydown.enter)="openConversation(conv)" (keydown.space)="openConversation(conv)">
             <div class="avatar-wrapper">
               <div class="avatar-gradient">
-                {{ getAvatarInitial(conv.title) }}
+                @if (row.avatarUrl) {
+                  <img [src]="row.avatarUrl" [alt]="row.name">
+                } @else {
+                  {{ getAvatarInitial(row.name) }}
+                }
               </div>
-              <div class="status-indicator online"></div>
+              <!-- Only for a partner actually online: the dot used to be green for everyone. -->
+              @if (row.online) {
+                <div class="status-indicator online" title="En ligne"></div>
+              }
             </div>
             <div class="conv-details">
               <div class="details-top">
-                <h3 class="name">{{ conv.title }}</h3>
+                <h3 class="name">{{ row.name }}</h3>
                 <span class="timestamp">{{ conv.updatedAt | date:'HH:mm' }}</span>
               </div>
               <div class="details-bottom">

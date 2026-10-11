@@ -329,7 +329,7 @@
             width: 60px;
             flex-shrink: 0;
             border-right: 1px solid var(--border-default);
-            padding-top: 108px; // Synchronized with column-header height (12+8+40 + 24*2)
+            padding-top: 80px; // = .column-header height, or the hours drift from the grid
             position: sticky;
             left: 0;
             z-index: 90;
@@ -337,7 +337,6 @@
 
             @media (max-width: 768px) {
                 width: 44px;
-                padding-top: 80px;
             }
 
             .hour-slot {
@@ -383,6 +382,8 @@
                 }
 
                 .column-header {
+                    height: 80px;
+                    box-sizing: border-box;
                     padding: 16px 0 10px;
                     text-align: center;
                     display: flex;

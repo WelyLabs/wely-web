@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { QuickEventPopoverComponent, clampDelta } from './quick-event-popover';
+import { QuickEventPopoverComponent, clampDelta, upwardShift } from './quick-event-popover';
 import { EventCreateRequest } from '../../services/event.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -306,4 +306,52 @@ describe('QuickEventPopoverComponent', () => {
             expect(active.textContent).toContain('Public');
         });
     });
+
+    describe('staying on screen', () => {
+        const card = () => fixture.nativeElement.querySelector('.popover-container') as HTMLElement;
+        const placeCard = (top: number, bottom: number) => vi.spyOn(card(), 'getBoundingClientRect')
+            .mockReturnValue({ top, bottom, left: 100, right: 420, width: 320, height: bottom - top, x: 100, y: top } as DOMRect);
+
+        beforeEach(() => {
+            vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
+        });
+
+        it('upwardShift_shouldBeZero_whenTheBoxFits', () => {
+            expect(upwardShift(100, 700, 800)).toBe(0);
+        });
+
+        it('upwardShift_shouldLiftTheBottomAboveTheEdge', () => {
+            expect(upwardShift(300, 900, 800)).toBe(108);
+        });
+
+        it('upwardShift_shouldNeverLiftTheTopPastTheMargin', () => {
+            expect(upwardShift(50, 1200, 800)).toBe(42);
+        });
+
+        it('keepOnScreen_shouldMoveTheCardUp_whenItGrowsPastTheBottom', () => {
+            placeCard(300, 900);
+
+            component.keepOnScreen();
+
+            expect(component.offset()).toEqual({ x: 0, y: -108 });
+        });
+
+        it('keepOnScreen_shouldLeaveACardThatFits', () => {
+            placeCard(100, 500);
+
+            component.keepOnScreen();
+
+            expect(component.offset()).toEqual({ x: 0, y: 0 });
+        });
+
+        it('keepOnScreen_shouldLeaveTheCentredPhoneLayoutAlone', () => {
+            fixture.componentRef.setInput('isMobile', true);
+            placeCard(300, 900);
+
+            component.keepOnScreen();
+
+            expect(component.offset()).toEqual({ x: 0, y: 0 });
+        });
+    });
 });
+

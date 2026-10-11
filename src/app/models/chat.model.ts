@@ -49,6 +49,8 @@ export interface MessageBucket {
 
 export interface ConversationSummary {
     id: string;
+    /** Who takes part; a private conversation is named after the other one. */
+    participantIds?: string[];
     type: ConversationType;
     title: string;
     updatedAt: string;
