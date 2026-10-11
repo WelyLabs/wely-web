@@ -2,7 +2,8 @@
     padding: 60px 40px;
     max-width: 900px;
     margin: 0 auto;
-    min-height: 100vh;
+    // No min-height: 100vh — inside the layout's scroll area, already shorter than the screen,
+    // it made the page scroll by the bottom bar's height even when empty.
 }
 
 /* Header Section */
@@ -94,22 +95,25 @@
         transition: opacity 0.3s;
     }
 
-    &:hover {
-        transform: translateY(-4px) scale(1.01);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--brand-tint-strong);
+    // Hover only where there is one: on touch, the effect stuck after a tap.
+    @media (hover: hover) {
+        &:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--brand-tint-strong);
 
-        &::after {
-            opacity: 1;
-        }
+            &::after {
+                opacity: 1;
+            }
 
-        .avatar-gradient {
-            transform: scale(1.05);
-        }
+            .avatar-gradient {
+                transform: scale(1.05);
+            }
 
-        .chevron {
-            transform: translateX(4px);
-            color: var(--primary-blue);
+            .chevron {
+                transform: translateX(4px);
+                color: var(--primary-blue);
+            }
         }
     }
 }
@@ -168,9 +172,15 @@
             font-weight: 700;
             color: var(--text-primary);
             letter-spacing: -0.01em;
+            // A long name ellipsises rather than pushing the time off the row.
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .timestamp {
+            flex-shrink: 0;
             font-size: 12px;
             font-weight: 600;
             color: var(--text-tertiary);

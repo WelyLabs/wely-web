@@ -31,16 +31,6 @@
             flex: 1;
             opacity: 1;
             transform: translateX(0);
-
-            @media (max-width: 768px) {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                border: none;
-                background: var(--bg-canvas);
-            }
         }
     }
 }
@@ -684,7 +674,10 @@
         bottom: 0;
         left: 0;
         right: 0;
+        // A bottom sheet, with the backdrop above it to tap away; dvh so it follows the
+        // browser bars.
         height: 70vh;
+        height: 70dvh;
         margin: 0;
         border-radius: 32px 32px 0 0;
         transform: translateY(100%);
@@ -754,8 +747,10 @@
             cursor: pointer;
             transition: all 0.2s;
 
+            // 40px: a finger-sized target on phones, where it is the obvious way out.
             @media (max-width: 1023px) {
-                display: none;
+                width: 40px;
+                height: 40px;
             }
 
             &:hover {

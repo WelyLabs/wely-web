@@ -22,6 +22,11 @@
         background: transparent;
         font-size: 14px;
         color: var(--text-primary);
+
+        // 16px on touch screens: below that, iOS Safari zooms the page on focus.
+        @media (max-width: 1023px) {
+            font-size: 16px;
+        }
         outline: none;
         padding: 2px 0;
 
@@ -55,6 +60,14 @@
     color: inherit;
     font-size: 14px;
     line-height: 1;
+    // A finger-sized hit area around a small visual: the target grows, the layout does not.
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        inset: -12px;
+    }
     padding: 0 4px;
     cursor: pointer;
 }

@@ -83,8 +83,9 @@
       <router-outlet></router-outlet>
     </div>
 
-    <!-- Mobile Bottom Navigation -->
-    @if (isMobile()) {
+    <!-- Mobile Bottom Navigation: not in a conversation, where it sat between the message
+         input and the keyboard; the chat has its own back button. -->
+    @if (isMobile() && !isChatPage()) {
       <div class="bottom-nav">
         @for (item of navItems; track item.route) {
           <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">

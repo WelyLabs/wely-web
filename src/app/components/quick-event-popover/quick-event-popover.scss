@@ -133,6 +133,8 @@
 
 .popover-content {
     max-height: calc(100vh - 64px);
+    // dvh: the visible height, toolbars and keyboard excluded, so « Ajouter » stays reachable.
+    max-height: calc(100dvh - 64px);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -159,6 +161,11 @@
             font-size: 14px;
             color: var(--text-primary);
             padding: 4px 0;
+
+            // 16px on touch screens: below that, iOS Safari zooms the page on focus.
+            @media (max-width: 1023px) {
+                font-size: 16px;
+            }
             outline: none;
 
             &::placeholder {
@@ -221,6 +228,11 @@
                 align-items: center;
                 gap: 4px;
                 padding: 4px 10px;
+
+                @media (pointer: coarse) {
+                    min-height: 36px;
+                    padding: 6px 12px;
+                }
                 border-radius: 999px;
                 border: 1px solid rgba(0, 0, 0, 0.1);
                 background: transparent;

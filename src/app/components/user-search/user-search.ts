@@ -111,7 +111,7 @@ export class UserSearchComponent implements OnInit {
     openAddFriendDialog(): void {
         const dialogRef = this.dialog.open(AddFriendDialogComponent, {
             width: '450px',
-            maxWidth: '90vw'
+            maxWidth: '95vw'
         });
 
         dialogRef.afterClosed()
@@ -241,6 +241,7 @@ export class UserSearchComponent implements OnInit {
     onRemoveFriend(user: UserWithStatusDTO): void {
         const dialogRef = this.dialog.open(ConfirmDialogComponent, {
             width: '400px',
+            maxWidth: '95vw',
             data: {
                 title: 'Supprimer l\'ami',
                 message: `Êtes-vous sûr de vouloir supprimer ${user.userName} de vos amis ?`,

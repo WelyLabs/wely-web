@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarEntry } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
@@ -89,13 +90,23 @@ const POPOVER_WIDTH = 320;
 const POPOVER_HEIGHT = 400;
 const POPOVER_PADDING = 20;
 const POPOVER_GAP = 5;
-/** Below this width the popover is pinned to the corner rather than anchored. */
-const POPOVER_MOBILE_BREAKPOINT = 768;
+/**
+ * Below this width, or this height, the popover is centred on screen rather than anchored to
+ * its cell: anchored inside the calendar's clipped box, it lost its buttons on a phone held
+ * sideways (wide, but under 450px tall).
+ */
+const POPOVER_MOBILE_BREAKPOINT = 1023;
+const POPOVER_MIN_ANCHORED_HEIGHT = 560;
 /** Columns up to this index open to the right of their cell; later ones flip. */
 const POPOVER_FLIP_COLUMN = 3;
 /** The arrow stays within the popover's own height, as a percentage. */
 const POPOVER_ARROW_MIN = 10;
 const POPOVER_ARROW_MAX = 90;
+
+/** How far a finger may drift before a hold counts as a scroll. */
+const TOUCH_SLOP_PX = 10;
+/** How long after opening the popover ignores clicks on its backdrop. */
+const POPOVER_CLICK_GUARD_MS = 500;
 
 /** Keeps a value inside a range. */
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
@@ -152,6 +163,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly isDetailsOpen = signal(false);
 
   private isHoldActive = false;
+  /** When the popover last opened, for {@link onPopoverBackdropClick}. */
+  private popoverOpenedAt = 0;
 
   // Touch event tracking
   private touchStartPos = { x: 0, y: 0 };
@@ -280,9 +293,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return this.friendships().find(friend => friend.userId === userId)?.userName ?? 'un ami';
   }
 
+  /**
+   * Whether hour rows are the 60px phone ones. A signal, so that turning a phone across the
+   * breakpoint (portrait 390px, landscape 844px) re-lays friends' blocks and the selection;
+   * read straight from window.innerWidth, they kept the old row height and drifted by 25%.
+   */
+  private readonly compactRows = toSignal(
+    inject(BreakpointObserver).observe('(max-width: 768px)').pipe(map(state => state.matches)),
+    { initialValue: window.innerWidth <= 768 });
+
   /** Matches the hour rows of the stylesheet: 60px on a phone, 80px otherwise. */
   private hourHeight(): number {
-    return window.innerWidth <= 768 ? 60 : 80;
+    return this.compactRows() ? 60 : 80;
   }
 
   // Range selection, drag to create
@@ -342,13 +364,23 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   // Touch event handlers for swipe-to-dismiss on mobile
+  /** Whether the current touch may drag the panel down: off when it started in a scrolled list. */
+  private canDragDetails = false;
+
   onDetailsTouchStart(event: TouchEvent) {
     this.touchStartY = event.touches[0].clientY;
     this.touchCurrentY = this.touchStartY;
     this.isDragging = false;
+    // A downward move in a list scrolled down is the user scrolling back up, not a dismissal:
+    // only a list at its top (or the header) lets the panel be dragged away.
+    const list = (event.currentTarget as HTMLElement | null)?.querySelector('.events-list');
+    const inList = !!list && list.contains(event.target as Node);
+    this.canDragDetails = !inList || list.scrollTop <= 0;
   }
 
   onDetailsTouchMove(event: TouchEvent) {
+    if (!this.canDragDetails) return;
+
     const currentY = event.touches[0].clientY;
     const deltaY = currentY - this.touchStartY;
 
@@ -376,18 +408,26 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (!this.isDragging) return;
 
     const deltaY = this.touchCurrentY - this.touchStartY;
-    const detailsSection = event.currentTarget as HTMLElement;
 
-    // If swiped down more than 100px, close the panel
+    // Swiped down more than 100px: close it. It used to clear the date and events only, so the
+    // panel snapped back open, empty.
     if (deltaY > 100) {
-      this.selectedDate.set(null);
-      this.selectedEvents.set([]);
+      this.closeDetails();
     }
+    this.resetDetailsDrag(event);
+  }
 
-    // Reset transform
-    detailsSection.style.transform = '';
-    detailsSection.style.transition = '';
+  /** An interrupted touch (a call, a system gesture) puts the panel back where it was. */
+  onDetailsTouchCancel(event: TouchEvent) {
+    this.resetDetailsDrag(event);
+  }
+
+  private resetDetailsDrag(event: TouchEvent) {
+    const detailsSection = event.currentTarget as HTMLElement | null;
+    detailsSection?.style.setProperty('transform', '');
+    detailsSection?.style.setProperty('transition', '');
     this.isDragging = false;
+    this.canDragDetails = false;
   }
 
   private updateTimePosition(): void {
@@ -689,9 +729,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
 
     this.selectionTimeout = setTimeout(() => {
-      // Prevent default ONLY once hold is confirmed to avoid blocking scroll initially
-      if (event.cancelable) event.preventDefault();
-
       this.selectedDate.set(day.date);
       this.selectedEvents.set(this.events().filter(e => this.isSameDate(e.startDate, day.date)));
       this.isHoldActive = true;
@@ -706,6 +743,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.selectionTimeout) {
       clearTimeout(this.selectionTimeout);
       this.selectionTimeout = undefined;
+    }
+  }
+
+  /**
+   * A finger that moves is scrolling the month, not holding a day: without this, a slow scroll
+   * over the grid lasted the hold delay and opened the new-event form.
+   */
+  onMonthDayTouchMove(event: TouchEvent) {
+    if (!this.selectionTimeout) return;
+    const touch = event.touches[0];
+    if (Math.hypot(touch.clientX - this.touchStartPos.x, touch.clientY - this.touchStartPos.y) > TOUCH_SLOP_PX) {
+      this.onMonthDayMouseUp();
     }
   }
 
@@ -736,10 +785,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const fractionalHour = Math.round((relativeY / rect.height) * 4) / 4;
     const startHour = hour + fractionalHour;
 
+    // Scrolling is locked afterwards, in onTouchMove, once the hold has turned into a selection:
+    // a preventDefault here would act on an event long finished.
     this.selectionTimeout = setTimeout(() => {
-      // Lock scroll only after hold is successful
-      if (event.cancelable) event.preventDefault();
-
       this.isSelectingRange.set(true);
       this.selectionDate.set(date);
       this.selectionEndDate.set(date);
@@ -782,7 +830,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         Math.pow(touch.clientY - this.touchStartPos.y, 2)
       );
 
-      if (moveDistance > 10) {
+      if (moveDistance > TOUCH_SLOP_PX) {
         // User moved too much, they likely want to scroll, cancel the hold
         clearTimeout(this.selectionTimeout);
         this.selectionTimeout = undefined;
@@ -911,6 +959,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Calculate position based on the click/drag event
     this.calculatePopoverPosition(event, dateToAnchor);
     this.isPopoverVisible.set(true);
+    this.popoverOpenedAt = Date.now();
     // Closed, but selectedDate is kept: it is the date the new event belongs to.
     this.isDetailsOpen.set(false);
   }
@@ -928,7 +977,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
     const dateToAnchor = targetDate || this.selectedDate();
 
-    this.isMobilePopover.set(window.innerWidth <= POPOVER_MOBILE_BREAKPOINT);
+    this.isMobilePopover.set(window.innerWidth <= POPOVER_MOBILE_BREAKPOINT || window.innerHeight < POPOVER_MIN_ANCHORED_HEIGHT);
     if (this.isMobilePopover()) {
       this.popoverPosition.set({ x: 0, y: 0, arrowSide: 'top' });
       return;
@@ -1027,8 +1076,29 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return { left: box.left, right: box.right, centerY, columnIndex };
   }
 
+  /**
+   * The backdrop under a freshly opened popover. After a hold, the finger lifting off sends a
+   * click that lands on this backdrop, which closed the popover the moment it appeared.
+   */
+  onPopoverBackdropClick() {
+    if (Date.now() - this.popoverOpenedAt < POPOVER_CLICK_GUARD_MS) return;
+    this.cancelCreatingEvent();
+  }
+
+  /** A touch the system interrupted (a call, a gesture) must not leave a selection half-made. */
+  onTimeTouchCancel() {
+    if (this.selectionTimeout) {
+      clearTimeout(this.selectionTimeout);
+      this.selectionTimeout = undefined;
+    }
+    if (this.isSelectingRange()) {
+      this.cancelCreatingEvent();
+    }
+  }
+
   cancelCreatingEvent() {
     this.isPopoverVisible.set(false);
+    this.isSelectingRange.set(false);
     this.selectionDate.set(null);
     this.selectionEndDate.set(null);
     this.selectionStartHour.set(null);

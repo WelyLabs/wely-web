@@ -358,7 +358,9 @@
     position: fixed;
     top: 8px; // Perfect alignment for stacked title row
     right: 12px;
-    z-index: 2000;
+    // Under the day panel (1100) and the event popover (1500): above them, it covered the
+    // panel's title and opened the menu over a half-made event.
+    z-index: 1000;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     -webkit-tap-highlight-color: transparent;
@@ -527,6 +529,14 @@
                         background: var(--brand-tint);
                         border: none;
                         padding: 4px;
+                        position: relative;
+
+                        // Finger-sized hit area around the 22px button.
+                        &::after {
+                            content: '';
+                            position: absolute;
+                            inset: -10px;
+                        }
                         border-radius: 6px;
                         cursor: pointer;
                         display: flex;

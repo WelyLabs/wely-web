@@ -189,4 +189,25 @@ describe('SharedChatComponent', () => {
         component.ngAfterViewChecked();
         expect(preserveSpy).toHaveBeenCalled();
     });
+
+    it('template_shouldKeepTheInputUsable_whileAMessageIsInFlight', () => {
+        // Disabling the focused input blurred it, which dropped the phone keyboard after every send.
+        fixture.componentRef.setInput('messages', [{ id: 1, text: 'hi', sender: 'me', time: new Date() }]);
+        fixture.componentRef.setInput('loading', true);
+        component.newMessage.set('next one');
+        fixture.detectChanges();
+
+        const input = fixture.nativeElement.querySelector('#chat-message-input') as HTMLInputElement;
+        const send = fixture.nativeElement.querySelector('.send-btn') as HTMLButtonElement;
+        expect(input.disabled).toBe(false);
+        expect(send.disabled).toBe(false);
+    });
+
+    it('template_shouldDisableSend_whenThereIsNothingToSend', () => {
+        component.newMessage.set('   ');
+        fixture.detectChanges();
+
+        expect((fixture.nativeElement.querySelector('.send-btn') as HTMLButtonElement).disabled).toBe(true);
+    });
 });
+

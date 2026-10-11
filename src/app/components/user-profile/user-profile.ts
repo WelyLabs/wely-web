@@ -73,6 +73,7 @@ export class UserProfileComponent implements OnInit {
     openAvatarDialog(): void {
         const dialogRef = this.dialog.open(AvatarUploadDialogComponent, {
             width: '500px',
+            maxWidth: '95vw',
             panelClass: 'edit-profile-dialog',
             enterAnimationDuration: '300ms',
             exitAnimationDuration: '150ms'
@@ -101,6 +102,7 @@ export class UserProfileComponent implements OnInit {
     openEditDialog(): void {
         const dialogRef = this.dialog.open(EditProfileDialogComponent, {
             width: '500px',
+            maxWidth: '95vw',
             data: this.user(),
             disableClose: false,
             panelClass: 'edit-profile-dialog'

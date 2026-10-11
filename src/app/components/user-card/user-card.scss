@@ -30,17 +30,20 @@
         transition: opacity 0.3s;
     }
 
-    &:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: var(--shadow-xl);
-        border-color: var(--brand-tint-strong);
+    // Hover only where there is one: on touch, the effect stuck after a tap.
+    @media (hover: hover) {
+        &:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--brand-tint-strong);
 
-        &::after {
-            opacity: 1;
-        }
+            &::after {
+                opacity: 1;
+            }
 
-        .avatar-gradient {
-            transform: scale(1.1);
+            .avatar-gradient {
+                transform: scale(1.1);
+            }
         }
     }
 }
@@ -117,6 +120,8 @@
 
     .name {
         margin: 0 0 6px 0;
+        // Usernames have no spaces: break anywhere rather than overflow the card.
+        overflow-wrap: anywhere;
         font-size: 18px;
         font-weight: 800;
         color: var(--text-primary);

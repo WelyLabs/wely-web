@@ -422,7 +422,7 @@ h1 {
     box-shadow: var(--shadow-premium);
     transition: transform 0.3s $ease, box-shadow 0.3s ease;
 
-    &:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl); }
+    @media (hover: hover) { &:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl); } }
 
     .icon {
         display: grid;
