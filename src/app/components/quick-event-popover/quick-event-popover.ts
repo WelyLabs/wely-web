@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,32 @@ export interface PopoverPosition {
     x: number;
     y: number;
     arrowSide: 'top' | 'left' | 'right';
+}
+
+/** How far the user dragged the popover from where it opened, in pixels. */
+export interface DragOffset {
+    x: number;
+    y: number;
+}
+
+/** Elements that keep their own pointer behaviour instead of starting a drag. */
+const INTERACTIVE = 'input, textarea, button, select, label, a, [role="option"]';
+
+/**
+ * Bounds a drag delta so the popover stays on screen: `before` and `after` are the room left
+ * on each side. A popover already overflowing is pulled back in; one larger than the screen
+ * keeps its start edge visible.
+ */
+export function clampDelta(delta: number, before: number, after: number): number {
+    return Math.max(-before, Math.min(delta, after));
+}
+
+interface DragState {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    origin: DragOffset;
+    rect: DOMRect;
 }
 
 /**
@@ -46,6 +72,12 @@ export class QuickEventPopoverComponent {
      */
     readonly draft = linkedSignal(() => ({ ...this.data() }));
 
+    /** Back to where the popover opened, next to its slot, whenever a new slot is opened. */
+    readonly offset = linkedSignal<EventCreateRequest, DragOffset>({ source: this.data, computation: () => ({ x: 0, y: 0 }) });
+    readonly moved = computed(() => this.offset().x !== 0 || this.offset().y !== 0);
+    readonly dragging = signal(false);
+    private drag: DragState | null = null;
+
     /** Whether the "find a slot with friends" panel is open; closed again on each new slot. */
     readonly findingSlot = linkedSignal({ source: this.data, computation: () => false });
 
@@ -73,6 +105,45 @@ export class QuickEventPopoverComponent {
     /** Written by each field's `ngModelChange`, which is how a signal replaces two-way binding. */
     update<K extends keyof EventCreateRequest>(field: K, value: EventCreateRequest[K]): void {
         this.draft.update(draft => ({ ...draft, [field]: value }));
+    }
+
+    /** Starts moving the popover, unless the press lands on a field or a button. */
+    onPointerDown(event: PointerEvent): void {
+        if (event.button !== 0 || (event.target instanceof Element && event.target.closest(INTERACTIVE))) {
+            return;
+        }
+        const card = event.currentTarget as HTMLElement;
+        this.drag = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            origin: this.offset(),
+            rect: card.getBoundingClientRect()
+        };
+        card.setPointerCapture?.(event.pointerId);
+        this.dragging.set(true);
+        event.preventDefault();
+    }
+
+    onPointerMove(event: PointerEvent): void {
+        const drag = this.drag;
+        if (!drag || event.pointerId !== drag.pointerId) {
+            return;
+        }
+        const { rect } = drag;
+        const dx = clampDelta(event.clientX - drag.startX, rect.left, window.innerWidth - rect.right);
+        const dy = clampDelta(event.clientY - drag.startY, rect.top, window.innerHeight - rect.bottom);
+        this.offset.set({ x: drag.origin.x + dx, y: drag.origin.y + dy });
+    }
+
+    /** Also bound to pointercancel: a touch the browser turns into a scroll ends the drag. */
+    onPointerUp(event: PointerEvent): void {
+        if (!this.drag || event.pointerId !== this.drag.pointerId) {
+            return;
+        }
+        (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+        this.drag = null;
+        this.dragging.set(false);
     }
 
     onSave(): void {

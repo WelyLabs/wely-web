@@ -21,6 +21,7 @@
     z-index: 2000;
     padding: 16px;
     pointer-events: auto;
+    cursor: grab;
     // Premium Avatar-style animation
     animation: premiumPop 0.4s cubic-bezier(0.32, 0.72, 0, 1);
     transform-origin: center center;
@@ -36,6 +37,26 @@
         .popover-arrow {
             display: none;
         }
+    }
+
+    &.dragging {
+        cursor: grabbing;
+        user-select: none;
+    }
+
+    // Once moved, the arrow no longer points at the slot.
+    &.moved .popover-arrow {
+        display: none;
+    }
+
+    input,
+    textarea,
+    button {
+        cursor: auto;
+    }
+
+    button {
+        cursor: pointer;
     }
 
     &.arrow-left {
@@ -100,7 +121,19 @@
     }
 }
 
+.drag-handle {
+    width: 36px;
+    height: 4px;
+    margin: -6px auto 10px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.15);
+    // The handle is where a touch drags instead of scrolling.
+    touch-action: none;
+}
+
 .popover-content {
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
