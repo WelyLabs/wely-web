@@ -12,6 +12,10 @@ Frontend de la plateforme [Wely Calendar](https://github.com/WelyLabs/wely-platf
     <td width="50%"><img src="docs/screenshots/friends.jpg" alt="Page Amis avec les niveaux de proximité"></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/screenshots/explore-map.jpg" alt="Carte des événements à venir, avec la fiche d'un événement à rejoindre"></td>
+    <td width="50%"><img src="docs/screenshots/location-picker.jpg" alt="Choix du lieu d'un événement sur une carte"></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/screenshots/conversations.jpg" alt="Liste des conversations, nommées d'après l'autre participant"></td>
     <td width="50%"></td>
   </tr>
@@ -33,7 +37,8 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 |---|---|
 | **Calendrier** | Vue mensuelle des événements auxquels l'utilisateur est inscrit |
 | **Trouver un créneau** | Sur une plage glissée dans le calendrier (un ou plusieurs jours), liste les moments où l'utilisateur et les amis choisis sont tous libres, et place l'événement sur celui qu'il retient |
-| **Feed** | Découverte des événements auxquels il n'est pas inscrit |
+| **Feed** | Découverte des événements auxquels il n'est pas inscrit, en cartes à faire glisser ou sur une carte de la zone affichée, d'où on les rejoint |
+| **Lieux** | Lieu d'un événement choisi sur une carte (MapLibre, tuiles OpenFreeMap) avec recherche d'adresse (Photon) ; mini-carte sur la page de l'événement |
 | **Social** | Recherche d'utilisateurs, ajout par tag `Pseudo#1234`, demandes d'amis |
 | **Messagerie** | Conversations temps réel via RSocket, historique paginé |
 | **Profil** | Consultation et édition, recadrage d'avatar |
