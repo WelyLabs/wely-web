@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 import { EventService, FreeRange } from '../../services/event.service';
@@ -19,6 +20,9 @@ const MINUTE_MS = 60_000;
 /** Durations offered, in minutes. Only those fitting in the window are shown. */
 const DURATIONS = [15, 30, 60, 90, 120, 180, 240];
 const DEFAULT_DURATION = 60;
+/** Suggestions shown under the mention field at once. */
+const MAX_SUGGESTIONS = 6;
+const MENTION_PREFIX = '@';
 /** Same cap as the backend, so the user cannot build a search that is bound to be rejected. */
 export const MAX_FRIENDS = 20;
 
@@ -29,7 +33,7 @@ export const MAX_FRIENDS = 20;
 @Component({
     selector: 'app-find-slot',
     standalone: true,
-    imports: [CommonModule, MatIconModule],
+    imports: [CommonModule, FormsModule, MatIconModule],
     templateUrl: './find-slot.html',
     styleUrl: './find-slot.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -46,6 +50,31 @@ export class FindSlotComponent {
     readonly friends = signal<UserNodeDTO[] | null>(null);
     readonly friendsError = signal(false);
     readonly selected = signal<ReadonlySet<string>>(new Set());
+
+    /** What is typed in the mention field, `@` included. */
+    readonly query = signal('');
+
+    /** The friends already mentioned, in the order they were mentioned. */
+    readonly selectedFriends = computed(() => {
+        const byId = new Map((this.friends() ?? []).map(friend => [friend.userId, friend]));
+        return [...this.selected()].flatMap(id => byId.get(id) ?? []);
+    });
+
+    /** Friends not mentioned yet whose name or tag contains what follows the `@`. */
+    readonly suggestions = computed(() => {
+        const typed = this.query().trim();
+        if (!typed) {
+            return [];
+        }
+        const needle = (typed.startsWith(MENTION_PREFIX) ? typed.slice(1) : typed).toLowerCase();
+        return (this.friends() ?? [])
+            .filter(friend => !this.selected().has(friend.userId))
+            .filter(friend => this.tagOf(friend).toLowerCase().includes(needle))
+            .slice(0, MAX_SUGGESTIONS);
+    });
+
+    /** The suggestion Enter would pick, moved with the arrow keys; back to the first on each keystroke. */
+    readonly activeIndex = linkedSignal({ source: this.suggestions, computation: () => 0 });
 
     readonly durations = computed(() => {
         const { start, end } = this.window();
@@ -77,19 +106,54 @@ export class FindSlotComponent {
         });
     }
 
-    isSelected(userId: string): boolean {
-        return this.selected().has(userId);
+    tagOf(friend: UserNodeDTO): string {
+        return `${friend.userName}#${friend.hashtag}`;
     }
 
-    toggle(userId: string): void {
+    mention(friend: UserNodeDTO): void {
+        this.selected.update(current => new Set(current).add(friend.userId));
+        this.query.set('');
+        this.clearResults();
+    }
+
+    remove(userId: string): void {
         this.selected.update(current => {
             const next = new Set(current);
-            if (!next.delete(userId)) {
-                next.add(userId);
-            }
+            next.delete(userId);
             return next;
         });
         this.clearResults();
+    }
+
+    /** Arrows move through the suggestions, Enter picks one, Backspace on an empty field drops the last mention. */
+    onQueryKeydown(event: KeyboardEvent): void {
+        const suggestions = this.suggestions();
+        switch (event.key) {
+            case 'ArrowDown':
+            case 'ArrowUp':
+                if (suggestions.length > 0) {
+                    event.preventDefault();
+                    const step = event.key === 'ArrowDown' ? 1 : -1;
+                    this.activeIndex.update(index => (index + step + suggestions.length) % suggestions.length);
+                }
+                break;
+            case 'Enter':
+                if (suggestions.length > 0) {
+                    event.preventDefault();
+                    this.mention(suggestions[this.activeIndex()]);
+                }
+                break;
+            case 'Escape':
+                this.query.set('');
+                break;
+            case 'Backspace': {
+                const last = this.selectedFriends().at(-1);
+                if (!this.query() && last) {
+                    this.remove(last.userId);
+                }
+                break;
+            }
+        }
     }
 
     setDuration(minutes: number): void {

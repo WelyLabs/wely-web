@@ -7,16 +7,33 @@
     } @else if (friends()!.length === 0) {
         <p class="message">Ajoutez des amis pour chercher un créneau ensemble.</p>
     } @else {
-        <ul class="friend-list">
-            @for (friend of friends(); track friend.userId) {
-                <li>
-                    <label class="friend">
-                        <input type="checkbox" [checked]="isSelected(friend.userId)" (change)="toggle(friend.userId)">
-                        <span>{{ friend.userName }}</span>
-                    </label>
-                </li>
+        <div class="mention-field">
+            @for (friend of selectedFriends(); track friend.userId) {
+                <span class="mention">
+                    &#64;{{ friend.userName }}
+                    <button type="button" class="mention-remove" [attr.aria-label]="'Retirer ' + friend.userName"
+                        (click)="remove(friend.userId)">×</button>
+                </span>
             }
-        </ul>
+            <label class="visually-hidden" for="find-slot-query">Mentionner un ami</label>
+            <input id="find-slot-query" type="text" autocomplete="off" role="combobox"
+                aria-controls="find-slot-suggestions" [attr.aria-expanded]="suggestions().length > 0"
+                [placeholder]="selected().size === 0 ? '@ un ami' : ''"
+                [ngModel]="query()" (ngModelChange)="query.set($event)" (keydown)="onQueryKeydown($event)">
+        </div>
+        @if (suggestions().length > 0) {
+            <ul id="find-slot-suggestions" class="suggestions" role="listbox">
+                @for (friend of suggestions(); track friend.userId; let i = $index) {
+                    <li role="option" [attr.aria-selected]="i === activeIndex()" [class.active]="i === activeIndex()"
+                        (mousedown)="$event.preventDefault(); mention(friend)">
+                        <span class="suggestion-name">{{ friend.userName }}</span>
+                        <span class="suggestion-tag">#{{ friend.hashtag }}</span>
+                    </li>
+                }
+            </ul>
+        } @else if (query().trim().length > 1) {
+            <p class="message">Aucun ami ne correspond.</p>
+        }
     }
 
     <div class="section-label">Pendant</div>
