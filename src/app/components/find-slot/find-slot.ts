@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 import { EventService, FreeRange } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { UserNodeDTO } from '../../models/user.model';
 import { LoggerService } from '../../core/logging/logger.service';
+import { FriendMentionInputComponent } from '../friend-mention-input/friend-mention-input';
 
 /** A period of time, used both for the search window and for the slot picked in it. */
 export interface TimeWindow {
@@ -20,9 +20,6 @@ const MINUTE_MS = 60_000;
 /** Durations offered, in minutes. Only those fitting in the window are shown. */
 const DURATIONS = [15, 30, 60, 90, 120, 180, 240];
 const DEFAULT_DURATION = 60;
-/** Suggestions shown under the mention field at once. */
-const MAX_SUGGESTIONS = 6;
-const MENTION_PREFIX = '@';
 /** Same cap as the backend, so the user cannot build a search that is bound to be rejected. */
 export const MAX_FRIENDS = 20;
 
@@ -33,7 +30,7 @@ export const MAX_FRIENDS = 20;
 @Component({
     selector: 'app-find-slot',
     standalone: true,
-    imports: [CommonModule, FormsModule, MatIconModule],
+    imports: [CommonModule, MatIconModule, FriendMentionInputComponent],
     templateUrl: './find-slot.html',
     styleUrl: './find-slot.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -49,32 +46,9 @@ export class FindSlotComponent {
 
     readonly friends = signal<UserNodeDTO[] | null>(null);
     readonly friendsError = signal(false);
-    readonly selected = signal<ReadonlySet<string>>(new Set());
-
-    /** What is typed in the mention field, `@` included. */
-    readonly query = signal('');
-
-    /** The friends already mentioned, in the order they were mentioned. */
-    readonly selectedFriends = computed(() => {
-        const byId = new Map((this.friends() ?? []).map(friend => [friend.userId, friend]));
-        return [...this.selected()].flatMap(id => byId.get(id) ?? []);
-    });
-
-    /** Friends not mentioned yet whose name or tag contains what follows the `@`. */
-    readonly suggestions = computed(() => {
-        const typed = this.query().trim();
-        if (!typed) {
-            return [];
-        }
-        const needle = (typed.startsWith(MENTION_PREFIX) ? typed.slice(1) : typed).toLowerCase();
-        return (this.friends() ?? [])
-            .filter(friend => !this.selected().has(friend.userId))
-            .filter(friend => this.tagOf(friend).toLowerCase().includes(needle))
-            .slice(0, MAX_SUGGESTIONS);
-    });
-
-    /** The suggestion Enter would pick, moved with the arrow keys; back to the first on each keystroke. */
-    readonly activeIndex = linkedSignal({ source: this.suggestions, computation: () => 0 });
+    readonly maxFriends = MAX_FRIENDS;
+    /** Mentioned friends, in the order they were mentioned. */
+    readonly selected = signal<string[]>([]);
 
     readonly durations = computed(() => {
         const { start, end } = this.window();
@@ -92,7 +66,7 @@ export class FindSlotComponent {
     readonly errorMessage = signal<string | null>(null);
 
     readonly canSearch = computed(() =>
-        this.selected().size > 0 && this.selected().size <= MAX_FRIENDS && !this.searching());
+        this.selected().length > 0 && this.selected().length <= MAX_FRIENDS && !this.searching());
 
     constructor() {
         this.socialService.listFriends().pipe(
@@ -106,54 +80,9 @@ export class FindSlotComponent {
         });
     }
 
-    tagOf(friend: UserNodeDTO): string {
-        return `${friend.userName}#${friend.hashtag}`;
-    }
-
-    mention(friend: UserNodeDTO): void {
-        this.selected.update(current => new Set(current).add(friend.userId));
-        this.query.set('');
+    onSelectedChange(friendIds: string[]): void {
+        this.selected.set(friendIds);
         this.clearResults();
-    }
-
-    remove(userId: string): void {
-        this.selected.update(current => {
-            const next = new Set(current);
-            next.delete(userId);
-            return next;
-        });
-        this.clearResults();
-    }
-
-    /** Arrows move through the suggestions, Enter picks one, Backspace on an empty field drops the last mention. */
-    onQueryKeydown(event: KeyboardEvent): void {
-        const suggestions = this.suggestions();
-        switch (event.key) {
-            case 'ArrowDown':
-            case 'ArrowUp':
-                if (suggestions.length > 0) {
-                    event.preventDefault();
-                    const step = event.key === 'ArrowDown' ? 1 : -1;
-                    this.activeIndex.update(index => (index + step + suggestions.length) % suggestions.length);
-                }
-                break;
-            case 'Enter':
-                if (suggestions.length > 0) {
-                    event.preventDefault();
-                    this.mention(suggestions[this.activeIndex()]);
-                }
-                break;
-            case 'Escape':
-                this.query.set('');
-                break;
-            case 'Backspace': {
-                const last = this.selectedFriends().at(-1);
-                if (!this.query() && last) {
-                    this.remove(last.userId);
-                }
-                break;
-            }
-        }
     }
 
     setDuration(minutes: number): void {
@@ -170,7 +99,7 @@ export class FindSlotComponent {
         this.errorMessage.set(null);
 
         this.eventService.findFreeSlots({
-            friendIds: [...this.selected()],
+            friendIds: this.selected(),
             start,
             end,
             durationMinutes: this.durationMinutes()

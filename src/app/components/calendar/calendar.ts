@@ -1,15 +1,15 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { EventService, FeedEvent, EventCreateRequest, FriendCalendarEntry } from '../../services/event.service';
+import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarEntry } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
-import { CLOSENESS_LABELS, FriendSummary } from '../../models/friendship.model';
+import { FriendSummary } from '../../models/friendship.model';
 
 /** How often the now-line is repositioned. */
 const TIME_MARKER_REFRESH_MS = 60000;
@@ -39,12 +39,18 @@ function startOfDay(day: Date): Date {
   return date;
 }
 
-/** What the friend's closeness discloses, for the legend under the header. */
-const OVERLAY_LEGENDS: Readonly<Record<string, string>> = {
-  FRIEND: 'vous voyez ses moments occupés, et le détail de ce que vous pouvez voir vous-même',
-  CLOSE: 'vous voyez aussi le titre des événements de personnes que vous ne connaissez pas',
-  INTIMATE: 'vous voyez tout, sauf ses événements privés'
-};
+/** Common free time shorter than this is not worth showing on the grid. */
+const MIN_COMMON_FREE_MINUTES = 30;
+
+/** What the overlay fetched for the visible days: each friend's calendar, and the common free time. */
+interface OverlayData {
+  calendars: { friendId: string; entries: FriendCalendarEntry[]; failed: boolean }[];
+  /** Null when it could not be computed. */
+  free: FreeRange[] | null;
+}
+
+const NO_OVERLAY: OverlayData = { calendars: [], free: [] };
+
 
 /** Six rows of seven, so the month grid never changes height between months. */
 const MONTH_GRID_CELLS = 42;
@@ -67,8 +73,9 @@ export interface CalendarEvent {
 }
 
 import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
-import { FriendBlock, FriendBlocksComponent } from '../friend-blocks/friend-blocks';
-import { FriendOverlayPickerComponent } from '../friend-overlay-picker/friend-overlay-picker';
+import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
+import { DayLayout, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, layoutDay } from '../calendar-overlay/overlay-layout';
+import { FriendOverlayBarComponent } from '../friend-overlay-bar/friend-overlay-bar';
 
 /** How many event titles a month cell names before it starts counting the rest. */
 const MONTH_CELL_EVENTS = 3;
@@ -92,7 +99,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, FriendBlocksComponent, FriendOverlayPickerComponent],
+  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -158,73 +165,87 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   /** Friends whose calendar can be laid over the week or day view. */
   readonly friendships = signal<FriendSummary[]>([]);
-  readonly overlayFriendId = signal<string | null>(null);
-  readonly overlayError = signal<string | null>(null);
-  readonly overlayFriend = computed(() =>
-    this.friendships().find(friend => friend.userId === this.overlayFriendId()) ?? null);
-  readonly overlayLegend = computed(() => {
-    const friend = this.overlayFriend();
-    return friend ? `${friend.userName} est « ${CLOSENESS_LABELS[friend.closeness]} » : ${OVERLAY_LEGENDS[friend.closeness]}.` : null;
-  });
+  /** The friends laid over the grid, in the order they were mentioned, at most four. */
+  readonly overlayFriendIds = signal<string[]>([]);
+  /** Each overlaid friend's colour, by mention order: the lane and the chip share it. */
+  readonly overlayColors = computed(() =>
+    new Map(this.overlayFriendIds().map((id, index) => [id, OVERLAY_COLORS[index % OVERLAY_COLORS.length]])));
 
-  /** Which friend, over which days: equal requests do not refetch when the days are merely rebuilt. */
+  /** Which friends, over which days: equal requests do not refetch when the days are merely rebuilt. */
   private readonly overlayRequest = computed(() => {
-    const friendId = this.overlayFriendId();
+    const friendIds = this.overlayFriendIds();
     const days = this.days();
-    if (!friendId || this.viewMode() === 'month' || days.length === 0) {
+    if (friendIds.length === 0 || this.viewMode() === 'month' || days.length === 0) {
       return null;
     }
     const from = startOfDay(days[0].date);
     const to = startOfDay(days[days.length - 1].date);
     to.setDate(to.getDate() + 1);
-    return { friendId, from, to };
+    return { friendIds, from, to };
   }, {
-    equal: (a, b) => a === b || (!!a && !!b && a.friendId === b.friendId
+    equal: (a, b) => a === b || (!!a && !!b && a.friendIds.join() === b.friendIds.join()
       && a.from.getTime() === b.from.getTime() && a.to.getTime() === b.to.getTime())
   });
 
-  /** The overlaid friend's entries; switchMap drops the answer for a week already left. */
-  readonly friendEntries = toSignal(toObservable(this.overlayRequest).pipe(
-    switchMap(request => {
-      this.overlayError.set(null);
-      if (!request) {
-        return of<FriendCalendarEntry[]>([]);
-      }
-      return this.eventService.getFriendCalendar(request.friendId, request.from, request.to).pipe(
-        catchError((err: unknown) => {
-          this.logger.error('CalendarComponent', 'Could not load a friend calendar', err);
-          this.overlayError.set('Impossible de charger ce calendrier.');
-          return of<FriendCalendarEntry[]>([]);
-        }));
-    })), { initialValue: [] });
+  /**
+   * Every overlaid friend's calendar, one request each in parallel, and the time all of you have
+   * free. One friend failing does not hide the others; switchMap drops an answer for a week
+   * already left.
+   */
+  private readonly overlayData = toSignal(toObservable(this.overlayRequest).pipe(
+    switchMap(request => request ? this.fetchOverlay(request.friendIds, request.from, request.to) : of(NO_OVERLAY))
+  ), { initialValue: NO_OVERLAY });
 
-  /** The friend's entries per day, by `toDateString()`, each cut to the day it is drawn on. */
-  readonly friendBlocks = computed(() => {
-    const hourHeight = this.hourHeight();
-    const byDay = new Map<string, FriendBlock[]>();
-    for (const day of this.days()) {
-      const dayStart = startOfDay(day.date);
-      const dayEnd = new Date(dayStart);
-      dayEnd.setDate(dayEnd.getDate() + 1);
-      const blocks = this.friendEntries()
-        .filter(entry => entry.start < dayEnd && entry.end > dayStart)
-        .map(entry => {
-          const from = Math.max(entry.start.getTime(), dayStart.getTime());
-          const to = Math.min(entry.end.getTime(), dayEnd.getTime());
-          return {
-            top: (from - dayStart.getTime()) / HOUR_MS * hourHeight,
-            height: Math.max((to - from) / HOUR_MS * hourHeight, 4),
-            title: entry.title,
-            location: entry.location
-          };
-        });
-      byDay.set(day.date.toDateString(), blocks);
+  readonly overlayError = computed(() => {
+    const data = this.overlayData();
+    const failed = data.calendars.filter(calendar => calendar.failed).map(calendar => this.nameOf(calendar.friendId));
+    if (failed.length > 0) {
+      return `Impossible de charger le calendrier de ${failed.join(', ')}.`;
     }
-    return byDay;
+    return data.free === null ? 'Les créneaux communs n\'ont pas pu être calculés.' : null;
   });
 
-  friendBlocksFor(date: Date): FriendBlock[] {
-    return this.friendBlocks().get(date.toDateString()) ?? [];
+  /** Each visible day's overlay, by `toDateString()`: friends' lanes and the common free time. */
+  readonly dayLayouts = computed(() => {
+    const data = this.overlayData();
+    const colors = this.overlayColors();
+    const lanes: FriendLane[] = data.calendars.map(calendar => ({
+      friendName: this.nameOf(calendar.friendId),
+      color: colors.get(calendar.friendId) ?? OVERLAY_COLORS[0],
+      periods: calendar.entries
+    }));
+    const hourHeight = this.hourHeight();
+    return new Map(this.days().map(day =>
+      [day.date.toDateString(), layoutDay(day.date, lanes, data.free ?? [], hourHeight)]));
+  });
+
+  overlayFor(date: Date): DayLayout {
+    return this.dayLayouts().get(date.toDateString()) ?? { blocks: [], free: [] };
+  }
+
+  onOverlayFriendsChange(friendIds: string[]): void {
+    this.overlayFriendIds.set(friendIds.slice(0, MAX_OVERLAID_FRIENDS));
+  }
+
+  private fetchOverlay(friendIds: string[], from: Date, to: Date): Observable<OverlayData> {
+    const calendars = forkJoin(friendIds.map(friendId =>
+      this.eventService.getFriendCalendar(friendId, from, to).pipe(
+        map(entries => ({ friendId, entries, failed: false })),
+        catchError((err: unknown) => {
+          this.logger.error('CalendarComponent', 'Could not load a friend calendar', err);
+          return of({ friendId, entries: [], failed: true });
+        }))));
+    const free = this.eventService.findFreeSlots({
+      friendIds, start: from, end: to, durationMinutes: MIN_COMMON_FREE_MINUTES
+    }).pipe(catchError((err: unknown) => {
+      this.logger.error('CalendarComponent', 'Could not compute the common free time', err);
+      return of(null);
+    }));
+    return forkJoin({ calendars, free });
+  }
+
+  private nameOf(userId: string): string {
+    return this.friendships().find(friend => friend.userId === userId)?.userName ?? 'un ami';
   }
 
   /** Matches the hour rows of the stylesheet: 60px on a phone, 80px otherwise. */

@@ -1,0 +1,100 @@
+:host {
+    display: block;
+    position: relative;
+}
+
+.mention-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+    &:focus-within {
+        border-bottom-color: var(--primary-blue);
+    }
+
+    input {
+        flex: 1;
+        min-width: 80px;
+        border: none;
+        background: transparent;
+        font-size: 14px;
+        color: var(--text-primary);
+        outline: none;
+        padding: 2px 0;
+
+        &::placeholder {
+            color: var(--text-tertiary);
+        }
+    }
+}
+
+.mention {
+    --mention-color: var(--primary-blue);
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 8px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--mention-color);
+    font-size: 13px;
+    font-weight: 600;
+
+    &.colored {
+        background: var(--mention-color);
+        color: white;
+    }
+}
+
+.mention-remove {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+}
+
+.suggestions {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+
+    li {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        cursor: pointer;
+
+        &.active {
+            background: rgba(59, 130, 246, 0.1);
+        }
+    }
+
+    .suggestion-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .suggestion-tag {
+        font-size: 12px;
+        color: var(--text-tertiary);
+    }
+}
+
+
+.no-match {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}

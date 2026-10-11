@@ -1,0 +1,13 @@
+@for (band of free(); track $index) {
+    <div class="free-band" [style.top.px]="band.top" [style.height.px]="band.height"></div>
+}
+@for (block of blocks(); track $index) {
+    <div class="friend-block" [class.busy]="!block.title"
+        [style.top.px]="block.top" [style.height.px]="block.height"
+        [style.left.%]="block.left" [style.width.%]="block.width" [style.--lane-color]="block.color">
+        <span class="friend-block-title">{{ block.title ?? 'Occupé' }}</span>
+        @if (block.location) {
+            <span class="friend-block-location">{{ block.location }}</span>
+        }
+    </div>
+}

@@ -62,171 +62,29 @@ describe('FindSlotComponent', () => {
 
     const alice = () => friends[1];
     const zoe = () => friends[0];
-    const key = (name: string) => new KeyboardEvent('keydown', { key: name, cancelable: true });
+    /** What the mention field reports when a friend is added to the selection. */
+    const mention = (friend: UserNodeDTO) => component.onSelectedChange([...component.selected(), friend.userId]);
 
-    it('suggestions_shouldBeEmpty_whenNothingIsTyped', () => {
-        expect(component.suggestions()).toEqual([]);
+    it('onSelectedChange_shouldKeepTheMentionedFriendsInOrder', () => {
+        mention(zoe());
+        mention(alice());
+
+        expect(component.selected()).toEqual(['u-2', 'u-1']);
     });
 
-    it('suggestions_shouldListEveryFriend_whenOnlyTheAtIsTyped', () => {
-        component.query.set('@');
-
-        expect(component.suggestions().map(f => f.userName)).toEqual(['Alice', 'Zoé']);
-    });
-
-    it('suggestions_shouldMatchTheNameCaseInsensitively_withOrWithoutTheAt', () => {
-        component.query.set('@ali');
-        expect(component.suggestions()).toEqual([alice()]);
-
-        component.query.set('ZO');
-        expect(component.suggestions()).toEqual([zoe()]);
-    });
-
-    it('suggestions_shouldMatchTheHashtag', () => {
-        component.query.set('@#2');
-
-        expect(component.suggestions()).toEqual([zoe()]);
-    });
-
-    it('suggestions_shouldLeaveOutFriendsAlreadyMentioned', () => {
-        component.mention(alice());
-        component.query.set('@');
-
-        expect(component.suggestions()).toEqual([zoe()]);
-    });
-
-    it('suggestions_shouldShowAtMostSix', () => {
-        listFriends.mockReturnValue(of(Array.from({ length: 10 }, (_, i) => ({ userId: `f-${i}`, userName: `Friend ${i}`, hashtag: i }))));
-        create();
-        component.query.set('@friend');
-
-        expect(component.suggestions()).toHaveLength(6);
-    });
-
-    it('mention_shouldSelectTheFriendAndClearTheField', () => {
-        component.query.set('@ali');
-
-        component.mention(alice());
-
-        expect(component.selected().has('u-1')).toBe(true);
-        expect(component.query()).toBe('');
-    });
-
-    it('mention_shouldClearPreviousResults', () => {
-        component.mention(alice());
+    it('onSelectedChange_shouldClearPreviousResults', () => {
+        mention(alice());
         component.search();
 
-        component.mention(zoe());
+        mention(zoe());
 
         expect(component.results()).toBeNull();
     });
 
-    it('selectedFriends_shouldKeepTheOrderOfMention', () => {
-        component.mention(zoe());
-        component.mention(alice());
+    it('template_shouldHandTheFriendsToTheMentionField', () => {
+        const field = fixture.nativeElement.querySelector('app-friend-mention-input');
 
-        expect(component.selectedFriends().map(f => f.userName)).toEqual(['Zoé', 'Alice']);
-    });
-
-    it('remove_shouldDropTheMentionAndClearResults', () => {
-        component.mention(alice());
-        component.search();
-
-        component.remove('u-1');
-
-        expect(component.selected().size).toBe(0);
-        expect(component.results()).toBeNull();
-    });
-
-    it('tagOf_shouldJoinNameAndHashtag', () => {
-        expect(component.tagOf(alice())).toBe('Alice#1');
-    });
-
-    it('onQueryKeydown_shouldMentionTheActiveSuggestionOnEnter', () => {
-        component.query.set('@');
-        const enter = key('Enter');
-
-        component.onQueryKeydown(enter);
-
-        expect(component.selectedFriends()).toEqual([alice()]);
-        expect(enter.defaultPrevented).toBe(true);
-    });
-
-    it('onQueryKeydown_shouldMoveThroughSuggestionsWithTheArrowsAndWrapAround', () => {
-        component.query.set('@');
-
-        component.onQueryKeydown(key('ArrowDown'));
-        expect(component.activeIndex()).toBe(1);
-
-        component.onQueryKeydown(key('ArrowDown'));
-        expect(component.activeIndex()).toBe(0);
-
-        component.onQueryKeydown(key('ArrowUp'));
-        expect(component.activeIndex()).toBe(1);
-
-        component.onQueryKeydown(key('Enter'));
-        expect(component.selectedFriends()).toEqual([zoe()]);
-    });
-
-    it('onQueryKeydown_shouldGoBackToTheFirstSuggestion_whenTheQueryChanges', () => {
-        component.query.set('@');
-        component.onQueryKeydown(key('ArrowDown'));
-
-        component.query.set('@a');
-
-        expect(component.activeIndex()).toBe(0);
-    });
-
-    it('onQueryKeydown_shouldLetEnterThrough_whenThereIsNoSuggestion', () => {
-        const enter = key('Enter');
-
-        component.onQueryKeydown(enter);
-
-        expect(enter.defaultPrevented).toBe(false);
-        expect(component.selected().size).toBe(0);
-    });
-
-    it('onQueryKeydown_shouldClearTheFieldOnEscape', () => {
-        component.query.set('@ali');
-
-        component.onQueryKeydown(key('Escape'));
-
-        expect(component.query()).toBe('');
-    });
-
-    it('onQueryKeydown_shouldDropTheLastMentionOnBackspace_whenTheFieldIsEmpty', () => {
-        component.mention(zoe());
-        component.mention(alice());
-
-        component.onQueryKeydown(key('Backspace'));
-
-        expect(component.selectedFriends()).toEqual([zoe()]);
-    });
-
-    it('onQueryKeydown_shouldKeepMentionsOnBackspace_whileTextIsTyped', () => {
-        component.mention(alice());
-        component.query.set('@z');
-
-        component.onQueryKeydown(key('Backspace'));
-
-        expect(component.selected().size).toBe(1);
-    });
-
-    it('template_shouldRenderMentionsAndSuggestions', () => {
-        component.mention(alice());
-        component.query.set('@z');
-        fixture.detectChanges();
-        const text = fixture.nativeElement.textContent;
-
-        expect(text).toContain('@Alice');
-        expect(fixture.nativeElement.querySelectorAll('.suggestions li')).toHaveLength(1);
-    });
-
-    it('template_shouldSayWhenNoFriendMatches', () => {
-        component.query.set('@nobody');
-        fixture.detectChanges();
-
-        expect(fixture.nativeElement.textContent).toContain('Aucun ami ne correspond');
+        expect(field).not.toBeNull();
     });
 
     it('canSearch_shouldBeFalse_whenNoFriendIsSelected', () => {
@@ -235,7 +93,7 @@ describe('FindSlotComponent', () => {
 
     it('canSearch_shouldBeFalse_whenTooManyFriendsAreSelected', () => {
         for (let i = 0; i <= MAX_FRIENDS; i++) {
-            component.mention({ userId: `u-${i}`, userName: `User ${i}`, hashtag: i });
+            mention({ userId: `u-${i}`, userName: `User ${i}`, hashtag: i });
         }
         expect(component.canSearch()).toBe(false);
     });
@@ -252,7 +110,7 @@ describe('FindSlotComponent', () => {
     });
 
     it('setDuration_shouldChangeTheDurationAndClearResults', () => {
-        component.mention(alice());
+        mention(alice());
         component.search();
 
         component.setDuration(90);
@@ -262,7 +120,7 @@ describe('FindSlotComponent', () => {
     });
 
     it('search_shouldSendTheWindowTheFriendsAndTheDuration', () => {
-        component.mention(alice());
+        mention(alice());
         component.search();
 
         expect(findFreeSlots).toHaveBeenCalledWith({
@@ -280,7 +138,7 @@ describe('FindSlotComponent', () => {
     it('search_shouldShowSearchingUntilTheAnswerArrives', () => {
         const answer = new Subject<FreeRange[]>();
         findFreeSlots.mockReturnValue(answer);
-        component.mention(alice());
+        mention(alice());
 
         component.search();
         expect(component.searching()).toBe(true);
@@ -292,7 +150,7 @@ describe('FindSlotComponent', () => {
 
     it('search_shouldSayNothingIsFree_whenNoRangeComesBack', () => {
         findFreeSlots.mockReturnValue(of([]));
-        component.mention(alice());
+        mention(alice());
         component.search();
         fixture.detectChanges();
 
@@ -306,7 +164,7 @@ describe('FindSlotComponent', () => {
         [500, 'Une erreur est survenue']
     ])('search_shouldExplainA%sAnswer', (status, message) => {
         findFreeSlots.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
-        component.mention(alice());
+        mention(alice());
 
         component.search();
 

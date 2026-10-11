@@ -1,0 +1,27 @@
+<div class="mention-field">
+    @for (friend of selectedFriends(); track friend.userId) {
+        <span class="mention" [class.colored]="colorOf(friend.userId)" [style.--mention-color]="colorOf(friend.userId)">
+            &#64;{{ friend.userName }}
+            <button type="button" class="mention-remove" [attr.aria-label]="'Retirer ' + friend.userName"
+                (click)="remove(friend.userId)">×</button>
+        </span>
+    }
+    <label class="visually-hidden" [for]="fieldId()">Mentionner un ami</label>
+    <input [id]="fieldId()" type="text" autocomplete="off" role="combobox"
+        [attr.aria-controls]="fieldId() + '-suggestions'" [attr.aria-expanded]="suggestions().length > 0"
+        [placeholder]="full() ? '' : selected().length === 0 ? placeholder() : '@'" [disabled]="full()"
+        [ngModel]="query()" (ngModelChange)="query.set($event)" (keydown)="onQueryKeydown($event)">
+</div>
+@if (suggestions().length > 0) {
+    <ul [id]="fieldId() + '-suggestions'" class="suggestions" role="listbox">
+        @for (friend of suggestions(); track friend.userId; let i = $index) {
+            <li role="option" [attr.aria-selected]="i === activeIndex()" [class.active]="i === activeIndex()"
+                (mousedown)="$event.preventDefault(); mention(friend)">
+                <span class="suggestion-name">{{ friend.userName }}</span>
+                <span class="suggestion-tag">#{{ friend.hashtag }}</span>
+            </li>
+        }
+    </ul>
+} @else if (query().trim().length > 1) {
+    <p class="no-match">Aucun ami ne correspond.</p>
+}

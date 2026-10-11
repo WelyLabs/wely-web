@@ -1,0 +1,55 @@
+:host {
+    display: contents;
+}
+
+.free-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: rgba(34, 197, 94, 0.14);
+    border-top: 1px dashed rgba(22, 163, 74, 0.5);
+    border-bottom: 1px dashed rgba(22, 163, 74, 0.5);
+}
+
+.friend-block {
+    --lane-color: #a855f7;
+    position: absolute;
+    z-index: 1;
+    // Never in the way of drag-to-create on the hour cells.
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 6px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    border-left: 3px solid var(--lane-color);
+    background: color-mix(in srgb, var(--lane-color) 14%, transparent);
+    font-size: 11px;
+    color: color-mix(in srgb, var(--lane-color) 80%, black);
+
+    &.busy {
+        background: repeating-linear-gradient(135deg,
+                color-mix(in srgb, var(--lane-color) 8%, transparent) 0 6px,
+                color-mix(in srgb, var(--lane-color) 20%, transparent) 6px 12px);
+        font-style: italic;
+    }
+}
+
+.friend-block-title,
+.friend-block-location {
+    // Lanes narrow down with each friend added: cut rather than wrap.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-block-title {
+    font-weight: 700;
+}
+
+.friend-block-location {
+    opacity: 0.8;
+}

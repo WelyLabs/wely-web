@@ -1,0 +1,24 @@
+<div class="overlay-bar">
+    <app-friend-mention-input class="overlay-field" fieldId="overlay-friends" [friends]="friendships()"
+        [selected]="selected()" [max]="max" [colors]="colors()" placeholder="@ superposer un ami"
+        (selectedChange)="selectedChange.emit($event)" />
+
+    @if (legend().length > 0) {
+        <ul class="legend">
+            @for (entry of legend(); track entry.userId) {
+                <li [title]="entry.userName + ' est « ' + entry.closeness + ' » : vous voyez ' + entry.discloses">
+                    <span class="swatch" [style.background]="entry.color"></span>
+                    {{ entry.userName }} · {{ entry.closeness }}
+                </li>
+            }
+            <li class="free">
+                <span class="swatch"></span>
+                Vous êtes tous libres
+            </li>
+        </ul>
+    }
+
+    @if (error(); as message) {
+        <p class="error">{{ message }}</p>
+    }
+</div>
