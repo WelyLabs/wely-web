@@ -171,6 +171,26 @@ describe('EventService', () => {
         httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
     });
 
+    it('getEvent_shouldFetchOneEventAndConvertItsDates', () => {
+        let event: FeedEvent | undefined;
+        service.getEvent('42').subscribe((loaded) => (event = loaded));
+
+        httpMock.expectOne(`${apiUrl}/42`).flush(payload({ id: '42' }));
+
+        expect(event?.id).toBe('42');
+        expect(event?.startDate).toBeInstanceOf(Date);
+    });
+
+    it('getParticipants_shouldReturnWhatTheViewerMayKnow', () => {
+        const participants = { count: 3, participantIds: [], friendIds: ['f1'] };
+        let received: unknown;
+        service.getParticipants('42').subscribe((loaded) => (received = loaded));
+
+        httpMock.expectOne(`${apiUrl}/42/participants`).flush(participants);
+
+        expect(received).toEqual(participants);
+    });
+
     it('toggles a subscription and refreshes both lists', () => {
         const event: FeedEvent = {
             id: '1',
