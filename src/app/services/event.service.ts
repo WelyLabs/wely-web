@@ -45,7 +45,7 @@ export interface EventParticipants {
   /** Everyone, in joining order — only for those who take part or organize; empty otherwise. */
   participantIds: string[];
   /** The viewer's friends among the participants. */
-  friendIds: string[];
+  friendsGoingIds: string[];
 }
 
 export interface FriendCalendarEntry {

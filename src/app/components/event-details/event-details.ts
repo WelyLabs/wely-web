@@ -146,7 +146,7 @@ export class EventDetailsComponent implements OnInit {
     return event ? this.names().get(event.organizerId)?.name ?? '' : '';
   });
 
-  readonly friends = computed(() => (this.participants()?.friendIds ?? []).map(id => this.person(id)));
+  readonly friends = computed(() => (this.participants()?.friendsGoingIds ?? []).map(id => this.person(id)));
 
   /** Everyone, friends first; only filled for those who take part or organize. */
   readonly people = computed(() => {
@@ -271,7 +271,7 @@ export class EventDetailsComponent implements OnInit {
       name,
       initials: initialsOf(name),
       picture: known?.picture,
-      isFriend: (this.participants()?.friendIds ?? []).includes(id)
+      isFriend: (this.participants()?.friendsGoingIds ?? []).includes(id)
     };
   }
 }

@@ -182,7 +182,7 @@ describe('EventService', () => {
     });
 
     it('getParticipants_shouldReturnWhatTheViewerMayKnow', () => {
-        const participants = { count: 3, participantIds: [], friendIds: ['f1'] };
+        const participants = { count: 3, participantIds: [], friendsGoingIds: ['f1'] };
         let received: unknown;
         service.getParticipants('42').subscribe((loaded) => (received = loaded));
 

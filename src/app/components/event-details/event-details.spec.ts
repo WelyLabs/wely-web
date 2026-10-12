@@ -86,7 +86,7 @@ describe('EventDetailsComponent', () => {
     const me = new BehaviorSubject<User | null>({ id: 'me' } as User);
 
     const participants = (overrides: Partial<EventParticipants> = {}): EventParticipants => ({
-        count: 3, participantIds: [], friendIds: ['f1'], ...overrides
+        count: 3, participantIds: [], friendsGoingIds: ['f1'], ...overrides
     });
 
     function create(): void {
