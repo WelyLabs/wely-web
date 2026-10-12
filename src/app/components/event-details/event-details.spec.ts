@@ -5,14 +5,20 @@ import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
-    EventDetailsComponent, avatarColor, countdownOf, initialsOf, isSameDay, phaseOf
+    EventDetailsComponent, THREAD_PREVIEW_SIZE, avatarColor, countdownOf, initialsOf, isSameDay, phaseOf
 } from './event-details';
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { UserService } from '../../services/user.service';
-import { ChatService, PendingMessage } from '../../services/chat.service';
+import { ChatService } from '../../services/chat.service';
+import { NavigationService } from '../../services/navigation.service';
 import { Conversation, ConversationType, Message, MessageType } from '../../models/chat.model';
 import { User } from '../../models/user.model';
+
+// ChatService is only provided as a token here, but importing it loads rsocket-js: replaced by the
+// shared stub, as in every spec that pulls the service in, so no file gets the real module first.
+vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
 
 const at = (iso: string) => new Date(iso);
 
@@ -85,6 +91,7 @@ describe('EventDetailsComponent', () => {
         toggleSubscription: ReturnType<typeof vi.fn>;
     };
     let router: { navigate: ReturnType<typeof vi.fn> };
+    let navigation: { back: ReturnType<typeof vi.fn> };
     let socialService: {
         searchUsers: ReturnType<typeof vi.fn>;
         sendFriendRequest: ReturnType<typeof vi.fn>;
@@ -140,6 +147,7 @@ describe('EventDetailsComponent', () => {
             toggleSubscription: vi.fn().mockReturnValue(of(event()))
         };
         router = { navigate: vi.fn() };
+        navigation = { back: vi.fn() };
         chatService = {
             getEventConversation: vi.fn().mockReturnValue(of(group([chatMessage()]))),
             sendMessage: vi.fn(),
@@ -160,6 +168,7 @@ describe('EventDetailsComponent', () => {
                 { provide: ChatService, useValue: chatService },
                 { provide: UserService, useValue: { currentUser$: me } },
                 { provide: Router, useValue: router },
+                { provide: NavigationService, useValue: navigation },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
             ]
         });
@@ -212,7 +221,7 @@ describe('EventDetailsComponent', () => {
         const message = fixture.nativeElement.querySelector('.thread-message') as HTMLElement;
         expect(message.textContent).toContain('Léo Martin');
         expect(message.textContent).toContain('Qui ramène les cartes ?');
-        expect(fixture.nativeElement.querySelector('.composer')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.open-discussion')).not.toBeNull();
     });
 
     it('followThread_shouldNotAskForTheGroupOfAGuest', () => {
@@ -260,40 +269,46 @@ describe('EventDetailsComponent', () => {
         expect(component.thread()).toEqual([]);
     });
 
-    it('sendMessage_shouldShowTheMessageAtOnceThenSettleIt', () => {
+    it('threadPreview_shouldKeepTheLastMessagesAndCountTheOthers', () => {
+        const messages = ['un', 'deux', 'trois', 'quatre', 'cinq'].map((content, i) =>
+            chatMessage({ id: `m${i}`, content, timestamp: `2026-10-12T09:0${i}:00` }));
+        chatService.getEventConversation.mockReturnValue(of(group(messages)));
         eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
-        const pending = { ...chatMessage({ id: 'pending-1', senderId: 'me', content: 'Je ramène Dixit' }), pending: true } as PendingMessage;
-        chatService.sendMessage.mockReturnValue(of(pending, { ...pending, pending: false }));
+
         create();
 
-        component.draft.set('  Je ramène Dixit ');
-        component.sendMessage();
-
-        expect(chatService.sendMessage).toHaveBeenCalledWith('conv-1', 'Je ramène Dixit', '');
-        expect(component.draft()).toBe('');
-        expect(component.thread().at(-1)).toEqual(expect.objectContaining({ id: 'pending-1', pending: false }));
-        expect(component.thread()).toHaveLength(2);
-        expect(component.authorOf(component.thread().at(-1)!)).toBe('Toi');
+        expect(component.threadPreview().map(message => message.content)).toEqual(['trois', 'quatre', 'cinq']);
+        expect(fixture.nativeElement.querySelectorAll('.thread-message').length).toBe(THREAD_PREVIEW_SIZE);
+        expect(fixture.nativeElement.textContent).toContain('2 messages plus tôt');
     });
 
-    it('sendMessage_shouldSendNothing_forAnEmptyDraft', () => {
+    it('openDiscussion_shouldOpenTheGroupInTheChat', () => {
         eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
         create();
 
-        component.draft.set('   ');
-        component.sendMessage();
+        (fixture.nativeElement.querySelector('.open-discussion') as HTMLButtonElement).click();
 
-        expect(chatService.sendMessage).not.toHaveBeenCalled();
+        expect(router.navigate).toHaveBeenCalledWith(['/chat', 'conv-1']);
     });
 
-    it('template_shouldHideTheComposerOnceItIsOver', () => {
+    it('openDiscussion_shouldDoNothing_beforeTheGroupIsLoaded', () => {
+        chatService.getEventConversation.mockReturnValue(new Subject<Conversation>());
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+        create();
+
+        component.openDiscussion();
+
+        expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('template_shouldStillOfferTheDiscussionOnceItIsOver', () => {
         vi.setSystemTime(at('2026-10-19T10:00:00'));
         eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
 
         create();
 
         expect(fixture.nativeElement.querySelector('.thread-message')).not.toBeNull();
-        expect(fixture.nativeElement.querySelector('.composer')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.open-discussion')?.textContent).toContain('Voir la discussion');
     });
 
     it('people_shouldListFriendsFirst', () => {
@@ -410,11 +425,11 @@ describe('EventDetailsComponent', () => {
         expect(fixture.nativeElement.querySelector('.people-heading')?.textContent).toContain('Tu as passé ce moment avec 2 personnes');
     });
 
-    it('goBack_shouldReturnToTheCalendar', () => {
+    it('goBack_shouldReturnWhereThePageWasOpenedFrom_orToTheCalendar', () => {
         create();
 
         component.goBack();
 
-        expect(router.navigate).toHaveBeenCalledWith(['/calendar']);
+        expect(navigation.back).toHaveBeenCalledWith('/calendar');
     });
 });

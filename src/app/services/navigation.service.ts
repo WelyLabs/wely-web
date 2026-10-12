@@ -24,12 +24,13 @@ export class NavigationService {
             });
     }
 
-    back(): void {
+    /** The previous page in the app, or {@code fallback} when the app was opened right here. */
+    back(fallback = '/conversations'): void {
         this.history.pop();
         if (this.history.length > 0) {
             this.location.back();
         } else {
-            this.router.navigateByUrl('/conversations');
+            this.router.navigateByUrl(fallback);
         }
     }
 }

@@ -70,6 +70,14 @@ describe('NavigationService', () => {
             expect(routerMock.navigateByUrl).toHaveBeenCalledWith('/conversations');
         });
 
+        it('back_shouldGoToTheGivenFallback_whenTheAppWasOpenedOnThisPage', () => {
+            routerEvents.next(new NavigationEnd(1, '/event/e1', '/event/e1'));
+
+            service.back('/calendar');
+
+            expect(routerMock.navigateByUrl).toHaveBeenCalledWith('/calendar');
+        });
+
         it('should pop from history when back() is called', () => {
             routerEvents.next(new NavigationEnd(1, '/page1', '/page1'));
             routerEvents.next(new NavigationEnd(2, '/page2', '/page2'));

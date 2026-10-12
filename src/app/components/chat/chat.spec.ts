@@ -226,6 +226,63 @@ describe('ChatComponent', () => {
         expect(chatServiceMock.getMessages).toHaveBeenCalledWith('conv1', 0);
     });
 
+    describe('event group', () => {
+        const group: Conversation = {
+            id: 'conv-ev', participantIds: ['me', 'ines', 'hugo'], type: ConversationType.EVENT,
+            title: 'Soirée jeux de société', eventId: 'ev-1', updatedAt: '', messages: [], bucketIndex: 0
+        };
+
+        const settle = async () => {
+            await new Promise(resolve => setTimeout(resolve));
+            fixture.detectChanges();
+        };
+
+        /** Lets the private conversation's first presence read go out, then switches to the group. */
+        async function openGroup(): Promise<void> {
+            await settle();
+            chatServiceMock.getConversationById.mockReturnValue(of(group));
+            chatServiceMock.getPresence.mockClear();
+            paramMapSubject.next(convertToParamMap({ convId: 'conv-ev' }));
+            await settle();
+        }
+
+        it('template_shouldNameTheGroupAfterTheEventAndCountItsMembers', async () => {
+            await openGroup();
+
+            expect(component.isEventGroup()).toBe(true);
+            const header = fixture.nativeElement.querySelector('.chat-header') as HTMLElement;
+            expect(header.textContent).toContain('Soirée jeux de société');
+            expect(header.textContent).toContain('3 membres');
+            expect(header.querySelector('.event-link')).not.toBeNull();
+        });
+
+        it('partnerPresence_shouldNotBeAskedForAGroup', async () => {
+            await openGroup();
+
+            expect(chatServiceMock.getPresence).not.toHaveBeenCalled();
+        });
+
+        it('onSendMessage_shouldSendToTheGroupWithoutAPartner', async () => {
+            await openGroup();
+            chatServiceMock.sendMessage.mockReturnValue(of({
+                id: '1', content: 'hi', senderId: 'me', senderName: 'Me', receiverId: '',
+                conversationId: 'conv-ev', timestamp: new Date().toISOString(), type: MessageType.TEXT, pending: false
+            }));
+
+            component.onSendMessage('hi');
+
+            expect(chatServiceMock.sendMessage).toHaveBeenCalledWith('conv-ev', 'hi', '');
+        });
+
+        it('openEvent_shouldOpenTheGroupsEvent', async () => {
+            await openGroup();
+
+            component.openEvent();
+
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'ev-1']);
+        });
+    });
+
     describe('presence', () => {
         // The first read is on timer(0, …): a macrotask after the conversation loads.
         const settle = async (target = fixture) => {

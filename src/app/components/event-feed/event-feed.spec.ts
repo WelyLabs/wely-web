@@ -168,7 +168,7 @@ describe('EventFeedComponent', () => {
     it('should navigate to event details', () => {
         const event = currentMockEvents[0];
         component.viewEventDetails(event);
-        expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'feed', event.id]);
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/event', event.id]);
     });
     it('shows the organiser name rather than their business id', () => {
         // The card used to print organizerId verbatim, which is a UUID: a feed event carries

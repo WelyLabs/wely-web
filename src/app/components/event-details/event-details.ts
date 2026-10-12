@@ -11,7 +11,8 @@ import { Observable, catchError, distinctUntilChanged, filter, interval, of, ret
 
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
-import { ChatService, PendingMessage } from '../../services/chat.service';
+import { ChatService } from '../../services/chat.service';
+import { NavigationService } from '../../services/navigation.service';
 import { Conversation, Message } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
@@ -45,12 +46,13 @@ export interface ThreadMessage {
   senderName: string;
   content: string;
   timestamp: string;
-  pending?: boolean;
-  failed?: boolean;
 }
 
 /** loading: asking wely-chat. ready: the group exists. unavailable: it could not be read. */
 export type ThreadState = 'loading' | 'ready' | 'unavailable';
+
+/** How many of the group's last messages the event page shows; the conversation has the rest. */
+export const THREAD_PREVIEW_SIZE = 3;
 
 /** wely-chat creates the group a moment after joining (relay, then Kafka): asked again this often. */
 const GROUP_RETRY_DELAY_MS = 1_500;
@@ -128,6 +130,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly eventService = inject(EventService);
   private readonly socialService = inject(SocialService);
   private readonly chatService = inject(ChatService);
+  private readonly navigationService = inject(NavigationService);
   private readonly userService = inject(UserService);
   private readonly logger = inject(LoggerService);
   private readonly destroyRef = inject(DestroyRef);
@@ -191,7 +194,8 @@ export class EventDetailsComponent implements OnInit {
   private readonly conversationId = signal<string | null>(null);
   readonly thread = signal<ThreadMessage[]>([]);
   readonly threadState = signal<ThreadState>('loading');
-  readonly draft = signal('');
+  /** The last few messages: a glimpse, the conversation itself is one tap away. */
+  readonly threadPreview = computed(() => this.thread().slice(-THREAD_PREVIEW_SIZE));
 
   readonly friendsSentence = computed(() => {
     const names = this.friends().map(friend => friend.name.split(' ')[0]);
@@ -272,8 +276,17 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  /** Back where the page was opened from: calendar, feed, map or a conversation. */
   goBack(): void {
-    this.router.navigate(['/calendar']);
+    this.navigationService.back('/calendar');
+  }
+
+  /** The group's conversation, in the chat: where it is read in full and written to. */
+  openDiscussion(): void {
+    const conversationId = this.conversationId();
+    if (conversationId) {
+      this.router.navigate(['/chat', conversationId]);
+    }
   }
 
   avatarColor(id: string): string {
@@ -305,21 +318,6 @@ export class EventDetailsComponent implements OnInit {
 
   acceptFriend(person: Person): void {
     this.connect(person, this.socialService.acceptFriend(person.id), 'Could not accept the friend request');
-  }
-
-  /** Sends the draft to the group; it shows at once, then settles as sent or failed. */
-  sendMessage(): void {
-    const content = this.draft().trim();
-    const conversationId = this.conversationId();
-    if (!content || !conversationId) {
-      return;
-    }
-    this.draft.set('');
-    // wely-chat delivers to the group's members and ignores the receiver: there is none to name.
-    this.chatService.sendMessage(conversationId, content, '').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: message => this.upsert(toThreadMessage(message)),
-      error: error => this.logger.error('EventDetailsComponent', 'Could not send to the group', error)
-    });
   }
 
   /** The name a message is signed with: "Toi" for the viewer, the directory's name when known. */
@@ -411,7 +409,7 @@ export class EventDetailsComponent implements OnInit {
     this.chatService.initializeStream();
   }
 
-  /** Replaces a message already shown (a pending one being confirmed), or appends it. */
+  /** Appends a message, or replaces it if it is already shown. */
   private upsert(message: ThreadMessage): void {
     this.thread.update(messages => {
       const index = messages.findIndex(shown => shown.id === message.id);
@@ -443,15 +441,12 @@ export class EventDetailsComponent implements OnInit {
 }
 
 /** Messages from history carry no id (wely-chat does not assign one yet): one is made up to track them. */
-function toThreadMessage(message: Message | PendingMessage): ThreadMessage {
-  const pending = 'pending' in message ? message : null;
+function toThreadMessage(message: Message): ThreadMessage {
   return {
     id: message.id ?? `${message.senderId}-${message.timestamp}`,
     senderId: message.senderId,
     senderName: message.senderName,
     content: message.content,
-    timestamp: message.timestamp,
-    pending: pending?.pending,
-    failed: pending?.failed
+    timestamp: message.timestamp
   };
 }

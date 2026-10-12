@@ -242,7 +242,7 @@ describe('ExploreMapComponent', () => {
 
         component.openDetails(concert);
 
-        expect(router.navigate).toHaveBeenCalledWith(['/event', 'feed', '1']);
+        expect(router.navigate).toHaveBeenCalledWith(['/event', '1']);
     });
 
     it('truncated_shouldAskToZoomInWhenTheLimitIsReached', async () => {
