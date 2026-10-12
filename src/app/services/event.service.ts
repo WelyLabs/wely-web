@@ -39,6 +39,15 @@ export interface FeedEvent {
  * One event of a friend's calendar, as much as the friendship allows: always when, the rest
  * only if disclosed.
  */
+/** Who takes part in an event, as the viewer may know it. */
+export interface EventParticipants {
+  count: number;
+  /** Everyone, in joining order — only for those who take part or organize; empty otherwise. */
+  participantIds: string[];
+  /** The viewer's friends among the participants. */
+  friendsGoingIds: string[];
+}
+
 export interface FriendCalendarEntry {
   start: Date;
   end: Date;
@@ -125,6 +134,17 @@ export class EventService {
       map((created) => this.toFeedEvent(created)),
       tap(() => this.refreshEvents()),
     );
+  }
+
+  /** One event, if the user may see it; a 404 otherwise. */
+  getEvent(id: string): Observable<FeedEvent> {
+    return this.http.get<EventPayload>(`${this.apiUrl}/${id}`).pipe(
+      map((event) => this.toFeedEvent(event)),
+    );
+  }
+
+  getParticipants(id: string): Observable<EventParticipants> {
+    return this.http.get<EventParticipants>(`${this.apiUrl}/${id}/participants`);
   }
 
   toggleSubscription(event: FeedEvent): Observable<FeedEvent> {

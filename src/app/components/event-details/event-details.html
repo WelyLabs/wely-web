@@ -1,96 +1,217 @@
 @if (event(); as event) {
-  <div class="details-container">
-    <div class="details-card glass-panel">
-      <div class="header">
-        <button mat-icon-button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        <h1>{{ event.title }}</h1>
+  <div class="event-page" [class]="'phase-' + phase()">
+    <!-- Takes over once the full header has scrolled away. -->
+    <div class="compact-bar" [class.visible]="collapsed()" [attr.aria-hidden]="!collapsed()">
+      <button type="button" class="icon-button" (click)="goBack()" aria-label="Retour" [attr.tabindex]="collapsed() ? null : -1">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="compact-text">
+        <span class="compact-title">{{ event.title }}</span>
+        <span class="compact-meta">{{ dayLabel(event.startDate) }} · {{ timeRange(event) }}</span>
       </div>
-      <mat-tab-group animationDuration="0ms" class="custom-tabs">
-        <!-- Information Tab -->
-        <mat-tab label="Informations">
-          <div class="tab-content">
-            @if (image()) {
-              <div class="event-image">
-                <img [src]="image()" [alt]="event.title">
-              </div>
+      @if (joined()) {
+        <span class="status-chip">Inscrit</span>
+      }
+    </div>
+
+    <header class="hero">
+      @if (phase() === 'live') {
+        <div class="live-band">
+          <div class="hero-top">
+            <button type="button" class="icon-button on-dark" (click)="goBack()" aria-label="Retour">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
+            <span class="live-badge"><span class="dot"></span>C'est aujourd'hui</span>
+          </div>
+          <h1>{{ event.title }}</h1>
+          <p class="live-meta">{{ event.location }} · {{ timeRange(event) }}</p>
+          <p class="live-countdown">{{ countdown() }}</p>
+          <div class="live-actions">
+            @if (mapUrl(); as url) {
+              <a class="light-button" [href]="url" target="_blank" rel="noopener noreferrer">
+                <mat-icon>near_me</mat-icon>Y aller
+              </a>
             }
-            <div class="event-info">
-              <div class="info-row">
-                <mat-icon>event</mat-icon>
-                <div class="info-content">
-                  <span class="label">Date</span>
-                  <span class="value">{{ formatDate(event.startDate) }}</span>
-                </div>
-              </div>
-              @if (time()) {
-                <div class="info-row">
-                  <mat-icon>schedule</mat-icon>
-                  <div class="info-content">
-                    <span class="label">Heure</span>
-                    <span class="value">{{ time() }}</span>
-                  </div>
-                </div>
+          </div>
+        </div>
+      } @else {
+        <div class="cover" [class.no-image]="!event.image">
+          @if (event.image) {
+            <img [src]="event.image" [alt]="event.title">
+          }
+          <button type="button" class="icon-button floating" (click)="goBack()" aria-label="Retour">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+        </div>
+        <div class="hero-text">
+          <span class="overline">{{ phase() === 'past' ? 'Terminé · ' + dayLabel(event.startDate) : countdown() }}</span>
+          <h1>{{ event.title }}</h1>
+          <p class="hero-meta">{{ dayLabel(event.startDate) }} · {{ timeRange(event) }} · {{ event.location }}</p>
+          @if (organizerName()) {
+            <p class="organizer">Organisé par {{ isOrganizer() ? 'toi' : organizerName() }}</p>
+          }
+        </div>
+      }
+    </header>
+    <div #heroEnd class="hero-end"></div>
+
+    <main class="content">
+      @switch (phase()) {
+        @case ('guest') {
+          <section class="card info-card" aria-label="Quand et où">
+            <div class="info-row">
+              <span class="info-icon"><mat-icon>event</mat-icon></span>
+              <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+            </div>
+            <div class="info-row">
+              <span class="info-icon"><mat-icon>location_on</mat-icon></span>
+              <div><strong>{{ event.location }}</strong></div>
+            </div>
+            @if (event.coordinates; as point) {
+              @defer (on viewport) {
+                <app-event-map [coordinates]="point" [label]="event.location" />
+              } @placeholder {
+                <div class="map-placeholder"></div>
               }
-              @if (location()) {
-                <div class="info-row">
-                  <mat-icon>location_on</mat-icon>
-                  <div class="info-content">
-                    <span class="label">Lieu</span>
-                    <span class="value">{{ location() }}</span>
-                  </div>
-                </div>
-              }
-              @if (coordinates(); as point) {
-                <!-- Its own chunk, fetched when scrolled into view: MapLibre weighs about 250 kB. -->
-                @defer (on viewport) {
-                  <app-event-map [coordinates]="point" [label]="location() ?? ''" />
-                } @placeholder {
-                  <div class="event-map-placeholder"></div>
-                }
-              }
-              @if (organizer()) {
-                <div class="info-row">
-                  <mat-icon>person</mat-icon>
-                  <div class="info-content">
-                    <span class="label">Organisateur</span>
-                    <span class="value">{{ organizer() }}</span>
-                  </div>
-                </div>
-              }
-              <div class="description-section">
-                <h2>Description</h2>
+            }
+          </section>
+
+          <ng-container *ngTemplateOutlet="whoComes" />
+
+          @if (event.description) {
+            <p class="description">{{ event.description }}</p>
+          }
+
+          <section class="card locked" aria-label="Fil du groupe">
+            <mat-icon>lock</mat-icon>
+            <strong>Le fil du groupe est réservé aux participants</strong>
+            <span>Rejoins pour voir qui vient et suivre ce qui se dit.</span>
+          </section>
+        }
+
+        @case ('past') {
+          @if (event.description) {
+            <p class="description">{{ event.description }}</p>
+          }
+          <ng-container *ngTemplateOutlet="whoComes" />
+          @if (joins().length > 0) {
+            <ng-container *ngTemplateOutlet="timeline" />
+          }
+        }
+
+        @default {
+          <div class="status-row">
+            @if (joined()) {
+              <span class="status-chip big"><mat-icon>check</mat-icon>Inscrit</span>
+            } @else if (isOrganizer()) {
+              <span class="status-chip big"><mat-icon>star</mat-icon>Organisateur</span>
+            }
+            @if (phase() === 'member' && mapUrl(); as url) {
+              <a class="outline-button" [href]="url" target="_blank" rel="noopener noreferrer">
+                <mat-icon>near_me</mat-icon>Y aller
+              </a>
+            }
+          </div>
+
+          @if (event.description) {
+            <section class="pinned" aria-label="Mot de l'organisateur">
+              <mat-icon>push_pin</mat-icon>
+              <div>
+                <strong>Mot de {{ isOrganizer() ? "l'organisateur" : organizerName() || "l'organisateur" }}</strong>
                 <p>{{ event.description }}</p>
               </div>
+            </section>
+          }
+
+          <ng-container *ngTemplateOutlet="whoComes" />
+          <ng-container *ngTemplateOutlet="timeline" />
+
+          <section class="card info-card" aria-label="Quand et où">
+            <div class="info-row">
+              <span class="info-icon"><mat-icon>event</mat-icon></span>
+              <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
             </div>
-            <div class="actions">
-              <button mat-flat-button color="primary" class="gradient-button">
-                <mat-icon>add_to_calendar</mat-icon>
-                Ajouter au calendrier
-              </button>
+            <div class="info-row">
+              <span class="info-icon"><mat-icon>location_on</mat-icon></span>
+              <div><strong>{{ event.location }}</strong></div>
             </div>
-          </div>
-        </mat-tab>
-        <!-- Chat Tab -->
-        <mat-tab label="Chat">
-          <div class="chat-container">
-            <app-shared-chat [messages]="chatMessages()" [placeholder]="'Type a message...'"
-              (send)="onSendMessage($event)">
-            </app-shared-chat>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
-    </div>
+            @if (event.coordinates; as point) {
+              @defer (on viewport) {
+                <app-event-map [coordinates]="point" [label]="event.location" />
+              } @placeholder {
+                <div class="map-placeholder"></div>
+              }
+            }
+          </section>
+
+          @if (joined()) {
+            <button type="button" class="text-button" (click)="toggleParticipation()" [disabled]="busy()">
+              Ne plus participer
+            </button>
+          }
+        }
+      }
+    </main>
+
+    @if (phase() === 'guest') {
+      <div class="action-bar">
+        <div class="action-text">
+          <strong>{{ participants()?.count ?? 0 }} participant{{ (participants()?.count ?? 0) > 1 ? 's' : '' }}</strong>
+          @if (friends().length > 0) {
+            <span>dont {{ friends().length }} ami{{ friends().length > 1 ? 's' : '' }}</span>
+          }
+        </div>
+        <button type="button" class="gradient-button" (click)="toggleParticipation()" [disabled]="busy()">Rejoindre</button>
+      </div>
+    }
   </div>
+
+  <ng-template #whoComes>
+    <section class="who" aria-label="Participants">
+      @let shown = people().length > 0 ? people() : friends();
+      @if (shown.length > 0) {
+        <div class="avatars">
+          @for (person of shown.slice(0, 5); track person.id) {
+            <span class="avatar" [style.background]="avatarColor(person.id)" [title]="person.name">
+              @if (person.picture) {
+                <img [src]="person.picture" alt="">
+              } @else {
+                {{ person.initials }}
+              }
+            </span>
+          }
+        </div>
+      }
+      <div class="who-text">
+        @if (friendsSentence()) {
+          <strong>{{ friendsSentence() }}</strong>
+        }
+        <span class="muted">
+          {{ participants()?.count ?? 0 }} {{ phase() === 'past' ? 'y étaient' : 'inscrit' + ((participants()?.count ?? 0) > 1 ? 's' : '') }}
+        </span>
+      </div>
+    </section>
+  </ng-template>
+
+  <ng-template #timeline>
+    <section class="timeline" aria-label="Fil du groupe">
+      <div class="timeline-title"><span>Fil du groupe</span></div>
+      @for (person of joins(); track person.id) {
+        <div class="timeline-item" [class.friend]="person.isFriend">
+          <span class="avatar small" [style.background]="avatarColor(person.id)">{{ person.initials }}</span>
+          <span><strong>{{ person.name }}</strong> {{ person.name === 'Toi' ? 'as rejoint' : 'a rejoint' }}</span>
+        </div>
+      } @empty {
+        <p class="muted">Personne n'a encore rejoint.</p>
+      }
+    </section>
+  </ng-template>
 }
 
-@if (!event()) {
+@if (notFound()) {
   <div class="not-found">
     <mat-icon>event_busy</mat-icon>
     <h2>Événement introuvable</h2>
-    <button mat-flat-button color="primary" (click)="goBack()">
-      Retour au calendrier
-    </button>
+    <button type="button" class="gradient-button" (click)="goBack()">Retour au calendrier</button>
   </div>
 }
