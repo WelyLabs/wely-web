@@ -5,7 +5,7 @@ import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
-    EventDetailsComponent, THREAD_PREVIEW_SIZE, avatarColor, countdownOf, initialsOf, isSameDay, phaseOf
+    EventDetailsComponent, THREAD_PREVIEW_SIZE, countdownOf, isSameDay, phaseOf
 } from './event-details';
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
@@ -63,17 +63,6 @@ describe('event page helpers', () => {
     it('countdownOf_shouldSayWhenItRunsOrIsOver', () => {
         expect(countdownOf(event(), at('2026-10-18T20:00:00'))).toBe('En cours');
         expect(countdownOf(event(), at('2026-10-19T00:00:00'))).toBe('Terminé');
-    });
-
-    it('initialsOf_shouldTakeTwoLetters', () => {
-        expect(initialsOf('Camille Durand')).toBe('CD');
-        expect(initialsOf('camille')).toBe('CA');
-        expect(initialsOf('  ')).toBe('?');
-    });
-
-    it('avatarColor_shouldBeStablePerPerson', () => {
-        expect(avatarColor('u1')).toBe(avatarColor('u1'));
-        expect(avatarColor('u1')).toMatch(/^#[0-9a-f]{6}$/);
     });
 
     it('isSameDay_shouldIgnoreTheTime', () => {
@@ -218,7 +207,7 @@ describe('EventDetailsComponent', () => {
         expect(component.phase()).toBe('member');
         expect(chatService.getEventConversation).toHaveBeenCalledWith('e1');
         expect(chatService.initializeStream).toHaveBeenCalled();
-        const message = fixture.nativeElement.querySelector('.thread-message') as HTMLElement;
+        const message = fixture.nativeElement.querySelector('app-chat-bubble') as HTMLElement;
         expect(message.textContent).toContain('Léo Martin');
         expect(message.textContent).toContain('Qui ramène les cartes ?');
         expect(fixture.nativeElement.querySelector('.open-discussion')).not.toBeNull();
@@ -277,8 +266,8 @@ describe('EventDetailsComponent', () => {
 
         create();
 
-        expect(component.threadPreview().map(message => message.content)).toEqual(['trois', 'quatre', 'cinq']);
-        expect(fixture.nativeElement.querySelectorAll('.thread-message').length).toBe(THREAD_PREVIEW_SIZE);
+        expect(component.threadPreview().map(message => message.text)).toEqual(['trois', 'quatre', 'cinq']);
+        expect(fixture.nativeElement.querySelectorAll('app-chat-bubble').length).toBe(THREAD_PREVIEW_SIZE);
         expect(fixture.nativeElement.textContent).toContain('2 messages plus tôt');
     });
 
@@ -307,7 +296,7 @@ describe('EventDetailsComponent', () => {
 
         create();
 
-        expect(fixture.nativeElement.querySelector('.thread-message')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('app-chat-bubble')).not.toBeNull();
         expect(fixture.nativeElement.querySelector('.open-discussion')?.textContent).toContain('Voir la discussion');
     });
 

@@ -32,16 +32,7 @@
 
     <!-- Message Bubbles -->
     @for (msg of messages(); track trackByMessage(index, msg); let index = $index) {
-      <div class="message-row"
-        [class.me]="msg.isMe">
-        <div class="message-bubble">
-          @if (!msg.isMe) {
-            <div class="sender-name">{{ msg.senderName }}</div>
-          }
-          <div class="message-text">{{ msg.text }}</div>
-          <div class="message-time">{{ msg.time | date:'HH:mm' }}</div>
-        </div>
-      </div>
+      <app-chat-bubble class="message-row" [message]="msg" />
     }
   </div>
 

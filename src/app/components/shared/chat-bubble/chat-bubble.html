@@ -1,0 +1,18 @@
+<div class="row" [class.mine]="message().isMe" [class.pending]="message().pending" [class.failed]="message().failed">
+  @if (!message().isMe) {
+    <span class="avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+  }
+  <div class="bubble">
+    @if (!message().isMe && author()) {
+      <strong class="author">{{ author() }}</strong>
+    }
+    <p>{{ message().text }}</p>
+    <span class="time">
+      @if (message().failed) {
+        Non envoyé
+      } @else {
+        {{ message().time | date:'HH:mm' }}
+      }
+    </span>
+  </div>
+</div>
