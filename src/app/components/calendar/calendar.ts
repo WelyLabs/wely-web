@@ -1119,7 +1119,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   viewEventDetails(event: CalendarEvent) {
-    this.router.navigate(['/event', 'calendar', event.id], {
+    this.router.navigate(['/event', event.id], {
       state: { event }
     });
   }

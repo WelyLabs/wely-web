@@ -7,15 +7,26 @@
       </button>
       <div class="user-info">
         <div class="avatar-sm">
-          {{ getAvatarInitial(conversationTitle() ?? undefined) }}
+          @if (isEventGroup()) {
+            <mat-icon>groups</mat-icon>
+          } @else {
+            {{ getAvatarInitial(conversationTitle() ?? undefined) }}
+          }
         </div>
         <div class="text-info">
           <h2 class="chat-title">{{ conversationTitle() ?? 'Chargement...' }}</h2>
-          @if (presenceText(); as status) {
+          @if (isEventGroup()) {
+            <span class="status-text offline">{{ memberCount() }} membre{{ memberCount() > 1 ? 's' : '' }}</span>
+          } @else if (presenceText(); as status) {
             <span class="status-text" [class.offline]="!isPartnerOnline()">{{ status }}</span>
           }
         </div>
       </div>
+      @if (isEventGroup()) {
+        <button mat-button class="event-link" (click)="openEvent()">
+          <mat-icon>event</mat-icon>Voir l'événement
+        </button>
+      }
     </header>
 
     <!-- Chat Content -->

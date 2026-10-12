@@ -29,7 +29,10 @@ export interface Conversation {
     id: string;
     participantIds: string[];
     type: ConversationType;
-    title?: string; // Optional title for UI
+    /** The event's title for an event group. */
+    title?: string | null;
+    /** The event an EVENT conversation belongs to. */
+    eventId?: string | null;
     updatedAt: string; // ISO DateTime
     lastMessage?: Message;
     messages: Message[];

@@ -104,12 +104,7 @@ export class ConversationsListComponent implements OnInit {
             });
     }
 
-    /** An event's group lives on the event page, next to who comes. */
     openConversation(summary: ConversationSummary): void {
-        if (summary.type === ConversationType.EVENT && summary.eventId) {
-            this.router.navigate(['/event', 'chat', summary.eventId]);
-            return;
-        }
         this.router.navigate(['/chat', summary.id]);
     }
 

@@ -254,8 +254,11 @@
           <p class="muted">Le fil n'est pas disponible pour le moment.</p>
         }
         @default {
-          @for (message of thread(); track message.id) {
-            <div class="thread-message" [class.mine]="isMine(message)" [class.pending]="message.pending" [class.failed]="message.failed">
+          @if (thread().length > threadPreview().length) {
+            <p class="muted earlier">{{ thread().length - threadPreview().length }} message{{ thread().length - threadPreview().length > 1 ? 's' : '' }} plus tôt</p>
+          }
+          @for (message of threadPreview(); track message.id) {
+            <div class="thread-message" [class.mine]="isMine(message)">
               @if (!isMine(message)) {
                 <span class="avatar small" [style.background]="avatarColor(message.senderId)">{{ initialsOf(authorOf(message)) }}</span>
               }
@@ -264,28 +267,15 @@
                   <strong class="author">{{ authorOf(message) }}</strong>
                 }
                 <p>{{ message.content }}</p>
-                <span class="time">
-                  @if (message.failed) {
-                    Non envoyé
-                  } @else {
-                    {{ message.timestamp | date:'HH:mm' }}
-                  }
-                </span>
+                <span class="time">{{ message.timestamp | date:'HH:mm' }}</span>
               </div>
             </div>
           } @empty {
             <p class="muted">Personne n'a encore écrit. Lance la discussion !</p>
           }
-          @if (phase() !== 'past') {
-            <div class="composer">
-              <label class="visually-hidden" for="group-message">Message au groupe</label>
-              <input id="group-message" type="text" placeholder="Écrire au groupe…" enterkeyhint="send"
-                [value]="draft()" (input)="draft.set($any($event.target).value)" (keyup.enter)="sendMessage()">
-              <button type="button" class="send-button" (click)="sendMessage()" [disabled]="!draft().trim()" aria-label="Envoyer">
-                <mat-icon>send</mat-icon>
-              </button>
-            </div>
-          }
+          <button type="button" class="open-discussion" (click)="openDiscussion()">
+            <mat-icon>forum</mat-icon>{{ phase() === 'past' ? 'Voir la discussion' : 'Ouvrir la discussion' }}
+          </button>
         }
       }
     </section>

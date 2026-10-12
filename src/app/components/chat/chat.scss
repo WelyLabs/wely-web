@@ -238,3 +238,24 @@
         max-height: none;
     }
 }
+// An event's group links back to the event; the label folds away on a phone, the icon stays.
+.chat-header .event-link {
+    flex-shrink: 0;
+    border-radius: 20px;
+    color: var(--primary-blue);
+    font-weight: 700;
+
+    mat-icon {
+        margin-right: 6px;
+    }
+
+    @media (max-width: 480px) {
+        min-width: 0;
+        padding: 0 8px;
+        font-size: 0;
+
+        mat-icon {
+            margin-right: 0;
+        }
+    }
+}

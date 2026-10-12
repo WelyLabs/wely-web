@@ -37,7 +37,7 @@ describe('routes', () => {
         ['calendar', CalendarComponent],
         ['feed', EventFeedComponent],
         ['friends', UserSearchComponent],
-        ['event/:type/:id', EventDetailsComponent],
+        ['event/:id', EventDetailsComponent],
         ['profile', UserProfileComponent],
         ['conversations', ConversationsListComponent],
         ['chat/:convId', ChatComponent]
@@ -46,6 +46,10 @@ describe('routes', () => {
 
         expect(route.component).toBeUndefined();
         expect(await load(route)).toBe(component);
+    });
+
+    it('routes_shouldSendTheOldEventLinksToTheEventPage', () => {
+        expect(child('event/:from/:id').redirectTo).toBe('event/:id');
     });
 
     it('routes_shouldSendTheOldUserDirectoryToTheFriendsPage', () => {

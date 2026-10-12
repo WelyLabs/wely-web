@@ -3,13 +3,13 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { catchError, of, switchMap, timer } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
 
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
 import { ChatService, PendingMessage } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, Message, Presence } from '../../models/chat.model';
+import { Conversation, ConversationType, Message, Presence } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 
 /** How often the other participant's presence is re-read: wely-chat refreshes it every 30 s. */
@@ -46,7 +46,8 @@ export function presenceLabel(presence: Presence | null, now: Date = new Date())
 const HISTORY_PREPEND_DELAY_MS = 50;
 
 /**
- * One conversation: its history, the live stream, and sending.
+ * One conversation: its history, the live stream, and sending. Either private, with someone, or an
+ * event's group, named after the event and linked to it.
  */
 @Component({
     selector: 'app-chat',
@@ -59,6 +60,7 @@ const HISTORY_PREPEND_DELAY_MS = 50;
 export class ChatComponent implements OnInit {
     private readonly logger = inject(LoggerService);
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
     private readonly chatService = inject(ChatService);
     private readonly userService = inject(UserService);
     private readonly navigationService = inject(NavigationService);
@@ -88,6 +90,11 @@ export class ChatComponent implements OnInit {
     readonly chatMessages = signal<ChatMessage[]>([]);
 
     readonly conversationTitle = computed(() => this.conversation()?.title ?? null);
+
+    /** An event's group: no single partner, every member may write. */
+    readonly isEventGroup = computed(() => this.conversation()?.type === ConversationType.EVENT);
+
+    readonly memberCount = computed(() => this.conversation()?.participantIds?.length ?? 0);
 
     /** The other participant, once the conversation is loaded. */
     private readonly partnerId = signal<string | null>(null);
@@ -165,16 +172,18 @@ export class ChatComponent implements OnInit {
         const sorted = [...(conversation.messages ?? [])].sort(byTimestamp);
 
         // The title is not always sent: for a direct conversation it is the other participant's
-        // name, which the first message they sent carries.
+        // name, which the first message they sent carries. An event's group has the event's.
         const title = conversation.title
             ?? sorted.find(message => message.senderId !== this.currentUserId)?.senderName
             ?? conversation.title;
 
         this.conversation.set({ ...conversation, title });
 
-        // Loading by conversation id gives no friend id, and sending needs one: it is whichever
-        // participant is not the current user.
-        if (!this.friendId && conversation.participantIds) {
+        // Loading by conversation id gives no friend id, and a private conversation's presence needs
+        // one: it is whichever participant is not the current user. A group has none.
+        if (conversation.type === ConversationType.EVENT) {
+            this.friendId = null;
+        } else if (!this.friendId && conversation.participantIds) {
             this.friendId = conversation.participantIds
                 .find(id => id !== this.currentUserId) ?? null;
         }
@@ -240,7 +249,8 @@ export class ChatComponent implements OnInit {
 
     onSendMessage(content: string): void {
         const conversation = this.conversation();
-        if (!content.trim() || !conversation || !this.friendId) {
+        const isGroup = conversation?.type === ConversationType.EVENT;
+        if (!content.trim() || !conversation || (!isGroup && !this.friendId)) {
             return;
         }
 
@@ -250,7 +260,8 @@ export class ChatComponent implements OnInit {
         // second replaces the first rather than appearing next to it.
         let optimisticId: string | undefined;
 
-        this.chatService.sendMessage(conversation.id, content, this.friendId)
+        // wely-chat delivers to the stored members and ignores the receiver; a group has none to name.
+        this.chatService.sendMessage(conversation.id, content, this.friendId ?? '')
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (message) => {
@@ -287,6 +298,14 @@ export class ChatComponent implements OnInit {
 
     goBack(): void {
         this.navigationService.back();
+    }
+
+    /** From an event's group to the event itself. */
+    openEvent(): void {
+        const eventId = this.conversation()?.eventId;
+        if (eventId) {
+            this.router.navigate(['/event', eventId]);
+        }
     }
 
     getAvatarInitial(title: string | undefined): string {

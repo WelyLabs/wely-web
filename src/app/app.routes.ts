@@ -19,10 +19,9 @@ export const routes: Routes = [
         children: [
             { path: 'calendar', loadComponent: () => import('./components/calendar/calendar').then(m => m.CalendarComponent) },
             { path: 'feed', loadComponent: () => import('./components/event-feed/event-feed').then(m => m.EventFeedComponent) },
-            {
-                path: 'event/:type/:id',
-                loadComponent: () => import('./components/event-details/event-details').then(m => m.EventDetailsComponent)
-            },
+            { path: 'event/:id', loadComponent: () => import('./components/event-details/event-details').then(m => m.EventDetailsComponent) },
+            // The middle segment named where the page was opened from and nothing read it. Kept for links already shared.
+            { path: 'event/:from/:id', redirectTo: 'event/:id' },
             { path: 'profile', loadComponent: () => import('./components/user-profile/user-profile').then(m => m.UserProfileComponent) },
             { path: 'friends', loadComponent: () => import('./components/user-search/user-search').then(m => m.UserSearchComponent) },
             // The user directory is gone: friends are added by tag or through events. Old links land on the friends page.

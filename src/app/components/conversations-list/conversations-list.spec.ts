@@ -121,10 +121,10 @@ describe('ConversationsListComponent', () => {
         expect(routerMock.navigate).toHaveBeenCalledWith(['/chat', summary.id]);
     });
 
-    it('openConversation_shouldOpenTheEventPage_forAnEventGroup', () => {
-        component.openConversation({ ...mockConversations[0], type: ConversationType.EVENT, eventId: 'ev-1' });
+    it('openConversation_shouldOpenAnEventGroupInTheChatToo', () => {
+        component.openConversation({ ...mockConversations[0], id: 'conv-ev', type: ConversationType.EVENT, eventId: 'ev-1' });
 
-        expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'chat', 'ev-1']);
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/chat', 'conv-ev']);
     });
 
     it('should return correct last message content', () => {

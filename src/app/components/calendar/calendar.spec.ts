@@ -91,7 +91,7 @@ describe('CalendarComponent', () => {
             endDate: new Date(),
         };
         component.viewEventDetails(event);
-        expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'calendar', event.id], expect.any(Object));
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/event', event.id], expect.any(Object));
     });
 
     it('should change month when navigate(-1) is called', () => {

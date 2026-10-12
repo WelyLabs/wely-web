@@ -156,7 +156,7 @@ export class ExploreMapComponent {
     }
 
     openDetails(event: FeedEvent): void {
-        this.router.navigate(['/event', 'feed', event.id]);
+        this.router.navigate(['/event', event.id]);
     }
 
     /** Centres the map on the user, if the browser knows and is allowed to tell. */

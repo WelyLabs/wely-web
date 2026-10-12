@@ -284,6 +284,6 @@ export class EventFeedComponent implements OnInit {
   }
 
   viewEventDetails(event: FeedEvent): void {
-    this.router.navigate(['/event', 'feed', event.id]);
+    this.router.navigate(['/event', event.id]);
   }
 }
