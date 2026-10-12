@@ -61,7 +61,7 @@
         @if (filteredUsers().length > 0) {
           <div class="users-grid">
             @for (user of filteredUsers(); track user.userId; let i = $index) {
-              <app-user-card [user]="user" [friendship]="friendshipOf(user)"
+              <app-user-card [user]="user" [friendship]="friendshipOf(user)" [metAt]="metAt(user)"
                 (closenessChange)="onClosenessChange($event)" (closenessAnswer)="onClosenessAnswer($event)"
                 [showFriendBadge]="false" [style.animation-delay]="(i * 0.05) + 's'"
                 (acceptFriend)="onAcceptFriend($event)"

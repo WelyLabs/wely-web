@@ -9,6 +9,7 @@ import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HttpErrorResponse } from '@angular/common/http';
 import { throwError } from 'rxjs';
+import { EventService } from '../../services/event.service';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BreakpointObserver } from '@angular/cdk/layout';
 
@@ -27,6 +28,7 @@ describe('UserSearchComponent', () => {
     let routerMock: any;
     let dialogMock: any;
     let breakpointObserverMock: any;
+    let eventServiceMock: { getEvent: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
         socialServiceMock = {
@@ -53,6 +55,9 @@ describe('UserSearchComponent', () => {
                 close: () => undefined
             }))
         };
+        eventServiceMock = {
+            getEvent: vi.fn().mockImplementation((id: string) => of({ id, title: `Event ${id}` }))
+        };
         breakpointObserverMock = {
             observe: vi.fn().mockReturnValue(of({ matches: false }))
         };
@@ -67,7 +72,8 @@ describe('UserSearchComponent', () => {
                     { provide: UserService, useValue: userServiceMock },
                     { provide: Router, useValue: routerMock },
                     { provide: MatDialog, useValue: dialogMock },
-                    { provide: BreakpointObserver, useValue: breakpointObserverMock }
+                    { provide: BreakpointObserver, useValue: breakpointObserverMock },
+                    { provide: EventService, useValue: eventServiceMock }
                 ]
             }
         }).compileComponents();
@@ -162,6 +168,31 @@ describe('UserSearchComponent', () => {
         socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice' }]));
         component.loadUsers();
         expect(component.filteredUsers()[0].relationStatus).toBe('PENDING_INCOMING');
+    });
+
+    it('metAt_shouldNameTheEventARequestWasSentFrom', () => {
+        socialServiceMock.searchUsers.mockReturnValue(of([
+            { userId: 'user-1', userName: 'Alice', viaEventId: 'e1' },
+            { userId: 'user-2', userName: 'Bob', viaEventId: 'e1' },
+            { userId: 'user-3', userName: 'Carol' }
+        ]));
+
+        component.onTabChange(2);
+
+        expect(eventServiceMock.getEvent).toHaveBeenCalledTimes(1);
+        expect(eventServiceMock.getEvent).toHaveBeenCalledWith('e1');
+        const [alice, , carol] = component.filteredUsers();
+        expect(component.metAt(alice)).toBe('Event e1');
+        expect(component.metAt(carol)).toBeNull();
+    });
+
+    it('metAt_shouldStayEmptyWhenTheEventCannotBeSeen', () => {
+        eventServiceMock.getEvent.mockReturnValue(throwError(() => new Error('404')));
+        socialServiceMock.searchUsers.mockReturnValue(of([{ userId: 'user-1', userName: 'Alice', viaEventId: 'gone' }]));
+
+        component.onTabChange(2);
+
+        expect(component.metAt(component.filteredUsers()[0])).toBeNull();
     });
 
     it('should NOT remove friend if dialog is cancelled', () => {

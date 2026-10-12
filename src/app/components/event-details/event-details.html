@@ -93,7 +93,11 @@
           @if (event.description) {
             <p class="description">{{ event.description }}</p>
           }
-          <ng-container *ngTemplateOutlet="whoComes" />
+          @if (people().length > 0) {
+            <ng-container *ngTemplateOutlet="peopleList" />
+          } @else {
+            <ng-container *ngTemplateOutlet="whoComes" />
+          }
           @if (joins().length > 0) {
             <ng-container *ngTemplateOutlet="timeline" />
           }
@@ -124,6 +128,9 @@
           }
 
           <ng-container *ngTemplateOutlet="whoComes" />
+          @if (people().length > 0) {
+            <ng-container *ngTemplateOutlet="peopleList" />
+          }
           <ng-container *ngTemplateOutlet="timeline" />
 
           <section class="card info-card" aria-label="Quand et où">
@@ -190,6 +197,49 @@
           {{ participants()?.count ?? 0 }} {{ phase() === 'past' ? 'y étaient' : 'inscrit' + ((participants()?.count ?? 0) > 1 ? 's' : '') }}
         </span>
       </div>
+    </section>
+  </ng-template>
+
+  <ng-template #peopleList>
+    <section class="people" aria-label="Participants">
+      @if (phase() === 'past' && strangers().length > 0) {
+        <div class="people-heading">
+          <strong>Tu as passé ce moment avec {{ others().length }} personne{{ others().length > 1 ? 's' : '' }}</strong>
+          <span class="muted">Ajoute celles que tu as rencontrées : elles sauront que c'était ici.</span>
+        </div>
+      } @else {
+        <div class="timeline-title"><span>{{ phase() === 'past' ? 'Ils y étaient' : 'Qui vient' }}</span></div>
+      }
+      @for (person of people(); track person.id) {
+        <div class="person-row">
+          <span class="avatar small" [style.background]="avatarColor(person.id)">
+            @if (person.picture) {
+              <img [src]="person.picture" alt="">
+            } @else {
+              {{ person.initials }}
+            }
+          </span>
+          <span class="person-name">{{ person.name }}</span>
+          @switch (person.relation) {
+            @case ('FRIENDS') {
+              <span class="relation">Ami</span>
+            }
+            @case ('SENT_BY_ME') {
+              <span class="relation">Demande envoyée</span>
+            }
+            @case ('SENT_BY_THEM') {
+              <button type="button" class="small-gradient-button" (click)="acceptFriend(person)"
+                [disabled]="sending().has(person.id)">Accepter</button>
+            }
+            @case ('NONE') {
+              <button type="button" class="small-outline-button" (click)="addFriend(person)"
+                [disabled]="sending().has(person.id)" [attr.aria-label]="'Ajouter ' + person.name + ' en ami'">
+                <mat-icon>person_add</mat-icon>Ajouter
+              </button>
+            }
+          }
+        </div>
+      }
     </section>
   </ng-template>
 

@@ -52,9 +52,10 @@ export class SocialService {
         return this.http.put<Friendship>(`${this.apiUrl}/relationships/${friendId}/closeness/decline`, {});
     }
 
-    /** Sends a friend request by public tag, `Name#1234`. */
-    sendFriendRequest(userTag: string): Observable<UserNodeDTO> {
-        return this.http.post<UserNodeDTO>(`${this.apiUrl}/relationships/request`, { userTag });
+    /** Sends a friend request by public tag, `Name#1234`; `viaEventId` says where the two met. */
+    sendFriendRequest(userTag: string, viaEventId?: string): Observable<UserNodeDTO> {
+        const body = viaEventId ? { userTag, viaEventId } : { userTag };
+        return this.http.post<UserNodeDTO>(`${this.apiUrl}/relationships/request`, body);
     }
 
     /** Accepts an incoming request. The backend answers 204. */
