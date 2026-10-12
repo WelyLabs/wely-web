@@ -47,6 +47,8 @@ export class UserCardComponent {
     readonly showFriendBadge = input(true);
     /** Set on the friends tab only: the closeness of the friendship and any pending proposal. */
     readonly friendship = input<FriendSummary | null>(null);
+    /** On a pending request, the title of the event the two met at. */
+    readonly metAt = input<string | null>(null);
 
     readonly addFriend = output<UserWithStatusDTO>();
     readonly acceptFriend = output<UserWithStatusDTO>();

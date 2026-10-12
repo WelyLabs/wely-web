@@ -7,12 +7,13 @@ import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { interval } from 'rxjs';
+import { Observable, interval } from 'rxjs';
 
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
+import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
 import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
 
 /**
@@ -23,12 +24,16 @@ import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
  */
 export type EventPhase = 'guest' | 'member' | 'live' | 'past';
 
+/** Where the viewer stands with someone; `ME` for the viewer themselves. */
+export type Relation = RelationStatus | 'ME';
+
 export interface Person {
   id: string;
   name: string;
   initials: string;
   picture?: string;
   isFriend: boolean;
+  relation: Relation;
 }
 
 const MINUTE_MS = 60_000;
@@ -117,7 +122,10 @@ export class EventDetailsComponent implements OnInit {
   /** Ticks every minute, so the countdown and the phase move on their own. */
   readonly now = signal(new Date());
 
-  private readonly names = signal<ReadonlyMap<string, { name: string; picture?: string }>>(new Map());
+  /** Everyone the viewer can see, with where the viewer stands with each. */
+  private readonly directory = signal<ReadonlyMap<string, UserWithStatusDTO>>(new Map());
+  /** People a friend request or an acceptance is on its way for. */
+  readonly sending = signal<ReadonlySet<string>>(new Set());
   private readonly me = toSignal(this.userService.currentUser$, { initialValue: null });
 
   readonly isOrganizer = computed(() => {
@@ -143,7 +151,7 @@ export class EventDetailsComponent implements OnInit {
 
   readonly organizerName = computed(() => {
     const event = this.event();
-    return event ? this.names().get(event.organizerId)?.name ?? '' : '';
+    return event ? this.directory().get(event.organizerId)?.userName ?? '' : '';
   });
 
   readonly friends = computed(() => (this.participants()?.friendsGoingIds ?? []).map(id => this.person(id)));
@@ -212,10 +220,7 @@ export class EventDetailsComponent implements OnInit {
     });
     this.loadParticipants(id);
 
-    this.socialService.searchUsers().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: users => this.names.set(new Map(users.map(user => [user.userId, { name: user.userName, picture: user.profilePicUrl }]))),
-      error: error => this.logger.error('EventDetailsComponent', 'Could not load the names', error)
-    });
+    this.loadDirectory();
 
     interval(MINUTE_MS).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.now.set(new Date()));
   }
@@ -255,6 +260,55 @@ export class EventDetailsComponent implements OnInit {
     return `${format(event.startDate)} – ${format(event.endDate)}`;
   }
 
+  /** Sends a request to someone met at this event, so they know where it comes from. */
+  addFriend(person: Person): void {
+    const event = this.event();
+    const hashtag = this.directory().get(person.id)?.hashtag;
+    if (!event || hashtag === undefined) {
+      return;
+    }
+    this.connect(person, this.socialService.sendFriendRequest(`${person.name}#${hashtag}`, event.id), 'Could not send the friend request');
+  }
+
+  acceptFriend(person: Person): void {
+    this.connect(person, this.socialService.acceptFriend(person.id), 'Could not accept the friend request');
+  }
+
+  /** Everyone but the viewer. */
+  readonly others = computed(() => this.people().filter(person => person.relation !== 'ME'));
+
+  /** People the viewer is not friends with yet, the ones worth adding after the event. */
+  readonly strangers = computed(() => this.others().filter(person => person.relation === 'NONE' || person.relation === 'SENT_BY_THEM'));
+
+  private connect(person: Person, request: Observable<unknown>, failure: string): void {
+    if (this.sending().has(person.id)) {
+      return;
+    }
+    this.sending.update(ids => new Set(ids).add(person.id));
+    const done = () => this.sending.update(ids => {
+      const next = new Set(ids);
+      next.delete(person.id);
+      return next;
+    });
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        done();
+        this.loadDirectory();
+      },
+      error: error => {
+        done();
+        this.logger.error('EventDetailsComponent', failure, error);
+      }
+    });
+  }
+
+  private loadDirectory(): void {
+    this.socialService.searchUsers().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: users => this.directory.set(new Map(users.map(user => [user.userId, user]))),
+      error: error => this.logger.error('EventDetailsComponent', 'Could not load the names', error)
+    });
+  }
+
   private loadParticipants(id: string): void {
     this.eventService.getParticipants(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: participants => this.participants.set(participants),
@@ -263,15 +317,17 @@ export class EventDetailsComponent implements OnInit {
   }
 
   private person(id: string): Person {
-    const known = this.names().get(id);
+    const known = this.directory().get(id);
     const me = this.me();
-    const name = me !== null && id === me.id ? 'Toi' : known?.name ?? 'Quelqu’un';
+    const isMe = me !== null && id === me.id;
+    const name = isMe ? 'Toi' : known?.userName ?? 'Quelqu’un';
     return {
       id,
       name,
       initials: initialsOf(name),
-      picture: known?.picture,
-      isFriend: (this.participants()?.friendsGoingIds ?? []).includes(id)
+      picture: known?.profilePicUrl,
+      isFriend: (this.participants()?.friendsGoingIds ?? []).includes(id),
+      relation: isMe ? 'ME' : known?.relationStatus ?? 'NONE'
     };
   }
 }

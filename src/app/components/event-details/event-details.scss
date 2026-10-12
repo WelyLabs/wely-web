@@ -469,6 +469,78 @@
     }
 }
 
+.people {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.people-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--brand-wash);
+}
+
+.person-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+
+    .person-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .relation {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+}
+
+.small-gradient-button,
+.small-outline-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 18px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.small-gradient-button {
+    border: none;
+    background: var(--accent-gradient);
+    color: white;
+}
+
+.small-outline-button {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
 .text-button {
     align-self: center;
     border: none;

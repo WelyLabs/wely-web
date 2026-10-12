@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FriendshipFilter, SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
+import { EventService } from '../../services/event.service';
 import { UserWithStatusDTO } from '../../models/user.model';
 import { Conversation } from '../../models/chat.model';
 import { ClosenessAnswer, ClosenessChange, UserCardComponent } from '../user-card/user-card';
@@ -42,6 +43,7 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
 export class UserSearchComponent implements OnInit {
     private readonly logger = inject(LoggerService);
     private readonly socialService = inject(SocialService);
+    private readonly eventService = inject(EventService);
     private readonly chatService = inject(ChatService);
     private readonly breakpointObserver = inject(BreakpointObserver);
     private readonly dialog = inject(MatDialog);
@@ -58,6 +60,9 @@ export class UserSearchComponent implements OnInit {
 
     /** On the friends tab, the closeness of each friendship, by user id. */
     readonly friendships = signal<ReadonlyMap<string, FriendSummary>>(new Map());
+
+    /** Titles of the events pending requests were sent from, by event id. */
+    readonly eventTitles = signal<ReadonlyMap<string, string>>(new Map());
 
     readonly searchQuery = signal('');
     readonly isLoading = signal(false);
@@ -141,6 +146,7 @@ export class UserSearchComponent implements OnInit {
                     // The API answers without a relation status: the tab's filter is the answer.
                     this.users.set(users.map(user => ({ ...user, relationStatus: filter })));
                     this.isLoading.set(false);
+                    this.loadEventTitles(users);
                 },
                 error: (err) => {
                     this.logger.error('UserSearchComponent', 'Error loading users:', err);
@@ -171,6 +177,24 @@ export class UserSearchComponent implements OnInit {
                     this.isLoading.set(false);
                 }
             });
+    }
+
+    metAt(user: UserWithStatusDTO): string | null {
+        return user.viaEventId ? this.eventTitles().get(user.viaEventId) ?? null : null;
+    }
+
+    /** An event the viewer can no longer see just leaves the card without its context. */
+    private loadEventTitles(users: UserWithStatusDTO[]): void {
+        const ids = [...new Set(users.flatMap(user => user.viaEventId ? [user.viaEventId] : []))]
+            .filter(id => !this.eventTitles().has(id));
+        for (const id of ids) {
+            this.eventService.getEvent(id)
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                    next: event => this.eventTitles.update(titles => new Map(titles).set(id, event.title)),
+                    error: () => undefined
+                });
+        }
     }
 
     friendshipOf(user: UserWithStatusDTO): FriendSummary | null {

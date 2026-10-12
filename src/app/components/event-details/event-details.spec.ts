@@ -83,6 +83,18 @@ describe('EventDetailsComponent', () => {
         toggleSubscription: ReturnType<typeof vi.fn>;
     };
     let router: { navigate: ReturnType<typeof vi.fn> };
+    let socialService: {
+        searchUsers: ReturnType<typeof vi.fn>;
+        sendFriendRequest: ReturnType<typeof vi.fn>;
+        acceptFriend: ReturnType<typeof vi.fn>;
+    };
+    const directory = () => [
+        { userId: 'org', userName: 'Camille Durand', hashtag: 1111, relationStatus: 'FRIENDS' },
+        { userId: 'f1', userName: 'Léo Martin', hashtag: 2222, relationStatus: 'FRIENDS' },
+        { userId: 'u2', userName: 'Inès Bernard', hashtag: 3333, relationStatus: 'NONE' },
+        { userId: 'u3', userName: 'Sami Kadi', hashtag: 4444, relationStatus: 'SENT_BY_THEM' },
+        { userId: 'u4', userName: 'Zoé Petit', hashtag: 5555, relationStatus: 'SENT_BY_ME' }
+    ];
     const me = new BehaviorSubject<User | null>({ id: 'me' } as User);
 
     const participants = (overrides: Partial<EventParticipants> = {}): EventParticipants => ({
@@ -109,16 +121,17 @@ describe('EventDetailsComponent', () => {
             toggleSubscription: vi.fn().mockReturnValue(of(event()))
         };
         router = { navigate: vi.fn() };
+        socialService = {
+            searchUsers: vi.fn().mockImplementation(() => of(directory())),
+            sendFriendRequest: vi.fn().mockReturnValue(of({})),
+            acceptFriend: vi.fn().mockReturnValue(of(undefined))
+        };
 
         TestBed.configureTestingModule({
             imports: [EventDetailsComponent],
             providers: [
                 { provide: EventService, useValue: eventService },
-                { provide: SocialService, useValue: { searchUsers: () => of([
-                    { userId: 'org', userName: 'Camille Durand' },
-                    { userId: 'f1', userName: 'Léo Martin' },
-                    { userId: 'u2', userName: 'Inès Bernard' }
-                ]) } },
+                { provide: SocialService, useValue: socialService },
                 { provide: UserService, useValue: { currentUser$: me } },
                 { provide: Router, useValue: router },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
@@ -230,6 +243,64 @@ describe('EventDetailsComponent', () => {
         create();
 
         expect(component.mapUrl()).toBe('https://www.openstreetmap.org/search?query=Le%20Transbordeur');
+    });
+
+    it('people_shouldCarryWhereTheViewerStandsWithEach', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'f1', 'u2', 'u3', 'u4'] })));
+
+        create();
+
+        expect(component.people().map(person => [person.id, person.relation])).toEqual([
+            ['f1', 'FRIENDS'], ['me', 'ME'], ['u2', 'NONE'], ['u3', 'SENT_BY_THEM'], ['u4', 'SENT_BY_ME']
+        ]);
+        expect(component.strangers().map(person => person.id)).toEqual(['u2', 'u3']);
+    });
+
+    it('template_shouldNotListParticipantsToAGuest', () => {
+        create();
+
+        expect(fixture.nativeElement.querySelector('.people')).toBeNull();
+    });
+
+    it('addFriend_shouldSendTheTagWithTheEventThenRefreshTheStatuses', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u2'] })));
+        create();
+
+        (fixture.nativeElement.querySelector('.small-outline-button') as HTMLButtonElement).click();
+
+        expect(socialService.sendFriendRequest).toHaveBeenCalledWith('Inès Bernard#3333', 'e1');
+        expect(socialService.searchUsers).toHaveBeenCalledTimes(2);
+        expect(component.sending().size).toBe(0);
+    });
+
+    it('addFriend_shouldReleaseThePersonWhenItFails', () => {
+        socialService.sendFriendRequest.mockReturnValue(throwError(() => new Error('down')));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u2'] })));
+        create();
+
+        component.addFriend(component.people().find(person => person.id === 'u2')!);
+
+        expect(component.sending().size).toBe(0);
+        expect(socialService.searchUsers).toHaveBeenCalledTimes(1);
+    });
+
+    it('acceptFriend_shouldAcceptAPendingRequestFromAParticipant', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u3'] })));
+        create();
+
+        (fixture.nativeElement.querySelector('.small-gradient-button') as HTMLButtonElement).click();
+
+        expect(socialService.acceptFriend).toHaveBeenCalledWith('u3');
+    });
+
+    it('template_shouldInviteToAddPeopleMetOnceItIsOver', () => {
+        vi.setSystemTime(at('2026-10-19T10:00:00'));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'f1', 'u2'] })));
+
+        create();
+
+        expect(component.phase()).toBe('past');
+        expect(fixture.nativeElement.querySelector('.people-heading')?.textContent).toContain('Tu as passé ce moment avec 2 personnes');
     });
 
     it('goBack_shouldReturnToTheCalendar', () => {

@@ -32,6 +32,17 @@ describe('UserCardComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    it('metAt_shouldShowWhereTheTwoMet', () => {
+        fixture.componentRef.setInput('metAt', 'Soirée jeux');
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.met-at')?.textContent).toContain('Vous étiez à « Soirée jeux »');
+    });
+
+    it('metAt_shouldShowNothingWithoutAnEvent', () => {
+        expect(fixture.nativeElement.querySelector('.met-at')).toBeNull();
+    });
+
     it('should derive initials from the user name', () => {
         expect(component.initials()).toBe('TE');
     });

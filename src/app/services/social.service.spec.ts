@@ -73,6 +73,14 @@ describe('SocialService', () => {
         req.flush({});
     });
 
+    it('sendFriendRequest_shouldSayWhichEventTheTwoMetAt', () => {
+        service.sendFriendRequest('Alice#1234', 'e1').subscribe();
+
+        const req = httpMock.expectOne(`${apiUrl}/relationships/request`);
+        expect(req.request.body).toEqual({ userTag: 'Alice#1234', viaEventId: 'e1' });
+        req.flush({});
+    });
+
     it('should accept friend request', () => {
         const userId = '550e8400-e29b-41d4-a716-446655440000';
         service.acceptFriend(userId).subscribe();

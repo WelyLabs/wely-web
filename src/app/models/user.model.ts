@@ -45,6 +45,10 @@ export interface UserWithStatusDTO {
     userName: string;
     profilePicUrl?: string;
     relationStatus: RelationStatus;
+    /** With the name, the public tag `Name#1234` a request is sent to. */
+    hashtag?: number;
+    /** While a request is pending: the event it was sent from, if any. */
+    viaEventId?: string | null;
 }
 
 /** A user node as returned by the social service after a relationship change. */
