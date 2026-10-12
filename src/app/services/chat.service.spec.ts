@@ -100,6 +100,17 @@ describe('ChatService', () => {
     await expect(pending).resolves.toEqual(presence);
   });
 
+  it('getEventConversation_shouldReadTheEventsGroup', async () => {
+    const conversation = { id: 'conv-1', participantIds: ['me'], messages: [], bucketIndex: 0 };
+    const pending = firstValueFrom(service.getEventConversation('ev-1'));
+
+    const request = httpMock.expectOne(`${apiUrl}/conversations/events/ev-1`);
+    expect(request.request.method).toBe('GET');
+    request.flush(conversation);
+
+    await expect(pending).resolves.toEqual(conversation);
+  });
+
   it('récupère ou crée une conversation à partir de l’ami visé', async () => {
     const pending = firstValueFrom(service.getConversation('friend-1'));
 

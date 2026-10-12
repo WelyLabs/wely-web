@@ -1,6 +1,9 @@
+/** As wely-chat names them: a conversation stored before types existed comes back DIRECT. */
 export enum ConversationType {
-    PRIVATE = 'PRIVATE',
-    GROUP = 'GROUP'
+    DIRECT = 'DIRECT',
+    GROUP = 'GROUP',
+    /** An event's group, whose members follow who takes part. */
+    EVENT = 'EVENT'
 }
 
 export enum MessageType {
@@ -56,4 +59,6 @@ export interface ConversationSummary {
     updatedAt: string;
     lastMessage?: Message;
     lastBucketIndex: number;
+    /** The event an EVENT conversation belongs to. */
+    eventId?: string | null;
 }
