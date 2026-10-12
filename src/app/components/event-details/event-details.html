@@ -257,19 +257,8 @@
           @if (thread().length > threadPreview().length) {
             <p class="muted earlier">{{ thread().length - threadPreview().length }} message{{ thread().length - threadPreview().length > 1 ? 's' : '' }} plus tôt</p>
           }
-          @for (message of threadPreview(); track message.id) {
-            <div class="thread-message" [class.mine]="isMine(message)">
-              @if (!isMine(message)) {
-                <span class="avatar small" [style.background]="avatarColor(message.senderId)">{{ initialsOf(authorOf(message)) }}</span>
-              }
-              <div class="bubble">
-                @if (!isMine(message)) {
-                  <strong class="author">{{ authorOf(message) }}</strong>
-                }
-                <p>{{ message.content }}</p>
-                <span class="time">{{ message.timestamp | date:'HH:mm' }}</span>
-              </div>
-            </div>
+          @for (message of threadPreview(); track $index) {
+            <app-chat-bubble [message]="message" />
           } @empty {
             <p class="muted">Personne n'a encore écrit. Lance la discussion !</p>
           }

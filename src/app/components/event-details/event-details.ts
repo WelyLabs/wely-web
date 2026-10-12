@@ -3,7 +3,7 @@ import {
   computed, effect, inject, signal, viewChild
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,8 @@ import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
 import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
+import { ChatBubbleComponent, ChatBubbleMessage } from '../shared/chat-bubble/chat-bubble';
+import { avatarColor, initialsOf } from '../../core/ui/avatar';
 
 /**
  * What the page is for, given who looks and when.
@@ -60,23 +62,6 @@ const GROUP_RETRY_COUNT = 6;
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
-const AVATAR_COLORS = ['#2563eb', '#c2410c', '#0f766e', '#7c3aed', '#be185d', '#4d7c0f'];
-
-export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] ?? '?').slice(0, 2);
-  return letters.toUpperCase();
-}
-
-/** A stable colour per person, so an avatar keeps its colour from one visit to the next. */
-export function avatarColor(id: string): string {
-  let hash = 0;
-  for (const char of id) {
-    hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
 export function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -119,7 +104,7 @@ export function countdownOf(event: FeedEvent, now: Date): string {
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [DatePipe, NgTemplateOutlet, MatIconModule, EventMapComponent],
+  imports: [NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -195,7 +180,13 @@ export class EventDetailsComponent implements OnInit {
   readonly thread = signal<ThreadMessage[]>([]);
   readonly threadState = signal<ThreadState>('loading');
   /** The last few messages: a glimpse, the conversation itself is one tap away. */
-  readonly threadPreview = computed(() => this.thread().slice(-THREAD_PREVIEW_SIZE));
+  readonly threadPreview = computed<ChatBubbleMessage[]>(() => this.thread().slice(-THREAD_PREVIEW_SIZE).map(message => ({
+    text: message.content,
+    time: message.timestamp,
+    isMe: this.isMine(message),
+    senderName: this.authorOf(message),
+    senderId: message.senderId
+  })));
 
   readonly friendsSentence = computed(() => {
     const names = this.friends().map(friend => friend.name.split(' ')[0]);
@@ -293,9 +284,7 @@ export class EventDetailsComponent implements OnInit {
     return avatarColor(id);
   }
 
-  initialsOf(name: string): string {
-    return initialsOf(name);
-  }
+
 
   dayLabel(date: Date): string {
     return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });

@@ -206,6 +206,7 @@ export class ChatComponent implements OnInit {
             time: message.timestamp,
             isMe: message.senderId === this.currentUserId,
             senderName: message.senderName,
+            senderId: message.senderId,
             pending: 'pending' in message ? message.pending : undefined,
             failed: 'failed' in message ? message.failed : undefined
         };

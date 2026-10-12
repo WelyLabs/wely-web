@@ -458,51 +458,6 @@
     }
 }
 
-.thread-message {
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-
-    .bubble {
-        max-width: 78%;
-        padding: 10px 14px;
-        border-radius: 18px 18px 18px 6px;
-        background: var(--bg-card);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-
-        p {
-            margin: 0;
-            line-height: 1.4;
-            white-space: pre-line;
-            overflow-wrap: anywhere;
-        }
-    }
-
-    .author {
-        display: block;
-        font-size: 13px;
-        margin-bottom: 2px;
-    }
-
-    .time {
-        display: block;
-        margin-top: 4px;
-        font-size: 11px;
-        opacity: 0.7;
-        text-align: right;
-    }
-
-    &.mine {
-        justify-content: flex-end;
-
-        .bubble {
-            border-radius: 18px 18px 6px 18px;
-            background: var(--accent-gradient);
-            color: white;
-        }
-    }
-}
-
 .earlier {
     margin: 0;
     text-align: center;

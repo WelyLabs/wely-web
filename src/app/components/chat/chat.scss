@@ -151,12 +151,14 @@
 }
 
 /* Content Area */
+// The page's background, as on the event page: the bubbles are white cards and need it to stand out.
 .chat-content-area {
     flex: 1;
     position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: var(--bg-canvas);
 }
 
 .chat-shared-wrapper {
