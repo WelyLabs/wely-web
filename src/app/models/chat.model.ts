@@ -21,7 +21,8 @@ export interface Message {
     conversationId: string;
     content: string;
     type: MessageType;
-    timestamp: string; // LocalDateTime from backend -> ISO string in frontend
+    /** ISO instant with its zone, as wely-chat sends it. */
+    timestamp: string;
     reactions: Record<string, number>;
 }
 

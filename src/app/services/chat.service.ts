@@ -249,12 +249,13 @@ export class ChatService implements OnDestroy {
 
             socket.requestResponse(payload).subscribe({
               onComplete: (response) => {
-                // wely-chat answers with the stored message. Only its id is taken, when it has one:
-                // its timestamp is a zone-less UTC LocalDateTime, which would shift the time shown.
+                // wely-chat answers with the stored message: its time is the server's, an instant with
+                // its zone, so it is the one kept. Its id is still null, so the local one stays.
                 const confirmed = (response?.data ?? null) as Message | null;
                 observer.next({
                   ...optimistic,
                   id: confirmed?.id ?? optimistic.id,
+                  timestamp: confirmed?.timestamp ?? optimistic.timestamp,
                   pending: false,
                 });
                 observer.complete();

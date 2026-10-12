@@ -152,8 +152,8 @@ describe('ChatService', () => {
     expect(emissions[1].id).toBe('server-id-1');
   });
 
-  it('sendMessage_shouldKeepTheLocalId_whenTheAcknowledgementHasNone', async () => {
-    rsocketStub.responsePayload = { data: { id: null, content: 'hello', timestamp: '2026-10-12T23:44:00' } };
+  it('sendMessage_shouldKeepTheLocalId_andTakeTheServersTime', async () => {
+    rsocketStub.responsePayload = { data: { id: null, content: 'hello', timestamp: '2026-10-12T23:44:46Z' } };
 
     const emissions = (await firstValueFrom(
       service.sendMessage('conv-1', 'hello', 'friend-1').pipe(toArray()),
@@ -161,7 +161,7 @@ describe('ChatService', () => {
 
     expect(emissions[1].pending).toBe(false);
     expect(emissions[1].id).toBe(emissions[0].id);
-    expect(emissions[1].timestamp).toBe(emissions[0].timestamp);
+    expect(emissions[1].timestamp).toBe('2026-10-12T23:44:46Z');
   });
 
   it('signale un échec de livraison au lieu de le passer sous silence', async () => {
