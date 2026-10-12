@@ -176,6 +176,11 @@ export class ChatService implements OnDestroy {
     return this.http.get<ConversationSummary[]>(`${this.apiUrl}/conversations/all`);
   }
 
+  /** An event's group conversation; 404 for a non-member, or until wely-chat has created it. */
+  getEventConversation(eventId: string): Observable<Conversation> {
+    return this.http.get<Conversation>(`${this.apiUrl}/conversations/events/${eventId}`);
+  }
+
   getConversationById(conversationId: string): Observable<Conversation> {
     return this.http.get<Conversation>(`${this.apiUrl}/conversations/${conversationId}`);
   }

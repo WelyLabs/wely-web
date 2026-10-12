@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
@@ -10,6 +10,8 @@ import {
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { UserService } from '../../services/user.service';
+import { ChatService, PendingMessage } from '../../services/chat.service';
+import { Conversation, ConversationType, Message, MessageType } from '../../models/chat.model';
 import { User } from '../../models/user.model';
 
 const at = (iso: string) => new Date(iso);
@@ -96,6 +98,23 @@ describe('EventDetailsComponent', () => {
         { userId: 'u4', userName: 'Zoé Petit', hashtag: 5555, relationStatus: 'SENT_BY_ME' }
     ];
     const me = new BehaviorSubject<User | null>({ id: 'me' } as User);
+    let chatService: {
+        getEventConversation: ReturnType<typeof vi.fn>;
+        sendMessage: ReturnType<typeof vi.fn>;
+        initializeStream: ReturnType<typeof vi.fn>;
+        messages$: Subject<Message>;
+    };
+
+    const chatMessage = (overrides: Partial<Message> = {}): Message => ({
+        id: 'm1', senderId: 'f1', senderName: 'leo', receiverId: 'me', conversationId: 'conv-1',
+        content: 'Qui ramène les cartes ?', type: MessageType.TEXT, timestamp: '2026-10-12T09:00:00', reactions: {},
+        ...overrides
+    });
+
+    const group = (messages: Message[] = []): Conversation => ({
+        id: 'conv-1', participantIds: ['org', 'me', 'f1'], type: ConversationType.EVENT, updatedAt: '',
+        messages, bucketIndex: 0
+    });
 
     const participants = (overrides: Partial<EventParticipants> = {}): EventParticipants => ({
         count: 3, participantIds: [], friendsGoingIds: ['f1'], ...overrides
@@ -121,6 +140,12 @@ describe('EventDetailsComponent', () => {
             toggleSubscription: vi.fn().mockReturnValue(of(event()))
         };
         router = { navigate: vi.fn() };
+        chatService = {
+            getEventConversation: vi.fn().mockReturnValue(of(group([chatMessage()]))),
+            sendMessage: vi.fn(),
+            initializeStream: vi.fn(),
+            messages$: new Subject<Message>()
+        };
         socialService = {
             searchUsers: vi.fn().mockImplementation(() => of(directory())),
             sendFriendRequest: vi.fn().mockReturnValue(of({})),
@@ -132,6 +157,7 @@ describe('EventDetailsComponent', () => {
             providers: [
                 { provide: EventService, useValue: eventService },
                 { provide: SocialService, useValue: socialService },
+                { provide: ChatService, useValue: chatService },
                 { provide: UserService, useValue: { currentUser$: me } },
                 { provide: Router, useValue: router },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
@@ -174,19 +200,100 @@ describe('EventDetailsComponent', () => {
         expect(fixture.nativeElement.textContent).toContain('Léo y va');
     });
 
-    it('phase_shouldBeMemberAndShowTheTimelineOnceJoined', () => {
+    it('phase_shouldBeMemberAndShowTheGroupThreadOnceJoined', () => {
         eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['u2', 'me', 'f1'] })));
 
         create();
 
         expect(component.joined()).toBe(true);
         expect(component.phase()).toBe('member');
-        const items = Array.from(fixture.nativeElement.querySelectorAll('.timeline-item')) as HTMLElement[];
-        expect(items.map(item => item.textContent?.trim())).toEqual([
-            expect.stringContaining('Inès Bernard a rejoint'),
-            expect.stringContaining('Toi as rejoint'),
-            expect.stringContaining('Léo Martin a rejoint')
-        ]);
+        expect(chatService.getEventConversation).toHaveBeenCalledWith('e1');
+        expect(chatService.initializeStream).toHaveBeenCalled();
+        const message = fixture.nativeElement.querySelector('.thread-message') as HTMLElement;
+        expect(message.textContent).toContain('Léo Martin');
+        expect(message.textContent).toContain('Qui ramène les cartes ?');
+        expect(fixture.nativeElement.querySelector('.composer')).not.toBeNull();
+    });
+
+    it('followThread_shouldNotAskForTheGroupOfAGuest', () => {
+        create();
+
+        expect(chatService.getEventConversation).not.toHaveBeenCalled();
+    });
+
+    it('followThread_shouldAppendWhatArrivesLiveForThisGroupOnly', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+        create();
+
+        chatService.messages$.next(chatMessage({ id: 'm2', content: 'Moi !' }));
+        chatService.messages$.next(chatMessage({ id: 'm3', conversationId: 'other', content: 'ailleurs' }));
+
+        expect(component.thread().map(message => message.content)).toEqual(['Qui ramène les cartes ?', 'Moi !']);
+    });
+
+    it('followThread_shouldSayUnavailable_whenTheGroupCannotBeRead', () => {
+        chatService.getEventConversation.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+
+        create();
+
+        expect(component.threadState()).toBe('unavailable');
+        expect(fixture.nativeElement.textContent).toContain("Le fil n'est pas disponible");
+    });
+
+    it('followThread_shouldAskAgain_whileTheGroupIsBeingCreated', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'setInterval'] });
+        vi.setSystemTime(at('2026-10-12T10:00:00'));
+        let calls = 0;
+        // Deferred like a real HTTP call: retrying re-subscribes, which sends the request again.
+        chatService.getEventConversation.mockReturnValue(defer(() => {
+            calls += 1;
+            return calls === 1 ? throwError(() => new HttpErrorResponse({ status: 404 })) : of(group());
+        }));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+
+        create();
+        expect(component.threadState()).toBe('loading');
+        await vi.advanceTimersByTimeAsync(1_500);
+
+        expect(component.threadState()).toBe('ready');
+        expect(component.thread()).toEqual([]);
+    });
+
+    it('sendMessage_shouldShowTheMessageAtOnceThenSettleIt', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+        const pending = { ...chatMessage({ id: 'pending-1', senderId: 'me', content: 'Je ramène Dixit' }), pending: true } as PendingMessage;
+        chatService.sendMessage.mockReturnValue(of(pending, { ...pending, pending: false }));
+        create();
+
+        component.draft.set('  Je ramène Dixit ');
+        component.sendMessage();
+
+        expect(chatService.sendMessage).toHaveBeenCalledWith('conv-1', 'Je ramène Dixit', '');
+        expect(component.draft()).toBe('');
+        expect(component.thread().at(-1)).toEqual(expect.objectContaining({ id: 'pending-1', pending: false }));
+        expect(component.thread()).toHaveLength(2);
+        expect(component.authorOf(component.thread().at(-1)!)).toBe('Toi');
+    });
+
+    it('sendMessage_shouldSendNothing_forAnEmptyDraft', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+        create();
+
+        component.draft.set('   ');
+        component.sendMessage();
+
+        expect(chatService.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('template_shouldHideTheComposerOnceItIsOver', () => {
+        vi.setSystemTime(at('2026-10-19T10:00:00'));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+
+        create();
+
+        expect(fixture.nativeElement.querySelector('.thread-message')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.composer')).toBeNull();
     });
 
     it('people_shouldListFriendsFirst', () => {

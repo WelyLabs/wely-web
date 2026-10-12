@@ -2,15 +2,17 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit,
   computed, effect, inject, signal, viewChild
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { NgTemplateOutlet } from '@angular/common';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable, interval } from 'rxjs';
+import { Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
 
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
+import { ChatService, PendingMessage } from '../../services/chat.service';
+import { Conversation, Message } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
@@ -35,6 +37,24 @@ export interface Person {
   isFriend: boolean;
   relation: Relation;
 }
+
+/** One message of the group's thread, as the page shows it. */
+export interface ThreadMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: string;
+  pending?: boolean;
+  failed?: boolean;
+}
+
+/** loading: asking wely-chat. ready: the group exists. unavailable: it could not be read. */
+export type ThreadState = 'loading' | 'ready' | 'unavailable';
+
+/** wely-chat creates the group a moment after joining (relay, then Kafka): asked again this often. */
+const GROUP_RETRY_DELAY_MS = 1_500;
+const GROUP_RETRY_COUNT = 6;
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -97,7 +117,7 @@ export function countdownOf(event: FeedEvent, now: Date): string {
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [NgTemplateOutlet, MatIconModule, EventMapComponent],
+  imports: [DatePipe, NgTemplateOutlet, MatIconModule, EventMapComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -107,6 +127,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly eventService = inject(EventService);
   private readonly socialService = inject(SocialService);
+  private readonly chatService = inject(ChatService);
   private readonly userService = inject(UserService);
   private readonly logger = inject(LoggerService);
   private readonly destroyRef = inject(DestroyRef);
@@ -162,8 +183,15 @@ export class EventDetailsComponent implements OnInit {
     return [...all.filter(person => person.isFriend), ...all.filter(person => !person.isFriend)];
   });
 
-  /** The group's timeline, newest last: who joined, in joining order. */
-  readonly joins = computed(() => (this.participants()?.participantIds ?? []).map(id => this.person(id)));
+  /** Members are the organizer and those taking part: they get the group's thread. */
+  readonly member = computed(() => this.joined() || this.isOrganizer());
+  private readonly member$ = toObservable(this.member);
+
+  /** The event's group conversation in wely-chat, once it exists. */
+  private readonly conversationId = signal<string | null>(null);
+  readonly thread = signal<ThreadMessage[]>([]);
+  readonly threadState = signal<ThreadState>('loading');
+  readonly draft = signal('');
 
   readonly friendsSentence = computed(() => {
     const names = this.friends().map(friend => friend.name.split(' ')[0]);
@@ -221,6 +249,7 @@ export class EventDetailsComponent implements OnInit {
     this.loadParticipants(id);
 
     this.loadDirectory();
+    this.followThread(id);
 
     interval(MINUTE_MS).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.now.set(new Date()));
   }
@@ -251,6 +280,10 @@ export class EventDetailsComponent implements OnInit {
     return avatarColor(id);
   }
 
+  initialsOf(name: string): string {
+    return initialsOf(name);
+  }
+
   dayLabel(date: Date): string {
     return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   }
@@ -272,6 +305,34 @@ export class EventDetailsComponent implements OnInit {
 
   acceptFriend(person: Person): void {
     this.connect(person, this.socialService.acceptFriend(person.id), 'Could not accept the friend request');
+  }
+
+  /** Sends the draft to the group; it shows at once, then settles as sent or failed. */
+  sendMessage(): void {
+    const content = this.draft().trim();
+    const conversationId = this.conversationId();
+    if (!content || !conversationId) {
+      return;
+    }
+    this.draft.set('');
+    // wely-chat delivers to the group's members and ignores the receiver: there is none to name.
+    this.chatService.sendMessage(conversationId, content, '').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: message => this.upsert(toThreadMessage(message)),
+      error: error => this.logger.error('EventDetailsComponent', 'Could not send to the group', error)
+    });
+  }
+
+  /** The name a message is signed with: "Toi" for the viewer, the directory's name when known. */
+  authorOf(message: ThreadMessage): string {
+    const me = this.me();
+    if (me !== null && message.senderId === me.id) {
+      return 'Toi';
+    }
+    return this.directory().get(message.senderId)?.userName ?? message.senderName;
+  }
+
+  isMine(message: ThreadMessage): boolean {
+    return message.senderId === this.me()?.id;
   }
 
   /** Everyone but the viewer. */
@@ -309,6 +370,55 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  /**
+   * Loads the group whenever the viewer becomes a member, and appends what arrives live. wely-chat
+   * creates the group a moment after a join, so a 404 right then is asked again a few times.
+   */
+  private followThread(eventId: string): void {
+    this.member$.pipe(
+      distinctUntilChanged(),
+      filter(Boolean),
+      switchMap(() => {
+        this.threadState.set('loading');
+        return this.chatService.getEventConversation(eventId).pipe(
+          retry({
+            count: GROUP_RETRY_COUNT,
+            delay: (error: HttpErrorResponse) => error.status === 404 ? timer(GROUP_RETRY_DELAY_MS) : throwError(() => error)
+          }),
+          catchError(error => {
+            this.logger.error('EventDetailsComponent', 'Could not load the group thread', error);
+            return of(null);
+          })
+        );
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(conversation => this.showConversation(conversation));
+
+    this.chatService.messages$.pipe(
+      filter(message => message.conversationId === this.conversationId()),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(message => this.upsert(toThreadMessage(message)));
+  }
+
+  private showConversation(conversation: Conversation | null): void {
+    if (!conversation) {
+      this.threadState.set('unavailable');
+      return;
+    }
+    this.conversationId.set(conversation.id);
+    this.thread.set((conversation.messages ?? []).map(toThreadMessage));
+    this.threadState.set('ready');
+    this.chatService.initializeStream();
+  }
+
+  /** Replaces a message already shown (a pending one being confirmed), or appends it. */
+  private upsert(message: ThreadMessage): void {
+    this.thread.update(messages => {
+      const index = messages.findIndex(shown => shown.id === message.id);
+      return index < 0 ? [...messages, message] : messages.map((shown, i) => i === index ? message : shown);
+    });
+  }
+
   private loadParticipants(id: string): void {
     this.eventService.getParticipants(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: participants => this.participants.set(participants),
@@ -330,4 +440,18 @@ export class EventDetailsComponent implements OnInit {
       relation: isMe ? 'ME' : known?.relationStatus ?? 'NONE'
     };
   }
+}
+
+/** Messages from history carry no id (wely-chat does not assign one yet): one is made up to track them. */
+function toThreadMessage(message: Message | PendingMessage): ThreadMessage {
+  const pending = 'pending' in message ? message : null;
+  return {
+    id: message.id ?? `${message.senderId}-${message.timestamp}`,
+    senderId: message.senderId,
+    senderName: message.senderName,
+    content: message.content,
+    timestamp: message.timestamp,
+    pending: pending?.pending,
+    failed: pending?.failed
+  };
 }

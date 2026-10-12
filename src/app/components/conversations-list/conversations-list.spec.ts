@@ -27,7 +27,7 @@ describe('ConversationsListComponent', () => {
         {
             id: '1',
             title: 'Dave',
-            type: ConversationType.PRIVATE,
+            type: ConversationType.DIRECT,
             updatedAt: new Date().toISOString(),
             lastBucketIndex: 0
         }
@@ -121,6 +121,12 @@ describe('ConversationsListComponent', () => {
         expect(routerMock.navigate).toHaveBeenCalledWith(['/chat', summary.id]);
     });
 
+    it('openConversation_shouldOpenTheEventPage_forAnEventGroup', () => {
+        component.openConversation({ ...mockConversations[0], type: ConversationType.EVENT, eventId: 'ev-1' });
+
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'chat', 'ev-1']);
+    });
+
     it('should return correct last message content', () => {
         const summaryWithMsg = {
             ...mockConversations[0],
@@ -153,7 +159,7 @@ describe('ConversationsListComponent', () => {
 
     describe('rows', () => {
         const withLea = (overrides: Partial<ConversationSummary> = {}): ConversationSummary => ({
-            id: 'c-lea', participantIds: ['me', 'lea'], type: ConversationType.PRIVATE,
+            id: 'c-lea', participantIds: ['me', 'lea'], type: ConversationType.DIRECT,
             title: '', updatedAt: new Date().toISOString(), lastBucketIndex: 0, ...overrides
         });
         const lea = { userId: 'lea', userName: 'lea', hashtag: 6000, profilePicUrl: '/demo/avatars/lea.svg',
@@ -210,6 +216,13 @@ describe('ConversationsListComponent', () => {
             load([withLea()]);
 
             expect(component.rows()[0].online).toBe(false);
+        });
+
+        it('rows_shouldNameAnEventGroupAfterItsTitle_andAskNoPresence', () => {
+            load([withLea({ type: ConversationType.EVENT, title: 'Soirée jeux', eventId: 'ev-1', participantIds: ['me', 'lea', 'bob'] })]);
+
+            expect(component.rows()[0].name).toBe('Soirée jeux');
+            expect(chatServiceMock.getPresence).not.toHaveBeenCalled();
         });
     });
 });

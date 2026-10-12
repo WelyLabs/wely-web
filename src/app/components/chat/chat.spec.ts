@@ -5,7 +5,7 @@ import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
 import { NavigationService } from '../../services/navigation.service';
 import { of, BehaviorSubject, Subject, throwError } from 'rxjs';
-import { Conversation, MessageType } from '../../models/chat.model';
+import { Conversation, ConversationType, MessageType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -29,7 +29,7 @@ describe('ChatComponent', () => {
     const mockConv: Conversation = {
         id: 'conv1',
         participantIds: ['me', 'friend'],
-        type: 'PRIVATE' as any,
+        type: ConversationType.DIRECT,
         updatedAt: new Date().toISOString(),
         messages: [],
         bucketIndex: 1

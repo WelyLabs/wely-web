@@ -12,7 +12,7 @@ import { ChatService } from '../../services/chat.service';
 import { SocialService } from '../../services/social.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { catchError, forkJoin, map, of } from 'rxjs';
-import { ConversationSummary } from '../../models/chat.model';
+import { ConversationSummary, ConversationType } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 
 /** One row of the list: the conversation, and who it is with. */
@@ -104,7 +104,12 @@ export class ConversationsListComponent implements OnInit {
             });
     }
 
+    /** An event's group lives on the event page, next to who comes. */
     openConversation(summary: ConversationSummary): void {
+        if (summary.type === ConversationType.EVENT && summary.eventId) {
+            this.router.navigate(['/event', 'chat', summary.eventId]);
+            return;
+        }
         this.router.navigate(['/chat', summary.id]);
     }
 
@@ -117,8 +122,11 @@ export class ConversationsListComponent implements OnInit {
         return prefix + conversation.lastMessage.content;
     }
 
-    /** The participant who is not the current user. */
+    /** The participant who is not the current user; none for a group, which is named by its title. */
     private partnerOf(conversation: ConversationSummary): string | null {
+        if (conversation.type === ConversationType.EVENT) {
+            return null;
+        }
         return conversation.participantIds?.find(id => id !== this.currentUserId) ?? null;
     }
 
