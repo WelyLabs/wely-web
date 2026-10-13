@@ -298,7 +298,9 @@
     }
 
     @media (max-width: 1023px) {
-        padding: 0 !important;
+        // viewport-fit=cover: installed on the home screen, the page runs under the status bar
+        // and, in landscape, beside the notch. The bottom bar pads itself.
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left) !important;
         height: 100dvh;
         display: flex !important;
         flex-direction: column !important;

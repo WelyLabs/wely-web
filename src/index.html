@@ -8,7 +8,7 @@
   <!-- No zoom: an app screen, not a document. A pinch or a double tap left the layout half off
        screen; text that needs it is sized to be read as is (16px fields keep iOS from zooming
        on focus). iOS ignores user-scalable, hence the gesture guard in main.ts. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="description" content="Créez un événement : vos amis le voient passer dans leur fil et le rejoignent en un clic. Projet open source, démo en libre accès.">
   <meta name="theme-color" content="#fcfaf7">
 
@@ -28,6 +28,13 @@
   <meta property="og:image:alt" content="Page d'accueil de Wely, avec une réplique de l'application montrant une semaine d'événements, une conversation et une carte d'événement.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Installable: added to the home screen, Wely opens without the browser's bars. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Wely">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
