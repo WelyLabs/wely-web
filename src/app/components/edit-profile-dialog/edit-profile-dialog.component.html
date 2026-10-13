@@ -87,7 +87,7 @@
       Annuler
     </button>
     <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="isLoading() || profileForm.invalid"
-      class="save-button">
+      [appPendingTrail]="isLoading()" class="save-button">
       @if (!isLoading()) {
         <mat-icon>save</mat-icon>
       }

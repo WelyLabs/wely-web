@@ -362,3 +362,50 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
+/* Pending request: a light runs around the border (PendingTrailDirective) ------------------- */
+// The angle is registered so it can be animated: a plain custom property would jump, not turn.
+@property --trail-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.pending-trail {
+  position: relative;
+
+  // A 2px ring drawn inside the border box, so a button that clips its overflow still shows it:
+  // the conic gradient is the light, with a white head so it shows on the brand gradient too,
+  // and the mask keeps only the ring.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: conic-gradient(from var(--trail-angle),
+        transparent 0deg 220deg,
+        var(--brand-blue) 280deg,
+        var(--brand-orange) 340deg,
+        #fff 357deg,
+        transparent 360deg);
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    filter: drop-shadow(0 0 2px var(--brand-orange)) drop-shadow(0 0 4px var(--brand-glow));
+    pointer-events: none;
+    animation: pending-trail-turn 1.1s linear infinite;
+  }
+}
+
+@keyframes pending-trail-turn {
+  to {
+    --trail-angle: 360deg;
+  }
+}
+
+// No moving light for those who asked for less motion: a still ring says the same thing.
+@media (prefers-reduced-motion: reduce) {
+  .pending-trail::after {
+    animation: none;
+    background: var(--accent-gradient);
+  }
+}

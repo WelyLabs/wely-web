@@ -30,7 +30,8 @@
     <button mat-stroked-button (click)="onCancel()" class="cancel-btn" [disabled]="isLoading()">
       Annuler
     </button>
-    <button mat-flat-button color="primary" (click)="onAdd()" [disabled]="!userTag() || isLoading()" class="add-btn">
+    <button mat-flat-button color="primary" (click)="onAdd()" [disabled]="!userTag() || isLoading()" class="add-btn"
+      [appPendingTrail]="isLoading()">
       @if (!isLoading()) {
         <mat-icon>add</mat-icon>
       }

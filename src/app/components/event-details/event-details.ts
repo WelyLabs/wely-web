@@ -21,6 +21,7 @@ import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
 import { ChatBubbleComponent, ChatBubbleMessage } from '../shared/chat-bubble/chat-bubble';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { AvatarService } from '../../services/avatar.service';
+import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 
 /**
  * What the page is for, given who looks and when.
@@ -105,7 +106,7 @@ export function countdownOf(event: FeedEvent, now: Date): string {
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent],
+  imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

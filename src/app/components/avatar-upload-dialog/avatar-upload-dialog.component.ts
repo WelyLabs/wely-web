@@ -12,6 +12,7 @@ import { AvatarService } from '../../services/avatar.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { FormsModule } from '@angular/forms';
+import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 
 /** Pictures above this are refused before cropping: the phone's original, not what is sent. */
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
@@ -29,6 +30,7 @@ const UPLOAD_ERRORS: Record<string, string> = {
     selector: 'app-avatar-upload-dialog',
     standalone: true,
     imports: [
+    PendingTrailDirective,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
