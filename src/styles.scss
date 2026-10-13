@@ -138,6 +138,11 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  // No double-tap zoom (and no 300ms wait for it); panning still scrolls.
+  touch-action: manipulation;
+  // No text inflation when a phone turns to landscape.
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /*

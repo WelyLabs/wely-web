@@ -5,7 +5,10 @@
   <meta charset="utf-8">
   <title>Wely · vos agendas, partagés avec ceux qui comptent</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+  <!-- No zoom: an app screen, not a document. A pinch or a double tap left the layout half off
+       screen; text that needs it is sized to be read as is (16px fields keep iOS from zooming
+       on focus). iOS ignores user-scalable, hence the gesture guard in main.ts. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content">
   <meta name="description" content="Créez un événement : vos amis le voient passer dans leur fil et le rejoignent en un clic. Projet open source, démo en libre accès.">
   <meta name="theme-color" content="#fcfaf7">
 
