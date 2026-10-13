@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { QuickEventPopoverComponent, clampDelta, upwardShift } from './quick-event-popover';
+import { QuickEventPopoverComponent, clampDelta, toDateValue, toTimeValue, upwardShift, withDate, withTime } from './quick-event-popover';
 import { EventCreateRequest } from '../../services/event.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -407,5 +407,182 @@ describe('QuickEventPopoverComponent', () => {
             expect(component.offset()).toEqual({ x: 0, y: 0 });
         });
     });
-});
 
+    describe('date and time fields', () => {
+        const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute);
+        const open = (start: Date, end: Date) => {
+            fixture.componentRef.setInput('data', { ...request(), startDate: start, endDate: end });
+            fixture.detectChanges();
+        };
+
+        it('toDateValue_shouldGiveTheLocalDay', () => {
+            expect(toDateValue(at(4, 23, 30))).toBe('2026-10-04');
+        });
+
+        it('toTimeValue_shouldPadHoursAndMinutes', () => {
+            expect(toTimeValue(at(4, 9, 5))).toBe('09:05');
+        });
+
+        it('withDate_shouldKeepTheTimeOfDay', () => {
+            expect(withDate(at(4, 19, 15), '2026-11-02')).toEqual(new Date(2026, 10, 2, 19, 15));
+        });
+
+        it('withDate_shouldBeNull_whenTheFieldIsCleared', () => {
+            expect(withDate(at(4, 19), '')).toBeNull();
+        });
+
+        it('withTime_shouldKeepTheDay', () => {
+            expect(withTime(at(4, 19), '07:45')).toEqual(at(4, 7, 45));
+        });
+
+        it('withTime_shouldBeNull_whenTheFieldIsCleared', () => {
+            expect(withTime(at(4, 19), '')).toBeNull();
+        });
+
+        it('startDay_andTimes_shouldShowTheDraft', () => {
+            open(at(16, 19), at(16, 21, 30));
+
+            expect(component.startDay()).toBe('2026-10-16');
+            expect(component.startTime()).toBe('19:00');
+            expect(component.endTime()).toBe('21:30');
+        });
+
+        it('onStartChange_shouldMoveTheWholeEvent_keepingItsDuration', () => {
+            open(at(16, 19), at(16, 21));
+
+            component.onStartChange('time', '20:30');
+
+            expect(component.draft().startDate).toEqual(at(16, 20, 30));
+            expect(component.draft().endDate).toEqual(at(16, 22, 30));
+        });
+
+        it('onStartChange_shouldMoveTheEventToAnotherDay', () => {
+            open(at(16, 19), at(16, 21));
+
+            component.onStartChange('date', '2026-10-18');
+
+            expect(component.draft().startDate).toEqual(at(18, 19));
+            expect(component.draft().endDate).toEqual(at(18, 21));
+        });
+
+        it('onStartChange_shouldIgnoreAClearedField', () => {
+            open(at(16, 19), at(16, 21));
+
+            component.onStartChange('time', '');
+
+            expect(component.draft().startDate).toEqual(at(16, 19));
+        });
+
+        it('onEndChange_shouldSetTheEndTheSameDay', () => {
+            open(at(16, 19), at(16, 20));
+
+            component.onEndChange('time', '23:00');
+
+            expect(component.draft().endDate).toEqual(at(16, 23));
+        });
+
+        it('onEndChange_shouldReadAnEarlierTimeAsTheNextMorning', () => {
+            open(at(16, 22), at(16, 23));
+
+            component.onEndChange('time', '02:00');
+
+            expect(component.draft().endDate).toEqual(at(17, 2));
+            expect(component.spansSeveralDays()).toBe(true);
+        });
+
+        it('onEndChange_shouldBringAMultiDayEndBackToTheStartDay_whenThatStillFollowsTheStart', () => {
+            open(at(16, 18), at(17, 2));
+
+            component.onEndChange('date', '2026-10-16');
+            component.onEndChange('time', '23:00');
+
+            expect(component.draft().endDate).toEqual(at(16, 23));
+        });
+
+        it('invalidRange_shouldBlockTheSave_whenTheEndIsBeforeTheStart', () => {
+            open(at(16, 19), at(16, 21));
+            component.update('title', 'Afterwork');
+            component.onEndChange('date', '2026-10-15');
+            const save = vi.fn();
+            component.save.subscribe(save);
+
+            component.onSave();
+
+            expect(component.invalidRange()).toBe(true);
+            expect(save).not.toHaveBeenCalled();
+        });
+
+        it('template_shouldExplainAnInvalidRange', () => {
+            open(at(16, 19), at(16, 19));
+
+            expect(fixture.nativeElement.querySelector('.field-error')?.textContent).toContain('après le début');
+        });
+
+        it('template_shouldAskForTheEndDay_onlyForAMultiDayEvent', () => {
+            open(at(16, 19), at(16, 21));
+            expect(fixture.nativeElement.querySelector('#quick-event-end-day')).toBeNull();
+
+            open(at(16, 22), at(17, 2));
+            expect(fixture.nativeElement.querySelector('#quick-event-end-day')).not.toBeNull();
+        });
+    });
+
+    describe('saving', () => {
+        it('onSave_shouldRefuseATitleMadeOfSpaces', () => {
+            const save = vi.fn();
+            component.save.subscribe(save);
+            component.update('title', '   ');
+
+            component.onSave();
+
+            expect(save).not.toHaveBeenCalled();
+        });
+
+        it('onSave_shouldNotSendTwice_whileSaving', () => {
+            const save = vi.fn();
+            component.save.subscribe(save);
+            component.update('title', 'Afterwork');
+            fixture.componentRef.setInput('saving', true);
+
+            component.onSave();
+
+            expect(save).not.toHaveBeenCalled();
+        });
+
+        it('template_shouldShowTheError', () => {
+            fixture.componentRef.setInput('error', 'Échec');
+            fixture.detectChanges();
+
+            expect(fixture.nativeElement.querySelector('.save-error')?.textContent).toContain('Échec');
+        });
+
+        it('template_shouldSayItIsCreating_whileSaving', () => {
+            fixture.componentRef.setInput('saving', true);
+            fixture.detectChanges();
+
+            expect(fixture.nativeElement.querySelector('.submit-btn').textContent).toContain('Création');
+        });
+    });
+
+    describe('more options', () => {
+        it('toggleMoreOptions_shouldShowThenHideNotesAndSubscription', () => {
+            expect(fixture.nativeElement.querySelector('#quick-event-notes')).toBeNull();
+
+            component.toggleMoreOptions();
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('#quick-event-notes')).not.toBeNull();
+
+            component.toggleMoreOptions();
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('#quick-event-notes')).toBeNull();
+        });
+
+        it('showMoreOptions_shouldCloseWhenANewSlotIsOpened', () => {
+            component.toggleMoreOptions();
+
+            fixture.componentRef.setInput('data', request());
+
+            expect(component.showMoreOptions()).toBe(false);
+        });
+    });
+});

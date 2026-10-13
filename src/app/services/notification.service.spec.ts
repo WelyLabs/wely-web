@@ -4,6 +4,7 @@ import { NotificationService } from './notification.service';
 import { MessageToastComponent } from '../components/shared/toast/message-toast';
 import { Message, MessageType } from '../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Subject } from 'rxjs';
 
 describe('NotificationService', () => {
     let service: NotificationService;
@@ -52,6 +53,19 @@ describe('NotificationService', () => {
                 panelClass: ['chat-notification-panel']
             })
         );
+    });
+
+    it('showAction_shouldRunTheCallback_onlyWhenTheActionIsTaken', () => {
+        const action = new Subject<void>();
+        snackBarMock.open.mockReturnValue({ onAction: () => action });
+        const onAction = vi.fn();
+
+        service.showAction('Événement créé', 'Voir', onAction);
+
+        expect(snackBarMock.open).toHaveBeenCalledWith('Événement créé', 'Voir', expect.objectContaining({ duration: 5000 }));
+        expect(onAction).not.toHaveBeenCalled();
+        action.next();
+        expect(onAction).toHaveBeenCalledTimes(1);
     });
 
     it('should open info snackbar with correct message', () => {

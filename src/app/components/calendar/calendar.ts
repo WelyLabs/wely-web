@@ -10,6 +10,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarEntry } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
+import { NotificationService } from '../../services/notification.service';
 import { FriendSummary } from '../../models/friendship.model';
 
 /** How often the now-line is repositioned. */
@@ -105,6 +106,49 @@ const POPOVER_ARROW_MAX = 90;
 
 /** How far a finger may drift before a hold counts as a scroll. */
 const TOUCH_SLOP_PX = 10;
+/** A new event lasts an hour unless a range was dragged. */
+const DEFAULT_EVENT_MINUTES = 60;
+/** On a day other than today, a new event starts in the evening: when friends meet. */
+const DEFAULT_START_HOUR = 18;
+/** The latest hour a default start may fall on, so the hour after still ends that day. */
+const LAST_START_HOUR = 23;
+/**
+ * How long after a touch the mouse events the browser emulates for it are ignored: a tap is
+ * followed by a mousedown and a mouseup that would otherwise start a second selection.
+ */
+const COMPAT_MOUSE_GUARD_MS = 800;
+/** Remembers that the "how to create an event" hint was seen. */
+const CREATE_HINT_KEY = 'wely.calendar.createHintDone';
+
+/**
+ * Where a new event starts by default: the next full hour today, the evening any other day.
+ */
+export function defaultStart(day: Date, now = new Date()): Date {
+  const start = startOfDay(day);
+  if (start.toDateString() === now.toDateString()) {
+    start.setHours(Math.min(now.getHours() + 1, LAST_START_HOUR));
+  } else {
+    start.setHours(DEFAULT_START_HOUR);
+  }
+  return start;
+}
+
+/** Storage can be missing or refused (private mode, blocked site data): the hint then just shows. */
+function readHintDone(): boolean {
+  try {
+    return localStorage.getItem(CREATE_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeHintDone(): void {
+  try {
+    localStorage.setItem(CREATE_HINT_KEY, '1');
+  } catch {
+    // Not remembered: the hint shows again next time, nothing worse.
+  }
+}
 /** How long after opening the popover ignores clicks on its backdrop. */
 const POPOVER_CLICK_GUARD_MS = 500;
 
@@ -116,7 +160,8 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent, MonthDayOverlayComponent],
   templateUrl: './calendar.html',
-  styleUrl: './calendar.scss',
+  // The ways in to a new event have their own sheet: the calendar's is at its size budget.
+  styleUrls: ['./calendar.scss', './calendar-create.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalendarComponent implements OnInit, OnDestroy {
@@ -126,6 +171,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly el = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly socialService = inject(SocialService);
+  private readonly notifications = inject(NotificationService);
 
   readonly currentDate = signal(new Date());
   readonly days = signal<CalendarDay[]>([]);
@@ -162,7 +208,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
    */
   readonly isDetailsOpen = signal(false);
 
-  private isHoldActive = false;
+  /** Whether the new event is being sent, and why the last attempt failed. */
+  readonly savingEvent = signal(false);
+  readonly createError = signal<string | null>(null);
+
+  /** The one-line "how to create an event" hint, until the first event is created or it is closed. */
+  readonly showCreateHint = signal(!readHintDone());
+
   /** When the popover last opened, for {@link onPopoverBackdropClick}. */
   private popoverOpenedAt = 0;
 
@@ -321,6 +373,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly selectionEndDate = signal<Date | null>(null);
   private selectionTimeout?: ReturnType<typeof setTimeout>;
   private readonly SELECTION_DELAY = 400; // ms
+  /** A touch that may still be a tap: released before the hold delay, it creates an event there. */
+  private pendingTap: { date: Date; startHour: number } | null = null;
+  /** When a finger last touched the grid, to ignore the mouse events emulated after it. */
+  private lastTouchAt = 0;
 
   // Touch event tracking for swipe-to-dismiss
   private touchStartY = 0;
@@ -708,68 +764,27 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.viewMode() !== 'day') this.selectedDate.set(null);
   }
 
-  onMonthDayMouseDown(event: MouseEvent | TouchEvent, day: CalendarDay) {
-    if (this.isPopoverVisible()) return;
-
-    // Save start position for scroll detection
-    const clientX = (event instanceof MouseEvent) ? event.clientX : (event as TouchEvent).touches[0].clientX;
-    const clientY = (event instanceof MouseEvent) ? event.clientY : (event as TouchEvent).touches[0].clientY;
-    this.touchStartPos = { x: clientX, y: clientY };
-
-    this.isHoldActive = false;
-
-    // Clear any previous timer
-    if (this.selectionTimeout) {
-      clearTimeout(this.selectionTimeout);
-    }
-
-    this.selectionTimeout = setTimeout(() => {
-      this.selectedDate.set(day.date);
-      this.selectedEvents.set(this.events().filter(e => this.isSameDate(e.startDate, day.date)));
-      this.isHoldActive = true;
-      this.isDetailsOpen.set(false);
-
-      const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).touches[0] as unknown as MouseEvent;
-      this.startCreatingEvent(uiEvent, day.date);
-    }, this.SELECTION_DELAY);
-  }
-
-  onMonthDayMouseUp() {
-    if (this.selectionTimeout) {
-      clearTimeout(this.selectionTimeout);
-      this.selectionTimeout = undefined;
-    }
-  }
-
-  /**
-   * A finger that moves is scrolling the month, not holding a day: without this, a slow scroll
-   * over the grid lasted the hold delay and opened the new-event form.
-   */
-  onMonthDayTouchMove(event: TouchEvent) {
-    if (!this.selectionTimeout) return;
-    const touch = event.touches[0];
-    if (Math.hypot(touch.clientX - this.touchStartPos.x, touch.clientY - this.touchStartPos.y) > TOUCH_SLOP_PX) {
-      this.onMonthDayMouseUp();
-    }
-  }
-
   selectDate(day: CalendarDay) {
-    if (this.isHoldActive) {
-      this.isHoldActive = false;
-      return;
-    }
     this.selectedDate.set(day.date);
     this.selectedEvents.set(this.events().filter(e => this.isSameDate(e.startDate, day.date)));
     this.isDetailsOpen.set(true);
   }
 
-  // Week/Day View Drag-to-Select
+  // Week/Day View: click or drag to create
+  /**
+   * A mouse press starts the selection at once: a click makes a one-hour event there, a drag
+   * a range. A finger cannot drag without scrolling, so on touch a tap makes the one-hour event
+   * and a hold of {@link SELECTION_DELAY} starts the drag.
+   */
   onTimeMouseDown(event: MouseEvent | TouchEvent, date: Date, hour: number) {
     if (this.isPopoverVisible()) return;
+    const isMouse = event instanceof MouseEvent;
+    if (isMouse && (event.button !== 0 || Date.now() - this.lastTouchAt < COMPAT_MOUSE_GUARD_MS)) return;
+    // A press on an event opens that event, never a new one.
+    if (event.target instanceof Element && event.target.closest('.inline-event-card')) return;
 
-    // Save start position
-    const clientX = (event instanceof MouseEvent) ? event.clientX : (event as TouchEvent).touches[0].clientX;
-    const clientY = (event instanceof MouseEvent) ? event.clientY : (event as TouchEvent).touches[0].clientY;
+    const clientX = isMouse ? event.clientX : (event as TouchEvent).touches[0].clientX;
+    const clientY = isMouse ? event.clientY : (event as TouchEvent).touches[0].clientY;
     this.touchStartPos = { x: clientX, y: clientY };
 
     // Clear any previous selection state
@@ -777,26 +792,46 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const relativeY = clientY - rect.top;
-    const fractionalHour = Math.round((relativeY / rect.height) * 4) / 4;
+    const fractionalHour = Math.min(Math.floor((relativeY / rect.height) * 4) / 4, 0.75);
     const startHour = hour + fractionalHour;
 
+    if (isMouse) {
+      // No text selection while dragging across the grid.
+      event.preventDefault();
+      this.beginSelection(date, startHour);
+      return;
+    }
+
+    this.lastTouchAt = Date.now();
+    this.pendingTap = { date, startHour };
     // Scrolling is locked afterwards, in onTouchMove, once the hold has turned into a selection:
     // a preventDefault here would act on an event long finished.
     this.selectionTimeout = setTimeout(() => {
-      this.isSelectingRange.set(true);
-      this.selectionDate.set(date);
-      this.selectionEndDate.set(date);
-      this.selectionStartHour.set(startHour);
-      this.selectionEndHour.set(startHour + 0.5);
+      this.pendingTap = null;
+      this.beginSelection(date, startHour);
     }, this.SELECTION_DELAY);
   }
 
+  private beginSelection(date: Date, startHour: number): void {
+    this.isSelectingRange.set(true);
+    this.selectionDate.set(date);
+    this.selectionEndDate.set(date);
+    this.selectionStartHour.set(startHour);
+    this.selectionEndHour.set(startHour + DEFAULT_EVENT_MINUTES / 60);
+  }
+
+  /**
+   * The pointer entered another hour cell: the range now covers that whole hour when it is after
+   * the start, and runs from its top when it is before.
+   */
   onTimeMouseEnter(hour: number, date?: Date) {
-    if (!this.isSelectingRange()) return;
-    this.selectionEndHour.set(hour);
-    if (date) {
-      this.selectionEndDate.set(date);
-    }
+    const anchorDay = this.selectionDate();
+    const startHour = this.selectionStartHour();
+    if (!this.isSelectingRange() || !anchorDay || startHour === null) return;
+    const day = date ?? this.selectionEndDate() ?? anchorDay;
+    const afterStart = atHour(day, hour + 1) > atHour(anchorDay, startHour);
+    this.selectionEndHour.set(afterStart ? hour + 1 : hour);
+    this.selectionEndDate.set(day);
   }
 
   /**
@@ -829,6 +864,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         // User moved too much, they likely want to scroll, cancel the hold
         clearTimeout(this.selectionTimeout);
         this.selectionTimeout = undefined;
+        this.pendingTap = null;
       }
       return;
     }
@@ -851,9 +887,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       if (hourAttr !== null) {
         const hour = parseFloat(hourAttr);
         const day = dayAttr ? new Date(dayAttr) : undefined;
-        if (this.selectionEndHour() !== hour || (day && !this.isSameDate(day, this.selectionEndDate() ?? day))) {
-          this.onTimeMouseEnter(hour, day);
-        }
+        this.onTimeMouseEnter(hour, day);
       }
     }
   }
@@ -862,6 +896,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.selectionTimeout) {
       clearTimeout(this.selectionTimeout);
       this.selectionTimeout = undefined;
+    }
+    const isMouse = event instanceof MouseEvent;
+    if (!isMouse) {
+      this.lastTouchAt = Date.now();
+    }
+
+    const tap = this.pendingTap;
+    this.pendingTap = null;
+    if (tap && !this.isSelectingRange()) {
+      const start = atHour(tap.date, tap.startHour);
+      const uiEvent = (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
+      this.selectionDate.set(tap.date);
+      this.startCreatingEvent(uiEvent, undefined, start, new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60000));
+      return;
     }
 
     if (!this.isSelectingRange()) return;
@@ -874,7 +922,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (range && range.end > range.start) {
       this.selectedDate.set(range.start);
 
-      const uiEvent = (event instanceof MouseEvent) ? event : (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
+      const uiEvent = isMouse ? event : (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
       this.startCreatingEvent(uiEvent, undefined, range.start, range.end);
     } else {
       // Clear if it was just a click
@@ -914,14 +962,16 @@ export class CalendarComponent implements OnInit, OnDestroy {
     };
   }
   /**
-   * Escape closes the panel.
+   * Escape closes the new-event form, or else the panel.
    *
-   * <p>The backdrop is click-to-dismiss, but a div cannot take focus, so it can never
+   * <p>The backdrops are click-to-dismiss, but a div cannot take focus, so it can never
    * receive a key event: keyboard dismissal has to live on the component.
    */
   @HostListener('document:keydown.escape')
   onEscape() {
-    if (this.isDetailsOpen()) {
+    if (this.isPopoverVisible()) {
+      this.cancelCreatingEvent();
+    } else if (this.isDetailsOpen()) {
       this.closeDetails();
     }
   }
@@ -933,11 +983,43 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.isPopoverVisible.set(false);
   }
 
-  startCreatingEvent(event: MouseEvent, targetDate?: Date, startDate?: Date, endDate?: Date) {
-    if (!this.selectedDate() && !targetDate) return;
+  /**
+   * The "Nouvel événement" button, and the day panel's: the form opens on that day at a sensible
+   * hour. From the panel it points at the day's cell; from the button it is centred.
+   */
+  openNewEvent(day?: Date, trigger?: MouseEvent): void {
+    this.cancelCreatingEvent();
+    const start = defaultStart(day ?? this.defaultDay());
+    const end = new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60000);
+    this.startCreatingEvent(trigger ?? null, day, start, end);
+  }
+
+  /** The day the button creates on: the day shown, or today when it is on screen. */
+  private defaultDay(): Date {
+    const days = this.days();
+    if (this.viewMode() === 'day' && days.length > 0) {
+      return days[0].date;
+    }
+    const today = days.find(day => day.isToday);
+    if (today) {
+      return today.date;
+    }
+    const first = this.viewMode() === 'month' ? days.find(day => day.isCurrentMonth) : days[0];
+    return first?.date ?? new Date(this.currentDate());
+  }
+
+  dismissCreateHint(): void {
+    this.showCreateHint.set(false);
+    writeHintDone();
+  }
+
+  /** `event` is where the form was asked for; null centres it. */
+  startCreatingEvent(event: MouseEvent | null, targetDate?: Date, startDate?: Date, endDate?: Date) {
+    if (!this.selectedDate() && !targetDate && !startDate) return;
 
     const baseDate = startDate || targetDate || this.selectedDate() || new Date();
-    const finalEndDate = endDate || new Date(baseDate.getTime() + 30 * 60000);
+    const finalEndDate = endDate || new Date(baseDate.getTime() + DEFAULT_EVENT_MINUTES * 60000);
+    this.createError.set(null);
 
     this.popoverData.set({
       title: '',
@@ -967,13 +1049,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
    * two near-identical blocks that had already drifted apart. The geometry is resolved once
    * here, by {@link anchorGeometry}, and everything else reads from it.
    */
-  private calculatePopoverPosition(event: MouseEvent, targetDate?: Date | null) {
+  private calculatePopoverPosition(event: MouseEvent | null, targetDate?: Date | null) {
     const container = this.el.nativeElement.querySelector('.calendar-container');
     const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
     const dateToAnchor = targetDate || this.selectedDate();
 
-    this.isMobilePopover.set(window.innerWidth <= POPOVER_MOBILE_BREAKPOINT || window.innerHeight < POPOVER_MIN_ANCHORED_HEIGHT);
-    if (this.isMobilePopover()) {
+    this.isMobilePopover.set(!event || window.innerWidth <= POPOVER_MOBILE_BREAKPOINT || window.innerHeight < POPOVER_MIN_ANCHORED_HEIGHT);
+    if (!event || this.isMobilePopover()) {
       this.popoverPosition.set({ x: 0, y: 0, arrowSide: 'top' });
       return;
     }
@@ -1092,6 +1174,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   cancelCreatingEvent() {
+    this.pendingTap = null;
     this.isPopoverVisible.set(false);
     this.isSelectingRange.set(false);
     this.selectionDate.set(null);
@@ -1102,10 +1185,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   submitEvent(data: EventCreateRequest) {
-    if (!data.title || !data.startDate) return;
+    if (!data.title || !data.startDate || this.savingEvent()) return;
 
+    this.savingEvent.set(true);
+    this.createError.set(null);
     this.eventService.createEvent(data).subscribe({
-      next: () => {
+      next: created => {
+        this.savingEvent.set(false);
         this.isPopoverVisible.set(false);
         this.isDetailsOpen.set(false);
         this.selectedDate.set(null);
@@ -1113,8 +1199,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
         this.selectionStartHour.set(null);
         this.selectionEndHour.set(null);
         this.generateCalendar();
+        this.dismissCreateHint();
+        this.notifications.showAction('Événement créé', 'Voir',
+          () => this.router.navigate(['/event', created.id]));
       },
-      error: (err) => this.logger.error('CalendarComponent', 'Error creating event:', err)
+      error: (err: unknown) => {
+        this.savingEvent.set(false);
+        this.createError.set('L\'événement n\'a pas pu être créé. Réessayez dans un instant.');
+        this.logger.error('CalendarComponent', 'Error creating event:', err);
+      }
     });
   }
 

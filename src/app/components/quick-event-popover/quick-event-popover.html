@@ -9,7 +9,7 @@
     <div class="popover-content">
         <div class="form-group title-group">
             <label class="visually-hidden" for="quick-event-title">Titre de l'événement</label>
-            <input id="quick-event-title" type="text" [ngModel]="draft().title" (ngModelChange)="update('title', $event)"
+            <input #titleInput id="quick-event-title" type="text" [ngModel]="draft().title" (ngModelChange)="update('title', $event)"
                 placeholder="Titre de l'événement" (keyup.enter)="onSave()">
         </div>
 
@@ -36,13 +36,33 @@
 
         <div class="form-group date-group">
             <mat-icon>schedule</mat-icon>
-            <div class="time-range">
+            <div class="date-fields">
+                <div class="date-row">
+                    <label class="visually-hidden" for="quick-event-start-day">Date de début</label>
+                    <input id="quick-event-start-day" type="date" class="day-input" [ngModel]="startDay()"
+                        (ngModelChange)="onStartChange('date', $event)">
+                    <label class="visually-hidden" for="quick-event-start-time">Heure de début</label>
+                    <input id="quick-event-start-time" type="time" class="time-input" [ngModel]="startTime()"
+                        (ngModelChange)="onStartChange('time', $event)">
+                    <span class="arrow" aria-hidden="true">→</span>
+                    @if (!spansSeveralDays()) {
+                        <label class="visually-hidden" for="quick-event-end-time">Heure de fin</label>
+                        <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
+                            (ngModelChange)="onEndChange('time', $event)">
+                    }
+                </div>
                 @if (spansSeveralDays()) {
-                    <span>{{ draft().startDate | date:'EEE d MMM, HH:mm' }}</span>
-                    <span class="hours">→ {{ draft().endDate | date:'EEE d MMM, HH:mm' }}</span>
-                } @else {
-                    <span>{{ draft().startDate | date:'EEEE d MMMM' }}</span>
-                    <span class="hours">{{ draft().startDate | date:'HH:mm' }} - {{ draft().endDate | date:'HH:mm' }}</span>
+                    <div class="date-row">
+                        <label class="visually-hidden" for="quick-event-end-day">Date de fin</label>
+                        <input id="quick-event-end-day" type="date" class="day-input" [ngModel]="endDay()"
+                            (ngModelChange)="onEndChange('date', $event)">
+                        <label class="visually-hidden" for="quick-event-end-time">Heure de fin</label>
+                        <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
+                            (ngModelChange)="onEndChange('time', $event)">
+                    </div>
+                }
+                @if (invalidRange()) {
+                    <small class="field-error">La fin doit venir après le début.</small>
                 }
             </div>
         </div>
@@ -50,19 +70,12 @@
         @if (searchWindow(); as window) {
             <button type="button" class="find-slot-toggle" [class.open]="findingSlot()" (click)="toggleFindSlot()">
                 <mat-icon>group</mat-icon>
-                <span>Avec des amis…</span>
+                <span>Trouver un moment avec des amis</span>
             </button>
             @if (findingSlot()) {
                 <app-find-slot [window]="window" (picked)="onSlotPicked($event)" />
             }
         }
-
-        <div class="form-group notes-group">
-            <mat-icon>notes</mat-icon>
-            <label class="visually-hidden" for="quick-event-notes">Notes de l'événement</label>
-            <textarea id="quick-event-notes" [ngModel]="draft().description"
-                (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
-        </div>
 
         <div class="form-group visibility-group">
             <div class="visibility-choices" role="radiogroup" aria-label="Visibilité">
@@ -76,16 +89,35 @@
             <small class="visibility-hint">{{ visibilityHint() }}</small>
         </div>
 
-        <div class="form-group checkbox-group">
-            <label class="checkbox-container">
-                <input type="checkbox" [ngModel]="draft().subscribeByDefault" (ngModelChange)="update('subscribeByDefault', $event)">
-                <span>S'inscrire par défaut</span>
-            </label>
-        </div>
+        <button type="button" class="more-options-toggle" [class.open]="showMoreOptions()"
+            [attr.aria-expanded]="showMoreOptions()" (click)="toggleMoreOptions()">
+            <mat-icon>chevron_right</mat-icon>
+            <span>Plus d'options</span>
+        </button>
+        @if (showMoreOptions()) {
+            <div class="form-group notes-group">
+                <mat-icon>notes</mat-icon>
+                <label class="visually-hidden" for="quick-event-notes">Notes de l'événement</label>
+                <textarea id="quick-event-notes" [ngModel]="draft().description"
+                    (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" [ngModel]="draft().subscribeByDefault" (ngModelChange)="update('subscribeByDefault', $event)">
+                    <span>S'inscrire par défaut</span>
+                </label>
+            </div>
+        }
+
+        @if (error(); as message) {
+            <p class="save-error" role="alert">{{ message }}</p>
+        }
 
         <div class="form-actions">
-            <button class="cancel-btn" (click)="onCancel()">Annuler</button>
-            <button class="submit-btn" [disabled]="!draft().title" (click)="onSave()">Ajouter</button>
+            <button type="button" class="cancel-btn" (click)="onCancel()">Annuler</button>
+            <button type="button" class="submit-btn" [disabled]="!draft().title.trim() || invalidRange() || saving()"
+                (click)="onSave()">{{ saving() ? 'Création…' : 'Créer' }}</button>
         </div>
     </div>
     <div class="popover-arrow" [style.top.%]="arrowOffset()"></div>

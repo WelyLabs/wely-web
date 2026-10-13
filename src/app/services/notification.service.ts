@@ -21,6 +21,15 @@ export class NotificationService {
         this.snackBar.openFromComponent(MessageToastComponent, config);
     }
 
+    /** A short message with one action, which runs if the user takes it. */
+    showAction(message: string, action: string, onAction: () => void): void {
+        this.snackBar.open(message, action, {
+            duration: 5000,
+            horizontalPosition: 'right',
+            verticalPosition: 'bottom'
+        }).onAction().subscribe(onAction);
+    }
+
     showInfo(message: string): void {
         this.snackBar.open(message, 'Fermer', {
             duration: 3000,

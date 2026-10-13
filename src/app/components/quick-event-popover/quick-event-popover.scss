@@ -174,22 +174,50 @@
         }
 
         &.date-group {
-            .time-range {
+            align-items: flex-start;
+
+            > mat-icon {
+                margin-top: 6px;
+            }
+
+            .date-fields {
+                flex: 1;
                 display: flex;
                 flex-direction: column;
-                gap: 2px;
+                gap: 6px;
+                min-width: 0;
+            }
 
-                span {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
+            // The date on its own line, the hours under it: 320px holds no more side by side.
+            .date-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 6px;
+            }
 
-                .hours {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: var(--text-tertiary);
-                }
+            input.day-input,
+            input.time-input {
+                flex: none;
+                padding: 4px 8px;
+                border-radius: 8px;
+                background: rgba(0, 0, 0, 0.04);
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+            }
+
+            input.day-input {
+                flex-basis: 100%;
+            }
+
+            .arrow {
+                color: var(--text-tertiary);
+                font-size: 13px;
+            }
+
+            .field-error {
+                font-size: 12px;
+                color: var(--danger-ink);
             }
         }
 
@@ -328,6 +356,40 @@
         &.open span {
             font-weight: 700;
         }
+    }
+
+    .more-options-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 0;
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            transition: transform 0.2s;
+        }
+
+        &.open mat-icon {
+            transform: rotate(90deg);
+        }
+    }
+
+    .save-error {
+        margin: 0;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--danger) 10%, transparent);
+        color: var(--danger-ink);
+        font-size: 13px;
+        font-weight: 600;
     }
 
     .form-actions {

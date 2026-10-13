@@ -26,6 +26,9 @@
       </div>
 
       <div class="header-controls">
+        <button type="button" class="new-event-btn" (click)="openNewEvent()">
+          <mat-icon>add</mat-icon>Nouvel événement
+        </button>
         <div class="view-toggle">
           <button [class.active]="viewMode() === 'month'" (click)="toggleView('month')">Mois</button>
           <button [class.active]="viewMode() === 'week'" (click)="toggleView('week')">Semaine</button>
@@ -43,6 +46,17 @@
       </div>
     </div>
 
+    @if (showCreateHint()) {
+      <div class="create-hint">
+        <mat-icon>lightbulb</mat-icon>
+        <span class="hint-wide">Pour créer un événement, utilisez « Nouvel événement », ou cliquez sur un créneau en vue Semaine ou Jour.</span>
+        <span class="hint-narrow">Touchez + pour créer un événement, ou un créneau en vue Semaine ou Jour.</span>
+        <button type="button" aria-label="Masquer l'astuce" (click)="dismissCreateHint()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
+
     @if (friendships().length > 0) {
       <app-friend-overlay-bar [friendships]="friendships()" [selected]="overlayFriendIds()"
         [colors]="overlayColors()" [error]="overlayError()" (selectedChange)="onOverlayFriendsChange($event)" />
@@ -59,11 +73,7 @@
         @for (day of days(); track day.date.getTime(); let i = $index) {
           <div class="day-cell" role="button" tabindex="0" [class.other-month]="!day.isCurrentMonth"
             [class.today]="day.isToday" [class.selected]="selectedDate() && isSameDate(day.date, selectedDate()!)"
-            (click)="selectDate(day)" (keydown.enter)="selectDate(day)" (keydown.space)="selectDate(day)"
-            (mousedown)="onMonthDayMouseDown($event, day)"
-            (touchstart)="onMonthDayMouseDown($event, day)" (mouseup)="onMonthDayMouseUp()"
-            (touchmove)="onMonthDayTouchMove($event)" (touchend)="onMonthDayMouseUp()"
-            (touchcancel)="onMonthDayMouseUp()">
+            (click)="selectDate(day)" (keydown.enter)="selectDate(day)" (keydown.space)="selectDate(day)">
             <div class="day-content">
               <span class="day-number">{{ day.date | date:'d' }}</span>
               @if (day.hasEvents) {
@@ -189,6 +199,12 @@
         </div>
       }
 
+      @if (selectedDate(); as day) {
+        <button type="button" class="add-on-day" (click)="openNewEvent(day, $event)">
+          <mat-icon>add</mat-icon>Ajouter un événement le {{ day | date:'EEEE d' }}
+        </button>
+      }
+
       @for (event of selectedEvents(); track event.id) {
         <div class="event-card" role="button" tabindex="0" (click)="viewEventDetails(event)"
                   (keydown.enter)="viewEventDetails(event)" (keydown.space)="viewEventDetails(event)">
@@ -205,6 +221,13 @@
     </div>
   </div>
 
+  <!-- On a phone the header has no room for the button: it floats above the bottom bar. -->
+  @if (!isPopoverVisible() && !isDetailsOpen()) {
+    <button type="button" class="new-event-fab" aria-label="Nouvel événement" (click)="openNewEvent()">
+      <mat-icon>add</mat-icon>
+    </button>
+  }
+
   <!-- Quick Event Popover (Apple Style) -->
   @if (isPopoverVisible()) {
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
@@ -214,7 +237,8 @@
   }
   @if (isPopoverVisible()) {
     <app-quick-event-popover [data]="popoverData()" [position]="popoverPosition()"
-      [arrowOffset]="arrowOffset()" [isMobile]="isMobilePopover()" (save)="submitEvent($event)"
+      [arrowOffset]="arrowOffset()" [isMobile]="isMobilePopover()" [error]="createError()"
+      [saving]="savingEvent()" (save)="submitEvent($event)"
       (dismissed)="cancelCreatingEvent()">
     </app-quick-event-popover>
   }

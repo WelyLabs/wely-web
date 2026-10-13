@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CalendarComponent, CalendarEvent } from './calendar';
+import { CalendarComponent, CalendarEvent, defaultStart } from './calendar';
+import { NotificationService } from '../../services/notification.service';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
@@ -15,6 +16,7 @@ describe('CalendarComponent', () => {
     let eventServiceMock: Partial<EventService>;
     let routerMock: Partial<Router>;
     let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
+    let notificationsMock: { showAction: ReturnType<typeof vi.fn> };
     const friendships: FriendSummary[] = [
         { userId: 'lea', userName: 'lea', hashtag: 6000, closeness: 'CLOSE', proposal: null, proposedByFriend: false },
         { userId: 'hugo', userName: 'hugo', hashtag: 9074, closeness: 'FRIEND', proposal: null, proposedByFriend: false }
@@ -40,12 +42,14 @@ describe('CalendarComponent', () => {
         socialServiceMock = {
             listFriendships: vi.fn().mockReturnValue(of(friendships))
         };
+        notificationsMock = { showAction: vi.fn() };
 
         await TestBed.configureTestingModule({
             imports: [CalendarComponent, NoopAnimationsModule],
             providers: [
                 { provide: EventService, useValue: eventServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
+                { provide: NotificationService, useValue: notificationsMock },
                 { provide: Router, useValue: routerMock }
             ]
         }).compileComponents();
@@ -525,8 +529,32 @@ describe('CalendarComponent', () => {
 
             expect(component.selectionRange()).toEqual({
                 start: new Date(2026, 9, 12, 18),
-                end: new Date(2026, 9, 14, 10)
+                end: new Date(2026, 9, 14, 11)
             });
+        });
+
+        it('onTimeMouseEnter_shouldCoverTheWholeHourUnderThePointer', () => {
+            dragFrom(monday, 9.25);
+            component.onTimeMouseEnter(11, monday);
+
+            expect(component.selectionRange()).toEqual({
+                start: new Date(2026, 9, 12, 9, 15),
+                end: new Date(2026, 9, 12, 12)
+            });
+        });
+
+        it('onTimeMouseEnter_shouldEndAtTheHourOfTheStart_whenBackInItsCell', () => {
+            dragFrom(monday, 9.25);
+            component.onTimeMouseEnter(11, monday);
+            component.onTimeMouseEnter(9, monday);
+
+            expect(component.selectionRange()?.end).toEqual(new Date(2026, 9, 12, 10));
+        });
+
+        it('onTimeMouseEnter_shouldDoNothing_withoutASelection', () => {
+            component.onTimeMouseEnter(11, monday);
+
+            expect(component.selectionRange()).toBeNull();
         });
 
         it('selectionRange_shouldOrderTheBounds_whenDraggedBackwards', () => {
@@ -555,7 +583,7 @@ describe('CalendarComponent', () => {
                 display: 'block', top: '0px', height: `${24 * hourHeight}px`
             });
             expect(component.getSelectionStyle(wednesday)).toEqual({
-                display: 'block', top: '0px', height: `${10 * hourHeight}px`
+                display: 'block', top: '0px', height: `${11 * hourHeight}px`
             });
         });
 
@@ -574,7 +602,7 @@ describe('CalendarComponent', () => {
             component.onTimeMouseUp(new MouseEvent('mouseup'));
 
             expect(spy).toHaveBeenCalledWith(expect.anything(), undefined,
-                new Date(2026, 9, 12, 18), new Date(2026, 9, 14, 10));
+                new Date(2026, 9, 12, 18), new Date(2026, 9, 14, 11));
         });
     });
 
@@ -817,54 +845,138 @@ describe('CalendarComponent', () => {
         });
     });
 
-    describe('hold to select', () => {
-        it('onTimeMouseDown_shouldShowTheSelectionWhenTheHoldCompletes_withoutAnotherEvent', () => {
+    describe('click or drag to create', () => {
+        const press = (y = 0, target?: Element) => {
+            const event = new MouseEvent('mousedown', { clientX: 10, clientY: y, button: 0 });
+            Object.defineProperty(event, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
+            if (target) {
+                Object.defineProperty(event, 'target', { value: target });
+            }
+            return event;
+        };
+
+        beforeEach(() => {
             component.toggleView('week');
             fixture.detectChanges();
-            vi.useFakeTimers();
-            try {
-                const day = component.days()[2].date;
-                const press = new MouseEvent('mousedown', { clientX: 10, clientY: 0 });
-                Object.defineProperty(press, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
+        });
 
-                component.onTimeMouseDown(press, day, 9);
-                vi.advanceTimersByTime(500);
+        it('onTimeMouseDown_shouldStartTheSelectionAtOnce_withAMouse', () => {
+            const day = component.days()[2].date;
 
-                // Read straight from the signals the template binds: no pointer move needed.
-                expect(component.isSelectingRange()).toBe(true);
-                expect(component.getSelectionStyle(day)).toMatchObject({ display: 'block' });
-            } finally {
-                vi.useRealTimers();
-            }
+            component.onTimeMouseDown(press(), day, 9);
+
+            expect(component.isSelectingRange()).toBe(true);
+            expect(component.getSelectionStyle(day)).toMatchObject({ display: 'block' });
+        });
+
+        it('onTimeMouseUp_shouldOpenAOneHourEvent_afterAPlainClick', () => {
+            const open = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
+            const day = component.days()[2].date;
+
+            component.onTimeMouseDown(press(40), day, 9);
+            component.onTimeMouseUp(new MouseEvent('mouseup'));
+
+            const start = new Date(day);
+            start.setHours(9, 30, 0, 0);
+            expect(open).toHaveBeenCalledWith(expect.anything(), undefined, start, new Date(start.getTime() + 3600000));
+        });
+
+        it('onTimeMouseDown_shouldSnapDownToTheQuarterUnderThePointer', () => {
+            const day = component.days()[2].date;
+
+            component.onTimeMouseDown(press(79), day, 9);
+
+            expect(component.selectionStartHour()).toBe(9.75);
+        });
+
+        it('onTimeMouseDown_shouldLeaveAPressOnAnEventToThatEvent', () => {
+            const card = document.createElement('div');
+            card.className = 'inline-event-card';
+
+            component.onTimeMouseDown(press(0, card), component.days()[2].date, 9);
+
+            expect(component.isSelectingRange()).toBe(false);
+        });
+
+        it('onTimeMouseDown_shouldIgnoreTheRightButton', () => {
+            const event = new MouseEvent('mousedown', { button: 2 });
+
+            component.onTimeMouseDown(event, component.days()[2].date, 9);
+
+            expect(component.isSelectingRange()).toBe(false);
         });
     });
 
     describe('mobile touch', () => {
-        const day = () => component.days()[10];
         const touch = (x: number, y: number) => ({ touches: [{ clientX: x, clientY: y }], cancelable: false } as unknown as TouchEvent);
 
         afterEach(() => vi.useRealTimers());
 
-        it('onMonthDayTouchMove_shouldTreatAMovingFingerAsAScroll_notAHold', () => {
+        const finger = (y = 0) => ({
+            touches: [{ clientX: 10, clientY: y }],
+            changedTouches: [{ clientX: 10, clientY: y }],
+            currentTarget: { getBoundingClientRect: () => ({ top: 0, height: 80 }) },
+            target: null,
+            cancelable: false
+        } as unknown as TouchEvent);
+        const weekDay = () => {
+            component.toggleView('week');
+            fixture.detectChanges();
+            return component.days()[2].date;
+        };
+
+        it('onTimeMouseUp_shouldOpenAOneHourEvent_afterATap', () => {
+            const day = weekDay();
             vi.useFakeTimers();
             const open = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
-            component.onMonthDayMouseDown(touch(100, 100), day());
 
-            component.onMonthDayTouchMove(touch(100, 140));
+            component.onTimeMouseDown(finger(), day, 14);
+            vi.advanceTimersByTime(100);
+            component.onTimeMouseUp(finger());
+
+            const start = new Date(day);
+            start.setHours(14, 0, 0, 0);
+            expect(open).toHaveBeenCalledWith(expect.anything(), undefined, start, new Date(start.getTime() + 3600000));
+        });
+
+        it('onTouchMove_shouldTreatAMovingFingerAsAScroll_notATap', () => {
+            const day = weekDay();
+            vi.useFakeTimers();
+            const open = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
+
+            component.onTimeMouseDown(finger(100), day, 14);
+            component.onTouchMove(touch(10, 140));
+            component.onTimeMouseUp(finger(140));
             vi.advanceTimersByTime(1000);
 
             expect(open).not.toHaveBeenCalled();
+            expect(component.isSelectingRange()).toBe(false);
         });
 
-        it('onMonthDayTouchMove_shouldKeepTheHold_whenTheFingerBarelyMoves', () => {
+        it('onTimeMouseDown_shouldStartADragAfterAHold_onTouch', () => {
+            const day = weekDay();
+            vi.useFakeTimers();
+            component.onTimeMouseDown(finger(), day, 14);
+
+            expect(component.isSelectingRange()).toBe(false);
+            vi.advanceTimersByTime(500);
+            expect(component.isSelectingRange()).toBe(true);
+        });
+
+        it('onTimeMouseDown_shouldIgnoreTheMouseEventsEmulatedAfterATouch', () => {
+            const day = weekDay();
             vi.useFakeTimers();
             const open = vi.spyOn(component, 'startCreatingEvent').mockImplementation(() => undefined);
-            component.onMonthDayMouseDown(touch(100, 100), day());
+            component.onTimeMouseDown(finger(), day, 14);
+            component.onTimeMouseUp(finger());
+            open.mockClear();
+            component.isPopoverVisible.set(false);
 
-            component.onMonthDayTouchMove(touch(103, 104));
-            vi.advanceTimersByTime(1000);
+            const emulated = new MouseEvent('mousedown', { button: 0 });
+            Object.defineProperty(emulated, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
+            component.onTimeMouseDown(emulated, day, 14);
 
-            expect(open).toHaveBeenCalled();
+            expect(component.isSelectingRange()).toBe(false);
         });
 
         it('onPopoverBackdropClick_shouldIgnoreTheClickOfTheFingerThatOpenedIt', () => {
@@ -893,11 +1005,9 @@ describe('CalendarComponent', () => {
         });
 
         it('onTimeTouchCancel_shouldStopAPendingHold', () => {
+            const day = weekDay();
             vi.useFakeTimers();
-            component.toggleView('week');
-            const press = new MouseEvent('mousedown', { clientX: 10, clientY: 0 });
-            Object.defineProperty(press, 'currentTarget', { value: { getBoundingClientRect: () => ({ top: 0, height: 80 }) } });
-            component.onTimeMouseDown(press, component.days()[2].date, 9);
+            component.onTimeMouseDown(finger(), day, 9);
 
             component.onTimeTouchCancel();
             vi.advanceTimersByTime(1000);
@@ -929,6 +1039,157 @@ describe('CalendarComponent', () => {
             component.startCreatingEvent(new MouseEvent('click'), new Date(2026, 9, 14));
 
             expect(component.popoverData().title).toBe('');
+        });
+    });
+
+    describe('new event button', () => {
+        const now = new Date(2026, 9, 14, 15, 20);
+
+        it('defaultStart_shouldBeTheNextFullHour_today', () => {
+            expect(defaultStart(new Date(2026, 9, 14), now)).toEqual(new Date(2026, 9, 14, 16));
+        });
+
+        it('defaultStart_shouldStopAt23h_lateAtNight', () => {
+            expect(defaultStart(new Date(2026, 9, 14), new Date(2026, 9, 14, 23, 40))).toEqual(new Date(2026, 9, 14, 23));
+        });
+
+        it('defaultStart_shouldBeTheEvening_onAnotherDay', () => {
+            expect(defaultStart(new Date(2026, 9, 20, 9), now)).toEqual(new Date(2026, 9, 20, 18));
+        });
+
+        it('openNewEvent_shouldOpenACentredOneHourForm', () => {
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            expect(component.isPopoverVisible()).toBe(true);
+            expect(component.isMobilePopover()).toBe(true);
+            expect(component.popoverData().startDate).toEqual(new Date(2030, 0, 10, 18));
+            expect(component.popoverData().endDate).toEqual(new Date(2030, 0, 10, 19));
+        });
+
+        it('openNewEvent_shouldUseTheDayShown_inDayView', () => {
+            component.currentDate.set(new Date(2030, 0, 10));
+            component.toggleView('day');
+
+            component.openNewEvent();
+
+            expect(component.popoverData().startDate).toEqual(new Date(2030, 0, 10, 18));
+        });
+
+        it('openNewEvent_shouldUseTheFirstDayOfTheMonth_whenTodayIsNotShown', () => {
+            component.currentDate.set(new Date(2030, 4, 1));
+            component.generateCalendar();
+
+            component.openNewEvent();
+
+            expect(component.popoverData().startDate).toEqual(new Date(2030, 4, 1, 18));
+        });
+
+        it('openNewEvent_shouldUseToday_whenItIsShown', () => {
+            component.openNewEvent();
+
+            expect(component.isSameDate(component.popoverData().startDate, new Date())).toBe(true);
+        });
+
+        it('template_shouldOfferTheButtonInTheHeader_andOnPhones', () => {
+            const el: HTMLElement = fixture.nativeElement;
+
+            expect(el.querySelector('.new-event-btn')?.textContent).toContain('Nouvel événement');
+            expect(el.querySelector('.new-event-fab')).not.toBeNull();
+        });
+
+        it('template_shouldOfferToAddAnEventFromTheDayPanel', () => {
+            const day = { date: new Date(2030, 0, 10), isToday: false, isCurrentMonth: true, hasEvents: false };
+            component.selectDate(day);
+            fixture.detectChanges();
+            const open = vi.spyOn(component, 'openNewEvent');
+
+            (fixture.nativeElement.querySelector('.add-on-day') as HTMLButtonElement).click();
+
+            expect(open).toHaveBeenCalledWith(new Date(2030, 0, 10), expect.any(MouseEvent));
+        });
+
+        it('onEscape_shouldCloseTheFormFirst', () => {
+            component.isDetailsOpen.set(true);
+            component.openNewEvent(new Date(2030, 0, 10));
+            component.isDetailsOpen.set(true);
+
+            component.onEscape();
+
+            expect(component.isPopoverVisible()).toBe(false);
+            expect(component.isDetailsOpen()).toBe(true);
+        });
+    });
+
+    describe('saving a new event', () => {
+        const data: EventCreateRequest = { title: 'Afterwork', startDate: new Date(2030, 0, 10, 18), subscribeByDefault: false, location: '' };
+
+        beforeEach(() => {
+            try { localStorage.removeItem('wely.calendar.createHintDone'); } catch { /* no storage */ }
+        });
+
+        it('submitEvent_shouldCloseTheForm_andOfferToOpenTheEvent', () => {
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data);
+
+            expect(component.isPopoverVisible()).toBe(false);
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé', 'Voir', expect.any(Function));
+            notificationsMock.showAction.mock.calls[0][2]();
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', '101']);
+        });
+
+        it('submitEvent_shouldKeepTheFormOpenWithAMessage_whenItFails', () => {
+            (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() => new Error('500')));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data);
+
+            expect(component.isPopoverVisible()).toBe(true);
+            expect(component.createError()).toContain('pas pu être créé');
+            expect(component.savingEvent()).toBe(false);
+        });
+
+        it('submitEvent_shouldNotSendTwice_whileSaving', () => {
+            const pending = new Subject<FeedEvent>();
+            (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(pending);
+
+            component.submitEvent(data);
+            component.submitEvent(data);
+
+            expect(eventServiceMock.createEvent).toHaveBeenCalledTimes(1);
+        });
+
+        it('startCreatingEvent_shouldClearAnEarlierError', () => {
+            component.createError.set('old');
+
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            expect(component.createError()).toBeNull();
+        });
+
+        it('submitEvent_shouldRetireTheHint', () => {
+            component.showCreateHint.set(true);
+
+            component.submitEvent(data);
+
+            expect(component.showCreateHint()).toBe(false);
+        });
+
+        it('dismissCreateHint_shouldHideItAndRememberIt', () => {
+            component.dismissCreateHint();
+
+            expect(component.showCreateHint()).toBe(false);
+            expect(localStorage.getItem('wely.calendar.createHintDone')).toBe('1');
+        });
+
+        it('template_shouldShowTheHint_untilDismissed', () => {
+            component.showCreateHint.set(true);
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.create-hint')).not.toBeNull();
+
+            (fixture.nativeElement.querySelector('.create-hint button') as HTMLButtonElement).click();
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.create-hint')).toBeNull();
         });
     });
 

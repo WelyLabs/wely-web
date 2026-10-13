@@ -52,6 +52,42 @@ export function upwardShift(top: number, bottom: number, viewportHeight: number,
     return overflow > 0 ? Math.min(overflow, Math.max(top - margin, 0)) : 0;
 }
 
+const pad = (value: number) => value.toString().padStart(2, '0');
+
+/** A date as an `<input type="date">` value, in local time: `yyyy-MM-dd`. */
+export function toDateValue(date: Date): string {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** A time as an `<input type="time">` value: `HH:mm`. */
+export function toTimeValue(date: Date): string {
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** The same time of day on another date, or null when the input was cleared. */
+export function withDate(date: Date, value: string): Date | null {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return null;
+    }
+    const result = new Date(date);
+    result.setFullYear(year, month - 1, day);
+    return result;
+}
+
+/** The same date at another time of day, or null when the input was cleared. */
+export function withTime(date: Date, value: string): Date | null {
+    const [hours, minutes] = value.split(':').map(Number);
+    if (value === '' || Number.isNaN(hours) || Number.isNaN(minutes)) {
+        return null;
+    }
+    const result = new Date(date);
+    result.setHours(hours, minutes, 0, 0);
+    return result;
+}
+
+const DAY_MS = 86400000;
+
 interface DragState {
     pointerId: number;
     startX: number;
@@ -77,6 +113,10 @@ export class QuickEventPopoverComponent {
     /** Percentage from the top of the popover at which the arrow points. */
     readonly arrowOffset = input(50);
     readonly isMobile = input(false);
+    /** Why the last save failed, shown above the buttons. */
+    readonly error = input<string | null>(null);
+    /** While the event is being created: the button waits instead of sending it twice. */
+    readonly saving = input(false);
 
     readonly save = output<EventCreateRequest>();
     // Named dismissed rather than cancel: cancel is a native DOM event, and an output
@@ -98,8 +138,20 @@ export class QuickEventPopoverComponent {
     readonly visibilityHint = computed(() =>
         VISIBILITY_OPTIONS.find(option => option.value === this.visibility())?.hint ?? '');
 
+    /** The values the date and time fields show. */
+    readonly startDay = computed(() => toDateValue(this.draft().startDate));
+    readonly startTime = computed(() => toTimeValue(this.draft().startDate));
+    readonly endDay = computed(() => toDateValue(this.endOf(this.draft())));
+    readonly endTime = computed(() => toTimeValue(this.endOf(this.draft())));
+    /** An end at or before the start cannot be saved. */
+    readonly invalidRange = computed(() => this.endOf(this.draft()) <= this.draft().startDate);
+
+    /** Notes and « S'inscrire par défaut », folded away; closed again on each new slot. */
+    readonly showMoreOptions = linkedSignal({ source: this.data, computation: () => false });
+
     /** Back to where the popover opened, next to its slot, whenever a new slot is opened. */
     private readonly card = viewChild<ElementRef<HTMLElement>>('card');
+    private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
 
     readonly offset = linkedSignal<EventCreateRequest, DragOffset>({ source: this.data, computation: () => ({ x: 0, y: 0 }) });
     readonly moved = computed(() => this.offset().x !== 0 || this.offset().y !== 0);
@@ -111,6 +163,11 @@ export class QuickEventPopoverComponent {
         // it back up, through the same offset a drag uses.
         const destroyRef = inject(DestroyRef);
         afterNextRender(() => {
+            // Straight to the title with a mouse; on a touch screen that would throw the keyboard
+            // over a form the user has not looked at yet.
+            if (window.matchMedia?.('(pointer: fine)').matches) {
+                this.titleInput()?.nativeElement.focus();
+            }
             const card = this.card()?.nativeElement;
             if (!card || typeof ResizeObserver === 'undefined') {
                 return;
@@ -176,6 +233,43 @@ export class QuickEventPopoverComponent {
         this.findingSlot.set(false);
     }
 
+    private endOf(draft: EventCreateRequest): Date {
+        return draft.endDate ?? draft.startDate;
+    }
+
+    /** A new start date or time moves the whole event: the duration is kept. */
+    onStartChange(part: 'date' | 'time', value: string): void {
+        const draft = this.draft();
+        const start = part === 'date' ? withDate(draft.startDate, value) : withTime(draft.startDate, value);
+        if (!start) {
+            return;
+        }
+        const duration = this.endOf(draft).getTime() - draft.startDate.getTime();
+        this.draft.set({ ...draft, startDate: start, endDate: new Date(start.getTime() + duration) });
+    }
+
+    /**
+     * A new end. An end time before the start means the next morning (22:00 → 02:00): the end
+     * moves to the day after rather than being refused.
+     */
+    onEndChange(part: 'date' | 'time', value: string): void {
+        const draft = this.draft();
+        const current = this.endOf(draft);
+        let end = part === 'date' ? withDate(current, value) : withTime(current, value);
+        if (!end) {
+            return;
+        }
+        if (part === 'time' && end <= draft.startDate) {
+            const sameDay = withTime(draft.startDate, value) ?? end;
+            end = sameDay > draft.startDate ? sameDay : new Date(sameDay.getTime() + DAY_MS);
+        }
+        this.draft.set({ ...draft, endDate: end });
+    }
+
+    toggleMoreOptions(): void {
+        this.showMoreOptions.update(open => !open);
+    }
+
     /** Written by each field's `ngModelChange`, which is how a signal replaces two-way binding. */
     update<K extends keyof EventCreateRequest>(field: K, value: EventCreateRequest[K]): void {
         this.draft.update(draft => ({ ...draft, [field]: value }));
@@ -222,7 +316,7 @@ export class QuickEventPopoverComponent {
 
     onSave(): void {
         const draft = this.draft();
-        if (draft.title) {
+        if (draft.title.trim() && !this.invalidRange() && !this.saving()) {
             this.save.emit(draft);
         }
     }
