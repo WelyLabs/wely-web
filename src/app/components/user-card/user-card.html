@@ -35,10 +35,11 @@
 
   <div class="avatar-container">
     <div class="avatar-gradient">
-      @if (user().profilePicUrl) {
-        <img [src]="user().profilePicUrl" [alt]="user().userName">
+      @let picture = avatars.url(user().userId)();
+      @if (picture) {
+        <img [src]="picture" [alt]="user().userName">
       }
-      @if (!user().profilePicUrl) {
+      @if (!picture) {
         <span class="initials">{{ initials() }}</span>
       }
     </div>

@@ -93,31 +93,13 @@ export class UserService {
         );
     }
 
+    /**
+     * Replaces the current user's picture. wely-users answers a signed URL for it; screens read
+     * pictures through AvatarService, which the caller invalidates for the current user.
+     */
     uploadAvatar(file: File): Observable<{ profilePicUrl: string }> {
         const formData = new FormData();
         formData.append('file', file);
-
-        this.logger.debug('UserService', '📤 Uploading avatar file:', file.name, file.type, file.size);
-
-        // Backend returns a plain string (the URL), not a JSON object
-        return this.http.post(`${this.apiUrl}/profile/picture`, formData, { responseType: 'text' }).pipe(
-            tap(url => {
-                this.logger.debug('UserService', '✅ Upload successful, URL received:', url);
-            }),
-            tap(url => {
-                // Update the current user with the new avatar URL
-                this.updateCurrentUser({ profilePicUrl: url });
-                this.logger.debug('UserService', '✅ User updated with new avatar URL:', url);
-            }),
-            tap({
-                error: (error) => {
-                    this.logger.error('UserService', '❌ Upload failed with error:', error);
-                    this.logger.error('UserService', 'Error status:', error.status);
-                    this.logger.error('UserService', 'Error message:', error.message);
-                    this.logger.error('UserService', 'Error body:', error.error);
-                }
-            }),
-            // Transform string to object
-        ) as unknown as Observable<{ profilePicUrl: string }>;
+        return this.http.post<{ profilePicUrl: string }>(`${this.apiUrl}/profile/picture`, formData);
     }
 }

@@ -179,3 +179,8 @@
         }
     }
 }
+.error-message {
+    margin: 0 24px 8px;
+    color: var(--danger, #dc2626);
+    font-size: 14px;
+}

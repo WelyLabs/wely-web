@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ConversationsListComponent } from './conversations-list';
 import { ChatService } from '../../services/chat.service';
+import { AvatarService } from '../../services/avatar.service';
+import { signal } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
 import { Router, provideRouter } from '@angular/router';
@@ -49,7 +51,9 @@ describe('ConversationsListComponent', () => {
                 provideRouter([]),
                 { provide: ChatService, useValue: chatServiceMock },
                 { provide: UserService, useValue: userServiceMock },
-                { provide: SocialService, useValue: socialServiceMock }
+                { provide: SocialService, useValue: socialServiceMock },
+                // Pictures come from AvatarService by user id; lea has one.
+                { provide: AvatarService, useValue: { url: (id: string | null) => signal(id === 'lea' ? '/demo/avatars/lea.svg' : null) } }
             ]
         }).compileComponents();
         routerMock = TestBed.inject(Router);
@@ -192,6 +196,13 @@ describe('ConversationsListComponent', () => {
             load([withLea()]);
 
             expect(component.rows()[0].name).toBe('Conversation');
+            // The picture comes by user id from AvatarService, friend or not.
+            expect(component.rows()[0].avatarUrl).toBe('/demo/avatars/lea.svg');
+        });
+
+        it('rows_shouldShowNoPicture_forAPartnerWithoutOne', () => {
+            load([withLea({ id: 'c-bob', participantIds: ['me', 'bob'] })]);
+
             expect(component.rows()[0].avatarUrl).toBeNull();
         });
 

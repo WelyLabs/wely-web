@@ -20,7 +20,7 @@
     @if (imageChangedEvent()) {
       <div class="cropper-area">
         <image-cropper [imageChangedEvent]="imageChangedEvent()" [maintainAspectRatio]="true" [aspectRatio]="1 / 1"
-          format="png" (imageCropped)="imageCropped($event)" (imageLoaded)="imageLoaded($event)"
+          format="jpeg" [imageQuality]="90" [resizeToWidth]="uploadSize" [onlyScaleDown]="true" (imageCropped)="imageCropped($event)" (imageLoaded)="imageLoaded($event)"
           (cropperReady)="cropperReady()" (loadImageFailed)="loadImageFailed()" [transform]="{ scale: scale() }"
         class="cropper"></image-cropper>
       </div>
@@ -41,6 +41,10 @@
       </div>
     }
   </div>
+
+  @if (errorMessage()) {
+    <p class="error-message" role="alert">{{ errorMessage() }}</p>
+  }
 
   <div class="actions">
     <button mat-button (click)="close()">Annuler</button>

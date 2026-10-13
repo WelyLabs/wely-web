@@ -15,12 +15,12 @@
     </div>
 
     <div class="user-profile" (mouseenter)="showUserMenu.set(true)" (mouseleave)="showUserMenu.set(false)">
-      <div class="avatar" [class.has-image]="userProfile()?.profilePicUrl">
-        @if (userProfile()?.profilePicUrl) {
-          <img [src]="userProfile()?.profilePicUrl"
+      <div class="avatar" [class.has-image]="myPicture()">
+        @if (myPicture()) {
+          <img [src]="myPicture()"
             [alt]="'Photo de profil de ' + userProfile()?.firstName" class="avatar-image">
         }
-        @if (!userProfile()?.profilePicUrl) {
+        @if (!myPicture()) {
           <span aria-hidden="true">{{ userProfile()?.firstName?.[0] || 'U' }}{{
             userProfile()?.lastName?.[0]
             ||
@@ -61,11 +61,11 @@
              (keydown.enter)="toggleMobileMenu()" (keydown.space)="toggleMobileMenu()"
           [class.active]="showMobileMenu()">
           <div class="avatar-ring">
-            @if (userProfile()?.profilePicUrl) {
-              <img [src]="userProfile()?.profilePicUrl"
+            @if (myPicture()) {
+              <img [src]="myPicture()"
                 [alt]="'Photo de profil de ' + userProfile()?.firstName">
             }
-            @if (!userProfile()?.profilePicUrl) {
+            @if (!myPicture()) {
               <span>{{ userProfile()?.firstName?.[0] || 'U' }}</span>
             }
           </div>
@@ -96,11 +96,11 @@
       <div class="mobile-menu-content">
         <div class="mobile-user-header">
           <div class="avatar-large">
-            @if (userProfile()?.profilePicUrl) {
-              <img [src]="userProfile()?.profilePicUrl"
+            @if (myPicture()) {
+              <img [src]="myPicture()"
                 [alt]="'Photo de profil de ' + userProfile()?.firstName">
             }
-            @if (!userProfile()?.profilePicUrl) {
+            @if (!myPicture()) {
               <span aria-hidden="true">
                 {{ userProfile()?.firstName?.[0] }}{{ userProfile()?.lastName?.[0] }}
               </span>

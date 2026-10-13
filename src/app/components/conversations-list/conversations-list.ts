@@ -14,6 +14,7 @@ import { FriendSummary } from '../../models/friendship.model';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { ConversationSummary, ConversationType } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
+import { AvatarService } from '../../services/avatar.service';
 
 /** One row of the list: the conversation, and who it is with. */
 export interface ConversationRow {
@@ -40,6 +41,7 @@ export class ConversationsListComponent implements OnInit {
     private readonly chatService = inject(ChatService);
     private readonly userService = inject(UserService);
     private readonly socialService = inject(SocialService);
+    private readonly avatars = inject(AvatarService);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
 
@@ -61,7 +63,7 @@ export class ConversationsListComponent implements OnInit {
         return {
             conversation,
             name: conversation.title || friend?.userName || lastFromPartner || 'Conversation',
-            avatarUrl: friend?.profilePicUrl ?? null,
+            avatarUrl: partnerId ? this.avatars.url(partnerId)() : null,
             online: !!partnerId && this.onlinePartners().has(partnerId)
         };
     }));
