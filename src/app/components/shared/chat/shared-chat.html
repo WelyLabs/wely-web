@@ -32,7 +32,7 @@
 
     <!-- Message Bubbles -->
     @for (msg of messages(); track trackByMessage(index, msg); let index = $index) {
-      <app-chat-bubble class="message-row" [message]="msg" />
+      <app-chat-bubble class="message-row" [message]="msg" (photoOpened)="openPhoto.emit(msg)" />
     }
   </div>
 
@@ -40,6 +40,13 @@
   @if (!loading() || messages().length > 0) {
     <div class="chat-input-bar">
       <div class="input-glass-container">
+        @if (photos()) {
+          <button type="button" class="photo-btn" (click)="photoInput.click()" aria-label="Envoyer une photo">
+            <mat-icon>add_photo_alternate</mat-icon>
+          </button>
+          <input #photoInput type="file" accept="image/*" class="visually-hidden" tabindex="-1" aria-hidden="true"
+            (change)="onPhotoPicked($event)">
+        }
         <label class="visually-hidden" for="chat-message-input">Votre message</label>
         <input id="chat-message-input" type="text" [ngModel]="newMessage()" (ngModelChange)="newMessage.set($event)"
           [placeholder]="placeholder()" (keyup.enter)="sendMessage()" enterkeyhint="send" class="modern-input">

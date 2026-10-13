@@ -13,7 +13,7 @@ import { EventParticipants, EventService, FeedEvent } from '../../services/event
 import { SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, Message } from '../../models/chat.model';
+import { Conversation, Message, MessagePhoto } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
@@ -52,6 +52,7 @@ export interface ThreadMessage {
   senderName: string;
   content: string;
   timestamp: string;
+  photo?: MessagePhoto | null;
 }
 
 /** loading: asking wely-chat. ready: the group exists. unavailable: it could not be read. */
@@ -207,7 +208,10 @@ export class EventDetailsComponent implements OnInit {
     time: message.timestamp,
     isMe: this.isMine(message),
     senderName: this.authorOf(message),
-    senderId: message.senderId
+    senderId: message.senderId,
+    photo: message.photo
+      ? { url: message.photo.url ?? null, width: message.photo.width, height: message.photo.height, removed: message.photo.removed }
+      : undefined
   })));
 
   readonly friendsSentence = computed(() => {
@@ -459,6 +463,7 @@ function toThreadMessage(message: Message): ThreadMessage {
     senderId: message.senderId,
     senderName: message.senderName,
     content: message.content,
-    timestamp: message.timestamp
+    timestamp: message.timestamp,
+    photo: message.photo ?? null
   };
 }

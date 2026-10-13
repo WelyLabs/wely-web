@@ -116,6 +116,10 @@ export class ConversationsListComponent implements OnInit {
         }
 
         const prefix = conversation.lastMessage.senderId === this.currentUserId ? 'Vous: ' : '';
+        const photo = conversation.lastMessage.photo;
+        if (photo && !conversation.lastMessage.content) {
+            return prefix + (photo.removed ? 'Photo retirée' : 'Photo');
+        }
         return prefix + conversation.lastMessage.content;
     }
 

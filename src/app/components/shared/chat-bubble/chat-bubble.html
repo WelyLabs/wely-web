@@ -10,7 +10,19 @@
     @if (!message().isMe && author()) {
       <strong class="author">{{ author() }}</strong>
     }
-    <p>{{ message().text }}</p>
+    @if (message().photo; as photo) {
+      @if (photo.removed) {
+        <p class="photo-removed"><em>Photo retirée</em></p>
+      } @else if (photo.url) {
+        <button type="button" class="photo" (click)="photoOpened.emit()" aria-label="Voir la photo"
+          [style.aspect-ratio]="photo.width + ' / ' + photo.height">
+          <img [src]="photo.url" alt="" loading="lazy">
+        </button>
+      }
+    }
+    @if (message().text) {
+      <p>{{ message().text }}</p>
+    }
     <span class="time">
       @if (message().failed) {
         Non envoyé

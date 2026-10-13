@@ -145,6 +145,14 @@ describe('ConversationsListComponent', () => {
         expect(component.getLastMessageContent(summaryWithMyMsg as any)).toBe('Vous: hi');
     });
 
+    it('getLastMessageContent_shouldSayPhoto_forAPhotoWithoutCaption', () => {
+        const photo = (removed: boolean) => ({ ...mockConversations[0],
+            lastMessage: { content: '', senderId: 'friend', photo: { width: 1, height: 1, removed } } });
+
+        expect(component.getLastMessageContent(photo(false) as never)).toBe('Photo');
+        expect(component.getLastMessageContent(photo(true) as never)).toBe('Photo retirée');
+    });
+
     it('should return correct initial', () => {
         expect(component.getAvatarInitial('Dave')).toBe('D');
         expect(component.getAvatarInitial('')).toBe('?');

@@ -409,3 +409,10 @@ body {
     background: var(--accent-gradient);
   }
 }
+
+/* The photo viewer: a dark, edge-to-edge surface, the photo is the whole point. */
+.photo-viewer-panel .mat-mdc-dialog-surface {
+  background: #111;
+  border-radius: 16px;
+  overflow: hidden;
+}

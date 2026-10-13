@@ -9,11 +9,19 @@ import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
 import { ChatService, PendingMessage } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, ConversationType, Message, Presence } from '../../models/chat.model';
+import { Conversation, ConversationPhoto, ConversationType, Message, MessagePhoto, Presence } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 import { SocialService } from '../../services/social.service';
 import { AvatarService } from '../../services/avatar.service';
 import { FriendSummary } from '../../models/friendship.model';
+import { MatDialog } from '@angular/material/dialog';
+import { ChatPhotoService } from '../../services/chat-photo.service';
+import { PhotoResizer } from '../../core/ui/photo-resize';
+import { PhotoViewerComponent, PhotoViewerData, PhotoViewerResult } from '../photo-viewer/photo-viewer';
+import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
+
+/** How many photos the media tab reads at a time; a shorter page means there are no more. */
+export const MEDIA_PAGE_SIZE = 30;
 
 /** How often the other participant's presence is re-read: wely-chat refreshes it every 30 s. */
 const PRESENCE_POLL_MS = 30_000;
@@ -55,7 +63,7 @@ const HISTORY_PREPEND_DELAY_MS = 50;
 @Component({
     selector: 'app-chat',
     standalone: true,
-    imports: [MatButtonModule, MatIconModule, SharedChatComponent],
+    imports: [MatButtonModule, MatIconModule, SharedChatComponent, PendingTrailDirective],
     templateUrl: './chat.html',
     styleUrl: './chat.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -69,6 +77,9 @@ export class ChatComponent implements OnInit {
     private readonly navigationService = inject(NavigationService);
     private readonly socialService = inject(SocialService);
     private readonly avatars = inject(AvatarService);
+    private readonly chatPhotos = inject(ChatPhotoService);
+    private readonly photoResizer = inject(PhotoResizer);
+    private readonly dialog = inject(MatDialog);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly conversation = signal<Conversation | null>(null);
@@ -119,6 +130,24 @@ export class ChatComponent implements OnInit {
 
     /** An event's group: no single partner, every member may write. */
     readonly isEventGroup = computed(() => this.conversation()?.type === ConversationType.EVENT);
+
+    /** The media tab: the conversation's photos, newest first, read a page at a time. */
+    readonly showMedia = signal(false);
+    readonly mediaPhotos = signal<ConversationPhoto[]>([]);
+    readonly mediaState = signal<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
+    readonly mediaHasMore = signal(false);
+
+    /**
+     * Who moderates an event's group: its organizer, as wely-chat names them, or for groups
+     * announced before that, the first member, where wely-events has always put the organizer.
+     */
+    readonly moderatorId = computed(() => {
+        const conversation = this.conversation();
+        if (conversation?.type !== ConversationType.EVENT) {
+            return null;
+        }
+        return conversation.organizerId ?? conversation.participantIds?.[0] ?? null;
+    });
 
     readonly memberCount = computed(() => this.conversation()?.participantIds?.length ?? 0);
 
@@ -236,8 +265,156 @@ export class ChatComponent implements OnInit {
             senderName: message.senderName,
             senderId: message.senderId,
             pending: 'pending' in message ? message.pending : undefined,
-            failed: 'failed' in message ? message.failed : undefined
+            failed: 'failed' in message ? message.failed : undefined,
+            photo: 'photo' in message && message.photo ? bubblePhoto(message.photo) : undefined
         };
+    }
+
+    /** A photo may be removed by its sender, or in an event's group by its organizer. */
+    canRemovePhotoOf(senderId: string | undefined): boolean {
+        const me = this.currentUserId;
+        return me !== null && (senderId === me || me === this.moderatorId());
+    }
+
+    /**
+     * Shows the photo at once from the file, scales it down, sends it, then swaps in what the
+     * server stored. A photo that cannot be sent stays in the thread, marked as not sent.
+     */
+    async onSendPhoto(file: File): Promise<void> {
+        const conversation = this.conversation();
+        if (!conversation) {
+            return;
+        }
+        const localId = `local-photo-${Date.now()}`;
+        const preview = URL.createObjectURL(file);
+        this.chatMessages.update(entries => [...entries, {
+            id: localId, text: '', time: new Date().toISOString(), isMe: true, pending: true,
+            photo: { url: preview, width: 4, height: 3, removed: false }
+        }]);
+        const settle = (replacement: ChatMessage) => {
+            URL.revokeObjectURL(preview);
+            this.chatMessages.update(entries => entries.map(entry => entry.id === localId ? replacement : entry));
+        };
+        try {
+            const scaled = await this.photoResizer.downscale(file);
+            this.chatPhotos.send(conversation.id, scaled)
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                    next: stored => {
+                        this.messages.update(messages => [...messages, stored]);
+                        settle({ ...this.toChatMessage(stored), isMe: true });
+                        this.forgetMedia();
+                    },
+                    error: (error: unknown) => {
+                        this.logger.error('ChatComponent', 'Could not send the photo', error);
+                        this.chatMessages.update(entries => entries.map(entry =>
+                            entry.id === localId ? { ...entry, pending: false, failed: true } : entry));
+                    }
+                });
+        } catch (error) {
+            // The browser could not read the file: HEIC outside Safari, or not an image at all.
+            this.logger.error('ChatComponent', 'Could not read the photo', error);
+            settle({ id: localId, text: 'Ce format de photo n’est pas pris en charge.', time: new Date().toISOString(),
+                isMe: true, failed: true });
+        }
+    }
+
+    /** From the thread: the message's own photo. */
+    openPhotoFromThread(message: ChatMessage): void {
+        const photo = message.photo;
+        if (!message.id || !photo?.url || photo.removed || message.pending) {
+            return;
+        }
+        this.openViewer(message.id, photo.url, message.senderId, message.time);
+    }
+
+    /** From the media tab. */
+    openPhotoFromMedia(photo: ConversationPhoto): void {
+        if (photo.photo.url) {
+            this.openViewer(photo.messageId, photo.photo.url, photo.senderId, photo.sentAt);
+        }
+    }
+
+    toggleMedia(): void {
+        this.showMedia.update(open => !open);
+        if (this.showMedia() && this.mediaState() === 'idle') {
+            this.loadMedia();
+        }
+    }
+
+    /** The next page, from the oldest photo already shown. */
+    loadMedia(): void {
+        const conversation = this.conversation();
+        if (!conversation || this.mediaState() === 'loading') {
+            return;
+        }
+        const before = this.mediaPhotos().at(-1)?.sentAt;
+        this.mediaState.set('loading');
+        this.chatPhotos.page(conversation.id, before)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: page => {
+                    this.mediaPhotos.update(photos => [...photos, ...page]);
+                    this.mediaHasMore.set(page.length === MEDIA_PAGE_SIZE);
+                    this.mediaState.set('ready');
+                },
+                error: (error: unknown) => {
+                    this.logger.error('ChatComponent', 'Could not load the photos', error);
+                    this.mediaState.set('unavailable');
+                }
+            });
+    }
+
+    private openViewer(messageId: string, url: string, senderId: string | undefined, sentAt: string | Date): void {
+        const conversation = this.conversation();
+        if (!conversation) {
+            return;
+        }
+        const data: PhotoViewerData = {
+            conversationId: conversation.id,
+            messageId,
+            url,
+            senderName: this.nameOf(senderId),
+            sentAt: typeof sentAt === 'string' ? sentAt : sentAt.toISOString(),
+            canRemove: this.canRemovePhotoOf(senderId)
+        };
+        this.dialog.open<PhotoViewerComponent, PhotoViewerData, PhotoViewerResult>(PhotoViewerComponent, {
+            data,
+            maxWidth: '96vw',
+            panelClass: 'photo-viewer-panel'
+        }).afterClosed()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(result => {
+                if (result === 'removed') {
+                    this.markRemoved(messageId);
+                }
+            });
+    }
+
+    /** Removed for everyone: the thread keeps the message, the media tab drops it. */
+    private markRemoved(messageId: string): void {
+        const removed = { url: null, width: 0, height: 0, removed: true };
+        this.chatMessages.update(entries => entries.map(entry => entry.id === messageId ? { ...entry, photo: removed } : entry));
+        this.messages.update(messages => messages.map(message => message.id === messageId
+            ? { ...message, photo: { width: 0, height: 0, removed: true } } : message));
+        this.mediaPhotos.update(photos => photos.filter(photo => photo.messageId !== messageId));
+    }
+
+    /** A new photo makes the media tab stale: it is read again when next opened. */
+    private forgetMedia(): void {
+        if (!this.showMedia()) {
+            this.mediaPhotos.set([]);
+            this.mediaState.set('idle');
+        }
+    }
+
+    private nameOf(senderId: string | undefined): string {
+        if (senderId && senderId === this.currentUserId) {
+            return 'Toi';
+        }
+        return (senderId ? this.friends().get(senderId)?.userName : undefined)
+            ?? this.messages().find(message => message.senderId === senderId)?.senderName
+            ?? 'Un membre';
     }
 
     onLoadMoreMessages(): void {
@@ -340,6 +517,11 @@ export class ChatComponent implements OnInit {
     getAvatarInitial(title: string | undefined): string {
         return (title && title.length > 0) ? title.charAt(0).toUpperCase() : '?';
     }
+}
+
+/** What a bubble shows of a message's photo. */
+function bubblePhoto(photo: MessagePhoto): NonNullable<ChatMessage['photo']> {
+    return { url: photo.url ?? null, width: photo.width, height: photo.height, removed: photo.removed };
 }
 
 /** Oldest first, which is the order the panel renders. */
