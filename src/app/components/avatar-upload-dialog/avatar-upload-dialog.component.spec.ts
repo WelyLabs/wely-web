@@ -45,6 +45,17 @@ describe('AvatarUploadDialogComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    it('template_shouldOpenThePicker_fromAnywhereInTheDashedBox', () => {
+        // Only the icon and label at the centre used to listen: a click elsewhere in the
+        // box, which looks just as clickable, did nothing.
+        const input = fixture.nativeElement.querySelector('#avatar-file-input') as HTMLInputElement;
+        const click = vi.spyOn(input, 'click').mockImplementation(() => undefined);
+
+        (fixture.nativeElement.querySelector('.upload-area') as HTMLElement).click();
+
+        expect(click).toHaveBeenCalledOnce();
+    });
+
     it('should handle image cropping', () => {
         const mockEvent = {
             base64: 'data:image/png;base64,...',
