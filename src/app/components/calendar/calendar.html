@@ -16,8 +16,12 @@
             {{ currentDate() | date: 'MMMM yyyy' }}
           }
           @if (viewMode() === 'week') {
-            Semaine {{ getWeekNumber(currentDate()) }}, {{ currentDate() |
-            date: 'yyyy' }}
+            @if (onPhone() && days().length > 0) {
+              {{ days()[0].date | date: 'd MMM' }} – {{ days()[days().length - 1].date | date: 'd MMM' }}
+            } @else {
+              Semaine {{ getWeekNumber(currentDate()) }}, {{ currentDate() |
+              date: 'yyyy' }}
+            }
           }
           @if (viewMode() === 'day') {
             {{ currentDate() | date: 'd MMMM yyyy' }}
@@ -31,9 +35,16 @@
         </button>
         <div class="view-toggle">
           <button [class.active]="viewMode() === 'month'" (click)="toggleView('month')">Mois</button>
-          <button [class.active]="viewMode() === 'week'" (click)="toggleView('week')">Semaine</button>
+          <button [class.active]="viewMode() === 'week'" (click)="toggleView('week')">{{ weekLabel() }}</button>
           <button [class.active]="viewMode() === 'day'" (click)="toggleView('day')">Jour</button>
         </div>
+        <!-- On a phone the three buttons give way to one picker, so the header holds on one line. -->
+        <label class="visually-hidden" for="calendar-view-select">Vue</label>
+        <select id="calendar-view-select" class="view-select" [value]="viewMode()" (change)="onViewPicked($event)">
+          <option value="month">Mois</option>
+          <option value="week">{{ weekLabel() }}</option>
+          <option value="day">Jour</option>
+        </select>
 
         <div class="nav-buttons">
           <button (click)="navigate(-1)" aria-label="Précédent">
@@ -50,7 +61,7 @@
       <div class="create-hint">
         <mat-icon>lightbulb</mat-icon>
         <span class="hint-wide">Pour créer un événement, utilisez « Nouvel événement », ou cliquez sur un créneau en vue Semaine ou Jour.</span>
-        <span class="hint-narrow">Touchez + pour créer un événement, ou un créneau en vue Semaine ou Jour.</span>
+        <span class="hint-narrow">Touchez + pour créer un événement, ou un créneau en vue 3 jours ou Jour.</span>
         <button type="button" aria-label="Masquer l'astuce" (click)="dismissCreateHint()">
           <mat-icon>close</mat-icon>
         </button>
@@ -69,7 +80,8 @@
           <div class="weekday-name">{{ day }}</div>
         }
       </div>
-      <div class="days-grid month-grid" [class.selection-active]="selectedDate()">
+      <div class="days-grid month-grid" [class.selection-active]="selectedDate()"
+        (touchstart)="onSwipeStart($event)" (touchend)="onSwipeEnd($event)">
         @for (day of days(); track day.date.getTime(); let i = $index) {
           <div class="day-cell" role="button" tabindex="0" [class.other-month]="!day.isCurrentMonth"
             [class.today]="day.isToday" [class.selected]="selectedDate() && isSameDate(day.date, selectedDate()!)"
@@ -101,7 +113,7 @@
     <!-- Week/Day View Layout (Apple Style Schedule) -->
     @if (viewMode() === 'week' || viewMode() === 'day') {
       <div class="week-schedule-container" [class.day-mode]="viewMode() === 'day'"
-        (mouseup)="onTimeMouseUp($event)">
+        (mouseup)="onTimeMouseUp($event)" (touchstart)="onSwipeStart($event)" (touchend)="onSwipeEnd($event)">
         <!-- Time Axis -->
         <div class="time-axis">
           <div class="axis-header"></div>
@@ -112,7 +124,7 @@
           }
         </div>
         <!-- Day Columns -->
-        <div class="day-columns">
+        <div class="day-columns" [style.grid-template-columns]="'repeat(' + days().length + ', minmax(0, 1fr))'">
           @for (day of days(); track day.date.getTime()) {
             <div class="day-column" [class.today]="day.isToday">
               <div class="column-header">

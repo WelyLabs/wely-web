@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
@@ -57,6 +57,11 @@ const NO_OVERLAY: OverlayData = { calendars: [], free: [] };
 /** Six rows of seven, so the month grid never changes height between months. */
 const MONTH_GRID_CELLS = 42;
 const DAYS_IN_WEEK = 7;
+/** On a phone the week view shows this many days: seven did not fit and scrolled sideways. */
+const DAYS_ON_PHONE = 3;
+/** A horizontal swipe at least this long, and mostly horizontal, moves to the next period. */
+const SWIPE_MIN_PX = 60;
+const SWIPE_MAX_MS = 600;
 
 interface CalendarDay {
   date: Date;
@@ -140,8 +145,9 @@ const POPOVER_CLICK_GUARD_MS = 500;
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent, MonthDayOverlayComponent],
   templateUrl: './calendar.html',
-  // The ways in to a new event have their own sheet: the calendar's is at its size budget.
-  styleUrls: ['./calendar.scss', './calendar-create.scss'],
+  // The ways in to a new event, and the phone layout, have their own sheets: the calendar's is at
+  // its size budget.
+  styleUrls: ['./calendar.scss', './calendar-create.scss', './calendar-phone.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalendarComponent implements OnInit, OnDestroy {
@@ -338,6 +344,53 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return this.compactRows() ? 60 : 80;
   }
 
+  /** On a phone, « Semaine » is three days from the current date. */
+  readonly onPhone = computed(() => this.compactRows());
+  readonly weekLabel = computed(() => this.onPhone() ? '3 jours' : 'Semaine');
+
+  /** Turning a phone across the breakpoint changes how many days the week view holds. */
+  private readonly regenerateOnResize = effect(() => {
+    this.compactRows();
+    untracked(() => {
+      if (this.days().length > 0) {
+        this.generateCalendar();
+      }
+    });
+  });
+
+  private swipeStart: { x: number; y: number; at: number } | null = null;
+
+  onSwipeStart(event: TouchEvent): void {
+    const touch = event.touches[0];
+    this.swipeStart = event.touches.length === 1 ? { x: touch.clientX, y: touch.clientY, at: Date.now() } : null;
+  }
+
+  /**
+   * A quick horizontal swipe moves to the next or previous month, three days or day, like the
+   * arrows. Not while a range is being dragged, which also moves a finger sideways.
+   */
+  onSwipeEnd(event: TouchEvent): void {
+    const start = this.swipeStart;
+    this.swipeStart = null;
+    if (!start || this.isSelectingRange() || this.isPopoverVisible()) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) >= SWIPE_MIN_PX && Math.abs(dx) > 1.5 * Math.abs(dy) && Date.now() - start.at <= SWIPE_MAX_MS) {
+      this.navigate(dx < 0 ? 1 : -1);
+    }
+  }
+
+  /** The view picked in the phone's select. */
+  onViewPicked(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === 'month' || value === 'week' || value === 'day') {
+      this.toggleView(value);
+    }
+  }
+
   // Range selection, drag to create
   /**
    * Signals rather than plain fields: the hold-to-select timer sets them outside any event, and
@@ -523,6 +576,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.cancelCreatingEvent();
     this.viewMode.set(mode);
 
+    // A phone's three days start where the month left off: today, when it is in that month.
+    const today = new Date();
+    const current = this.currentDate();
+    if (mode === 'week' && this.onPhone() && today.getFullYear() === current.getFullYear() && today.getMonth() === current.getMonth()) {
+      this.currentDate.set(startOfDay(today));
+    }
+
     // Clear selection when switching to Month view
     if (mode === 'month') {
       this.selectedDate.set(null);
@@ -626,11 +686,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   private generateWeekView(): void {
     const current = new Date(this.currentDate());
-    const dayOfWeek = (current.getDay() + 6) % 7;
+    // A phone's three days start on the current date; a week starts on its Monday.
+    const dayOfWeek = this.onPhone() ? 0 : (current.getDay() + 6) % 7;
     const firstDayOfWeek = new Date(current.setDate(current.getDate() - dayOfWeek));
     const days: CalendarDay[] = [];
 
-    for (let i = 0; i < DAYS_IN_WEEK; i++) {
+    for (let i = 0; i < (this.onPhone() ? DAYS_ON_PHONE : DAYS_IN_WEEK); i++) {
       const date = new Date(firstDayOfWeek);
       date.setDate(firstDayOfWeek.getDate() + i);
       days.push({
@@ -730,7 +791,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.viewMode() === 'month') {
       this.currentDate.set(new Date(this.currentDate().getFullYear(), this.currentDate().getMonth() + delta, 1));
     } else if (this.viewMode() === 'week') {
-      this.currentDate.set(new Date(this.currentDate().getFullYear(), this.currentDate().getMonth(), this.currentDate().getDate() + (delta * 7)));
+      const step = this.onPhone() ? DAYS_ON_PHONE : DAYS_IN_WEEK;
+      this.currentDate.set(new Date(this.currentDate().getFullYear(), this.currentDate().getMonth(), this.currentDate().getDate() + (delta * step)));
     } else {
       // Day view navigation: move by 1 day and sync selectedDate
       const selected = this.selectedDate();

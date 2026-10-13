@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent, CalendarEvent, defaultStart } from './calendar';
 import { NotificationService } from '../../services/notification.service';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
 import { Router } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
@@ -1045,5 +1046,113 @@ describe('CalendarComponent', () => {
         });
     });
 
-});
+    describe('on a phone', () => {
+        /** A fresh calendar whose breakpoint says phone, or not. */
+        const phone = (on: boolean) => {
+            TestBed.resetTestingModule();
+            TestBed.configureTestingModule({
+                imports: [CalendarComponent, NoopAnimationsModule],
+                providers: [
+                    { provide: EventService, useValue: eventServiceMock },
+                    { provide: SocialService, useValue: socialServiceMock },
+                    { provide: NotificationService, useValue: notificationsMock },
+                    { provide: Router, useValue: routerMock },
+                    { provide: BreakpointObserver, useValue: { observe: () => of({ matches: on, breakpoints: {} }) } }
+                ]
+            });
+            fixture = TestBed.createComponent(CalendarComponent);
+            component = fixture.componentInstance;
+            fixture.detectChanges();
+        };
+        const swipe = (fromX: number, toX: number, dy = 0) => {
+            component.onSwipeStart({ touches: [{ clientX: fromX, clientY: 100 }] } as unknown as TouchEvent);
+            component.onSwipeEnd({ changedTouches: [{ clientX: toX, clientY: 100 + dy }] } as unknown as TouchEvent);
+        };
 
+        it('generateCalendar_shouldShowThreeDaysFromTheCurrentDate_inWeekView', () => {
+            phone(true);
+            component.currentDate.set(new Date(2030, 0, 10));
+            component.viewMode.set('week');
+
+            component.generateCalendar();
+
+            expect(component.days().map(day => day.date.getDate())).toEqual([10, 11, 12]);
+            expect(component.weekLabel()).toBe('3 jours');
+        });
+
+        it('navigate_shouldMoveThreeDaysAtATime', () => {
+            phone(true);
+            component.currentDate.set(new Date(2030, 0, 10));
+            component.viewMode.set('week');
+
+            component.navigate(1);
+
+            expect(component.days()[0].date.getDate()).toBe(13);
+        });
+
+        it('toggleView_shouldStartTheThreeDaysToday_whenTodayIsInTheMonth', () => {
+            phone(true);
+            const today = new Date();
+            component.currentDate.set(new Date(today.getFullYear(), today.getMonth(), 1));
+
+            component.toggleView('week');
+
+            expect(component.isSameDate(component.days()[0].date, today)).toBe(true);
+        });
+
+        it('generateCalendar_shouldKeepTheWholeWeek_onALargerScreen', () => {
+            phone(false);
+            component.currentDate.set(new Date(2030, 0, 10));
+            component.viewMode.set('week');
+
+            component.generateCalendar();
+
+            expect(component.days()).toHaveLength(7);
+            expect(component.weekLabel()).toBe('Semaine');
+        });
+
+        it('onSwipeEnd_shouldGoToTheNextPeriod_onASwipeLeft', () => {
+            const month = component.currentDate().getMonth();
+
+            swipe(300, 150);
+
+            expect(component.currentDate().getMonth()).toBe((month + 1) % 12);
+        });
+
+        it('onSwipeEnd_shouldGoBack_onASwipeRight', () => {
+            const month = component.currentDate().getMonth();
+
+            swipe(100, 260);
+
+            expect(component.currentDate().getMonth()).toBe((month + 11) % 12);
+        });
+
+        it('onSwipeEnd_shouldIgnoreAShortOrMostlyVerticalMove', () => {
+            const before = component.currentDate().getTime();
+
+            swipe(300, 270);
+            swipe(300, 200, 120);
+
+            expect(component.currentDate().getTime()).toBe(before);
+        });
+
+        it('onSwipeEnd_shouldIgnoreTheDragOfARange', () => {
+            const before = component.currentDate().getTime();
+            component.isSelectingRange.set(true);
+
+            swipe(300, 100);
+
+            expect(component.currentDate().getTime()).toBe(before);
+        });
+
+        it('onViewPicked_shouldSwitchTheView', () => {
+            const select = document.createElement('select');
+            select.innerHTML = '<option value="day">Jour</option>';
+            select.value = 'day';
+
+            component.onViewPicked({ target: select } as unknown as Event);
+
+            expect(component.viewMode()).toBe('day');
+        });
+    });
+});

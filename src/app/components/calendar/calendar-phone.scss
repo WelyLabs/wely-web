@@ -1,0 +1,73 @@
+// ── On a phone ─────────────────────────────────────────────────────────────────────────
+// The header holds on one line (title, view picker, arrows) instead of two with wide gaps
+// between them: about 90px more for the grid. The week view is three days, which fit.
+
+.view-select {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .calendar-section .calendar-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+
+        .title-group {
+            min-width: 0;
+            flex: 1;
+        }
+
+        h2 {
+            font-size: 20px;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: capitalize;
+        }
+
+        .header-controls {
+            width: auto;
+            flex-shrink: 0;
+            gap: 4px;
+            padding: 3px;
+            border-radius: 14px;
+
+            .view-toggle {
+                display: none;
+            }
+
+            .nav-buttons button {
+                width: 34px;
+                height: 34px;
+            }
+        }
+    }
+
+    .view-select {
+        display: block;
+        appearance: none;
+        -webkit-appearance: none;
+        border: none;
+        border-radius: 10px;
+        padding: 7px 26px 7px 10px;
+        // A chevron drawn in: the native arrow is gone with appearance: none.
+        background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23737373' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 9px center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        font: inherit;
+        // 16px: below that, iOS zooms in when the picker opens.
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .create-hint {
+        margin: 0 0 12px;
+    }
+
+    // Three days share the width: no column may ask for more than its share.
+    .calendar-section .week-schedule-container .day-columns .day-column {
+        min-width: 0;
+    }
+}
