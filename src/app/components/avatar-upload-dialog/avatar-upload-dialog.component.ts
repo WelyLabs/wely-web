@@ -56,7 +56,6 @@ export class AvatarUploadDialogComponent {
      * own input accepts, and the empty string only ever meant "nothing selected".
      */
     readonly imageChangedEvent = signal<Event | null>(null);
-    readonly croppedImage = signal('');
     readonly blob = signal<Blob | null>(null);
     readonly scale = signal(1);
     readonly isDragging = signal(false);
@@ -75,11 +74,9 @@ export class AvatarUploadDialogComponent {
         this.imageChangedEvent.set(event);
     }
 
+    /** The cropper hands a Blob and no base64: `output` defaults to 'blob'. */
     imageCropped(event: ImageCroppedEvent): void {
-        if (event.base64) {
-            this.croppedImage.set(event.base64);
-            this.blob.set(event.blob ?? null);
-        }
+        this.blob.set(event.blob ?? null);
     }
 
     // ngx-image-cropper requires these three outputs to be bound, and there is nothing
@@ -122,7 +119,7 @@ export class AvatarUploadDialogComponent {
                     if (me) {
                         this.avatarService.invalidate(me.id);
                     }
-                    this.dialogRef.close(this.croppedImage());
+                    this.dialogRef.close(true);
                 },
                 error: (err: unknown) => {
                     this.logger.error('AvatarUploadDialogComponent', 'Upload failed', err);

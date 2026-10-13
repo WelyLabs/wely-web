@@ -56,33 +56,31 @@ describe('AvatarUploadDialogComponent', () => {
         expect(click).toHaveBeenCalledOnce();
     });
 
-    it('should handle image cropping', () => {
-        const mockEvent = {
-            base64: 'data:image/png;base64,...',
-            blob: new Blob()
-        } as ImageCroppedEvent;
+    it('imageCropped_shouldKeepTheBlob_whenTheCropperSendsNoBase64', () => {
+        // The cropper's real event: a Blob and no base64. Keeping the image only when base64
+        // was set left nothing to send, and « Enregistrer » silently did nothing.
+        const blob = new Blob(['jpeg'], { type: 'image/jpeg' });
 
-        component.imageCropped(mockEvent);
+        component.imageCropped({ blob } as ImageCroppedEvent);
+        component.save();
 
-        expect(component.croppedImage()).toBe('data:image/png;base64,...');
-        expect(component.blob()).toEqual(mockEvent.blob);
+        expect(component.blob()).toBe(blob);
+        expect(userServiceMock.uploadAvatar).toHaveBeenCalledOnce();
     });
 
     it('should ignore a crop event that carries no image', () => {
-        component.imageCropped({ base64: '' } as ImageCroppedEvent);
+        component.imageCropped({ blob: null } as ImageCroppedEvent);
 
-        expect(component.croppedImage()).toBe('');
         expect(component.blob()).toBeNull();
     });
 
     it('should upload avatar and close on save', () => {
         component.blob.set(new Blob(['test'], { type: 'image/png' }));
-        component.croppedImage.set('data:image/png;base64,...');
 
         component.save();
 
         expect(userServiceMock.uploadAvatar).toHaveBeenCalledWith(expect.objectContaining({ type: 'image/jpeg' }));
-        expect(dialogRefMock.close).toHaveBeenCalledWith('data:image/png;base64,...');
+        expect(dialogRefMock.close).toHaveBeenCalledWith(true);
         expect(component.isLoading()).toBe(false);
         // Screens showing the user's picture ask for the new one.
         expect(avatarServiceMock.invalidate).toHaveBeenCalledWith('me');
