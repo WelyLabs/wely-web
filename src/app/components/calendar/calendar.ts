@@ -76,7 +76,7 @@ export interface CalendarEvent {
 
 import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-popover';
 import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
-import { DayLayout, DaySummary, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, layoutDay, summarizeDay } from '../calendar-overlay/overlay-layout';
+import { DayLayout, DaySummary, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, laneWidth, layoutDay, summarizeDay } from '../calendar-overlay/overlay-layout';
 import { MonthDayOverlayComponent } from '../month-day-overlay/month-day-overlay';
 import { FriendOverlayBarComponent } from '../friend-overlay-bar/friend-overlay-bar';
 
@@ -270,6 +270,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const hourHeight = this.hourHeight();
     return new Map(this.days().map(day => [day.date.toDateString(), layoutDay(day.date, lanes, free, hourHeight)]));
   });
+
+  /** Week and day views: the share of each column the user's own events keep, beside the friends' lanes. */
+  readonly ownLaneWidth = computed(() => this.viewMode() === 'month' ? 100 : laneWidth(this.overlayLanes().length));
 
   /** Month view: each cell's friend loads and common free stretch, by `toDateString()`. */
   readonly daySummaries = computed(() => {

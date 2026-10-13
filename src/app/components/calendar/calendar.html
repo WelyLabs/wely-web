@@ -157,7 +157,7 @@
                       (mousedown)="onTimeMouseDown($event, day.date, hour)"
                       (touchstart)="onTimeMouseDown($event, day.date, hour)"
                       (mouseenter)="onTimeMouseEnter(hour, day.date)">
-                      <div class="event-container">
+                      <div class="event-container" [style.width.%]="ownLaneWidth()">
                         @for (event of getEventsForHour(day.date, hour); track event) {
                           <div
                             class="inline-event-card" role="button" tabindex="0"

@@ -3,7 +3,7 @@
  * calendar hands in what it fetched, this decides where each piece is drawn.
  */
 
-/** At most this many friends side by side: past four, a lane is too narrow to read. */
+/** At most this many friends side by side, next to the user's own lane: past four, a lane is too narrow to read. */
 export const MAX_OVERLAID_FRIENDS = 4;
 
 /**
@@ -125,17 +125,27 @@ function place(period: Period, dayStart: Date, dayEnd: Date, hourHeight: number)
     };
 }
 
+/**
+ * The width of each lane of a day column, as a percentage: the user's own events take the first
+ * lane and each overlaid friend one more. Drawn over the friends' blocks, the user's events
+ * used to hide exactly the periods the overlay is there to compare.
+ */
+export function laneWidth(friendCount: number): number {
+    return 100 / (friendCount + 1);
+}
+
 export function layoutDay(day: Date, lanes: readonly FriendLane[], free: readonly Period[], hourHeight: number): DayLayout {
     const dayStart = startOfDay(day);
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayEnd.getDate() + 1);
-    const width = lanes.length > 0 ? 100 / lanes.length : 100;
+    const width = laneWidth(lanes.length);
 
+    // Lane 0 is the user's own.
     const blocks = lanes.flatMap((lane, index) => lane.periods.flatMap(period => {
         const placed = place(period, dayStart, dayEnd, hourHeight);
         return placed ? [{
             ...placed,
-            left: index * width,
+            left: (index + 1) * width,
             width,
             color: lane.color,
             friendName: lane.friendName,

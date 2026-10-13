@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FriendLane, layoutDay, summarizeDay, usefulHours } from './overlay-layout';
+import { FriendLane, laneWidth, layoutDay, summarizeDay, usefulHours } from './overlay-layout';
 
 describe('layoutDay', () => {
     const HOUR = 80;
@@ -10,16 +10,23 @@ describe('layoutDay', () => {
         friendName, color, periods: periods.map(([start, end, title]) => ({ start, end, title, location: null }))
     });
 
-    it('layoutDay_shouldGiveEachFriendAnEqualLaneInMentionOrder', () => {
+    it('layoutDay_shouldGiveEachFriendAnEqualLaneInMentionOrder_afterTheUsersOwn', () => {
         const { blocks } = layoutDay(wednesday, [
             lane('lea', '#a', [at(14, 18), at(14, 20), 'Poterie']),
             lane('hugo', '#b', [at(14, 18), at(14, 19), null])
         ], [], HOUR);
 
+        const third = 100 / 3;
         expect(blocks.map(b => [b.friendName, b.left, b.width, b.color])).toEqual([
-            ['lea', 0, 50, '#a'],
-            ['hugo', 50, 50, '#b']
+            ['lea', third, third, '#a'],
+            ['hugo', 2 * third, third, '#b']
         ]);
+    });
+
+    it('laneWidth_shouldShareTheColumnBetweenTheUserAndTheirFriends', () => {
+        expect(laneWidth(0)).toBe(100);
+        expect(laneWidth(1)).toBe(50);
+        expect(laneWidth(4)).toBe(20);
     });
 
     it('layoutDay_shouldPlaceAPeriodByItsHours', () => {

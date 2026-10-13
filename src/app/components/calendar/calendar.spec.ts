@@ -585,10 +585,12 @@ describe('CalendarComponent', () => {
             overlay('lea', 'hugo');
 
             const wednesday = component.overlayFor(new Date(2026, 9, 14));
+            const third = 100 / 3;
             expect(wednesday.blocks.map(b => [b.friendName, b.left, b.width, b.title])).toEqual([
-                ['lea', 0, 50, 'Poterie'],
-                ['hugo', 50, 50, null]
+                ['lea', third, third, 'Poterie'],
+                ['hugo', 2 * third, third, null]
             ]);
+            expect(component.ownLaneWidth()).toBe(third);
             expect(wednesday.free).toHaveLength(1);
             expect(component.overlayFor(new Date(2026, 9, 13))).toEqual({ blocks: [], free: [] });
         });
@@ -624,6 +626,20 @@ describe('CalendarComponent', () => {
             overlay('lea');
 
             expect(component.overlayError()).toContain('créneaux communs');
+        });
+
+        it('ownLaneWidth_shouldBeTheWholeColumn_withoutOverlaidFriends', () => {
+            showWeekOf(monday);
+
+            expect(component.ownLaneWidth()).toBe(100);
+        });
+
+        it('template_shouldNarrowTheUsersEventsToTheirLane', () => {
+            showWeekOf(monday);
+            overlay('lea');
+
+            const container: HTMLElement = fixture.nativeElement.querySelector('.event-container');
+            expect(container.style.width).toBe('50%');
         });
 
         it('onOverlayFriendsChange_shouldClearTheOverlay_whenEveryoneIsRemoved', () => {
