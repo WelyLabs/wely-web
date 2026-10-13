@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { UserWithStatusDTO } from '../../models/user.model';
 import { CLOSENESS_HINTS, CLOSENESS_LABELS, CLOSENESS_LEVELS, Closeness, FriendSummary, isAbove } from '../../models/friendship.model';
+import { AvatarService } from '../../services/avatar.service';
 
 /** A closeness the user asked for on a friend's card. */
 export interface ClosenessChange {
@@ -44,6 +45,7 @@ export class UserCardComponent {
     /** Required: a card with no user has nothing to render, and `input.required` says so at the
      * type level rather than through the `!` that used to hide it. */
     readonly user = input.required<UserWithStatusDTO>();
+    readonly avatars = inject(AvatarService);
     readonly showFriendBadge = input(true);
     /** Set on the friends tab only: the closeness of the friendship and any pending proposal. */
     readonly friendship = input<FriendSummary | null>(null);

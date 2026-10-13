@@ -20,6 +20,7 @@ import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
 import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
 import { ChatBubbleComponent, ChatBubbleMessage } from '../shared/chat-bubble/chat-bubble';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
+import { AvatarService } from '../../services/avatar.service';
 
 /**
  * What the page is for, given who looks and when.
@@ -115,6 +116,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly eventService = inject(EventService);
   private readonly socialService = inject(SocialService);
   private readonly chatService = inject(ChatService);
+  private readonly avatars = inject(AvatarService);
   private readonly navigationService = inject(NavigationService);
   private readonly userService = inject(UserService);
   private readonly logger = inject(LoggerService);
@@ -422,7 +424,8 @@ export class EventDetailsComponent implements OnInit {
       id,
       name,
       initials: initialsOf(name),
-      picture: known?.profilePicUrl,
+      // Through AvatarService, as a signal: the picture shows once its signed URL arrives.
+      picture: this.avatars.url(id)() ?? undefined,
       isFriend: (this.participants()?.friendsGoingIds ?? []).includes(id),
       relation: isMe ? 'ME' : known?.relationStatus ?? 'NONE'
     };

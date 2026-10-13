@@ -8,9 +8,10 @@
 
   <div class="content">
     @if (!imageChangedEvent()) {
-      <div class="upload-area">
-        <div class="upload-placeholder" role="button" tabindex="0" (click)="fileInput.click()"
-             (keydown.enter)="fileInput.click()" (keydown.space)="fileInput.click()">
+      <!-- The whole dashed box opens the picker, not just the icon and label at its centre. -->
+      <div class="upload-area" role="button" tabindex="0" (click)="fileInput.click()"
+           (keydown.enter)="fileInput.click()" (keydown.space)="fileInput.click()">
+        <div class="upload-placeholder">
           <mat-icon>add_a_photo</mat-icon>
           <span>Choisir une image</span>
         </div>
@@ -20,7 +21,7 @@
     @if (imageChangedEvent()) {
       <div class="cropper-area">
         <image-cropper [imageChangedEvent]="imageChangedEvent()" [maintainAspectRatio]="true" [aspectRatio]="1 / 1"
-          format="png" (imageCropped)="imageCropped($event)" (imageLoaded)="imageLoaded($event)"
+          format="jpeg" [imageQuality]="90" [resizeToWidth]="uploadSize" [onlyScaleDown]="true" (imageCropped)="imageCropped($event)" (imageLoaded)="imageLoaded($event)"
           (cropperReady)="cropperReady()" (loadImageFailed)="loadImageFailed()" [transform]="{ scale: scale() }"
         class="cropper"></image-cropper>
       </div>
@@ -41,6 +42,10 @@
       </div>
     }
   </div>
+
+  @if (errorMessage()) {
+    <p class="error-message" role="alert">{{ errorMessage() }}</p>
+  }
 
   <div class="actions">
     <button mat-button (click)="close()">Annuler</button>

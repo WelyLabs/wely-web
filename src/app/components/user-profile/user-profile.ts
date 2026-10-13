@@ -11,6 +11,7 @@ import { UserService } from '../../services/user.service';
 import { EditProfileDialogComponent } from '../edit-profile-dialog/edit-profile-dialog.component';
 
 import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-upload-dialog.component';
+import { AvatarService } from '../../services/avatar.service';
 
 @Component({
     selector: 'app-user-profile',
@@ -31,6 +32,7 @@ import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-uplo
 export class UserProfileComponent implements OnInit {
     private readonly logger = inject(LoggerService);
     private readonly userService = inject(UserService);
+    readonly avatars = inject(AvatarService);
     private readonly dialog = inject(MatDialog);
     private readonly destroyRef = inject(DestroyRef);
 

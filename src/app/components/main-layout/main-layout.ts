@@ -17,6 +17,7 @@ import { NotificationService } from '../../services/notification.service';
 import { Message } from '../../models/chat.model';
 import { filter, map, startWith } from 'rxjs';
 import { NavigationEnd } from '@angular/router';
+import { AvatarService } from '../../services/avatar.service';
 
 /** How long the "copied" tick stays visible after the user tag is put on the clipboard. */
 const COPY_FEEDBACK_MS = 2000;
@@ -70,6 +71,9 @@ export class MainLayoutComponent implements OnInit {
   );
 
   readonly userProfile = toSignal<User | null, null>(this.userService.currentUser$, { initialValue: null });
+  private readonly avatars = inject(AvatarService);
+  /** The signed-in user's picture URL, through AvatarService: pictures are private. */
+  readonly myPicture = computed(() => this.avatars.url(this.userProfile()?.id)());
 
   readonly isChatPage = toSignal(
     this.router.events.pipe(

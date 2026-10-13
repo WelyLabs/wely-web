@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AvatarUploadDialogComponent } from './avatar-upload-dialog.component';
 import { MatDialogRef } from '@angular/material/dialog';
 import { UserService } from '../../services/user.service';
+import { AvatarService } from '../../services/avatar.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { MAX_SOURCE_BYTES } from './avatar-upload-dialog.component';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -12,20 +15,24 @@ describe('AvatarUploadDialogComponent', () => {
     let fixture: ComponentFixture<AvatarUploadDialogComponent>;
     let dialogRefMock: any;
     let userServiceMock: any;
+    let avatarServiceMock: { invalidate: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
         dialogRefMock = {
             close: vi.fn()
         };
         userServiceMock = {
-            uploadAvatar: vi.fn().mockReturnValue(of({ profilePicUrl: 'new-url' }))
+            uploadAvatar: vi.fn().mockReturnValue(of({ profilePicUrl: 'new-url' })),
+            getCurrentUserValue: vi.fn().mockReturnValue({ id: 'me' })
         };
+        avatarServiceMock = { invalidate: vi.fn() };
 
         await TestBed.configureTestingModule({
             imports: [AvatarUploadDialogComponent, NoopAnimationsModule, ImageCropperComponent],
             providers: [
                 { provide: MatDialogRef, useValue: dialogRefMock },
-                { provide: UserService, useValue: userServiceMock }
+                { provide: UserService, useValue: userServiceMock },
+                { provide: AvatarService, useValue: avatarServiceMock }
             ]
         }).compileComponents();
 
@@ -36,6 +43,17 @@ describe('AvatarUploadDialogComponent', () => {
 
     it('should create', () => {
         expect(component).toBeTruthy();
+    });
+
+    it('template_shouldOpenThePicker_fromAnywhereInTheDashedBox', () => {
+        // Only the icon and label at the centre used to listen: a click elsewhere in the
+        // box, which looks just as clickable, did nothing.
+        const input = fixture.nativeElement.querySelector('#avatar-file-input') as HTMLInputElement;
+        const click = vi.spyOn(input, 'click').mockImplementation(() => undefined);
+
+        (fixture.nativeElement.querySelector('.upload-area') as HTMLElement).click();
+
+        expect(click).toHaveBeenCalledOnce();
     });
 
     it('should handle image cropping', () => {
@@ -63,9 +81,52 @@ describe('AvatarUploadDialogComponent', () => {
 
         component.save();
 
-        expect(userServiceMock.uploadAvatar).toHaveBeenCalled();
+        expect(userServiceMock.uploadAvatar).toHaveBeenCalledWith(expect.objectContaining({ type: 'image/jpeg' }));
         expect(dialogRefMock.close).toHaveBeenCalledWith('data:image/png;base64,...');
         expect(component.isLoading()).toBe(false);
+        // Screens showing the user's picture ask for the new one.
+        expect(avatarServiceMock.invalidate).toHaveBeenCalledWith('me');
+    });
+
+    it('save_shouldSayWhenTheServerRefusesTheImage', () => {
+        userServiceMock.uploadAvatar.mockReturnValue(throwError(() => new HttpErrorResponse({
+            status: 400, error: { code: 'USR-BUS-006' }
+        })));
+        component.blob.set(new Blob(['x']));
+
+        component.save();
+        fixture.detectChanges();
+
+        expect(component.errorMessage()).toContain("n'est pas une image");
+        expect(fixture.nativeElement.querySelector('.error-message')).not.toBeNull();
+        expect(dialogRefMock.close).not.toHaveBeenCalled();
+    });
+
+    it('save_shouldGiveAGeneralMessage_forAnUnexpectedFailure', () => {
+        userServiceMock.uploadAvatar.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+        component.blob.set(new Blob(['x']));
+
+        component.save();
+
+        expect(component.errorMessage()).toContain('a échoué');
+    });
+
+    it('fileChangeEvent_shouldRefuseAFileAboveTheLimitBeforeCropping', () => {
+        const big = { size: MAX_SOURCE_BYTES + 1 } as File;
+
+        component.fileChangeEvent({ target: { files: [big] } } as unknown as Event);
+
+        expect(component.imageChangedEvent()).toBeNull();
+        expect(component.errorMessage()).toContain('10 Mo');
+    });
+
+    it('loadImageFailed_shouldExplainAndLetTheUserPickAnother', () => {
+        component.imageChangedEvent.set(new Event('change'));
+
+        component.loadImageFailed();
+
+        expect(component.imageChangedEvent()).toBeNull();
+        expect(component.errorMessage()).toContain('ne peut pas être ouverte');
     });
 
     it('should not upload when nothing has been cropped', () => {

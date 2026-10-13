@@ -94,34 +94,24 @@ describe('UserService', () => {
         await expect(result).resolves.toEqual(saved);
     });
 
-    it('should upload avatar', () => {
-        const mockFile = new File([''], 'avatar.png', { type: 'image/png' });
-        const mockUrl = 'http://avatar.com/new.jpg';
+    it('uploadAvatar_shouldPostTheFileAsMultipartAndAnswerTheSignedUrl', async () => {
+        const file = new File(['jpeg'], 'avatar.jpg', { type: 'image/jpeg' });
 
-        service['currentUserSubject'].next(MOCK_USER);
-
-        service.uploadAvatar(mockFile).subscribe();
-
+        const result = firstValueFrom(service.uploadAvatar(file));
         const req = httpMock.expectOne(`${apiUrl}/profile/picture`);
         expect(req.request.method).toBe('POST');
-        expect(req.request.body instanceof FormData).toBe(true);
-        req.flush(mockUrl);
+        expect((req.request.body as FormData).get('file')).toBeInstanceOf(File);
+        req.flush({ profilePicUrl: 'https://media/signed' });
 
-        expect(service.getCurrentUserValue()?.profilePicUrl).toBe(mockUrl);
+        await expect(result).resolves.toEqual({ profilePicUrl: 'https://media/signed' });
     });
-    it('should handle upload avatar failure', () => {
-        const mockFile = new File([''], 'avatar.png', { type: 'image/png' });
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-        service.uploadAvatar(mockFile).subscribe({
-            error: (err) => {
-                expect(err).toBeDefined();
-            }
-        });
+    it('uploadAvatar_shouldReportTheFailure', async () => {
+        const result = firstValueFrom(service.uploadAvatar(new File(['x'], 'a.jpg')));
+        httpMock.expectOne(`${apiUrl}/profile/picture`)
+            .flush({ code: 'USR-BUS-006' }, { status: 400, statusText: 'Bad Request' });
 
-        const req = httpMock.expectOne(`${apiUrl}/profile/picture`);
-        req.error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
-        expect(consoleSpy).toHaveBeenCalled();
+        await expect(result).rejects.toMatchObject({ status: 400, error: { code: 'USR-BUS-006' } });
     });
 
     it('should NOT update current user locally if NO user is currently loaded', () => {

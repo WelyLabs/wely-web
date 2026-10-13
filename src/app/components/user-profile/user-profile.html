@@ -53,12 +53,13 @@
       <div class="header-content">
         <div class="avatar-container" role="button" tabindex="0" (click)="openAvatarDialog()"
             (keydown.enter)="openAvatarDialog()" (keydown.space)="openAvatarDialog()">
-          <div class="avatar" [class.has-image]="user.profilePicUrl">
-            @if (user.profilePicUrl) {
-              <img [src]="user.profilePicUrl"
+          @let picture = avatars.url(user.id)();
+          <div class="avatar" [class.has-image]="picture">
+            @if (picture) {
+              <img [src]="picture"
                 [alt]="'Photo de profil de ' + user.userName" class="avatar-image">
             }
-            @if (!user.profilePicUrl) {
+            @if (!picture) {
               <span class="avatar-initials" aria-hidden="true">
                 {{ user.firstName[0] || 'U' }}{{ user.lastName[0] || '' }}
               </span>
