@@ -15,6 +15,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { ChatPhotoService } from '../../services/chat-photo.service';
 import { MEDIA_PAGE_SIZE } from './chat';
 import { PhotoResizer } from '../../core/ui/photo-resize';
+import { PhotoViewerData } from '../photo-viewer/photo-viewer';
+import { HttpErrorResponse } from '@angular/common/http';
 
 // The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
 // the module rather than redefining an object, so the service and the test work on the same
@@ -252,6 +254,28 @@ describe('ChatComponent', () => {
         expect(component.chatMessages().some(m => m.text === 'hello from stream')).toBe(true);
     });
 
+    it('stream_shouldNotShowTheSameMessageTwice', () => {
+        const streamMsg = {
+            id: '99', content: 'once', senderId: 'friend', senderName: 'Friend', conversationId: 'conv1',
+            timestamp: new Date().toISOString(), type: MessageType.TEXT, kind: 'NEW'
+        };
+
+        chatMessagesSubject.next(streamMsg);
+        chatMessagesSubject.next(streamMsg);
+
+        expect(component.chatMessages().filter(m => m.id === '99')).toHaveLength(1);
+        expect(component.messages().filter(m => m.id === '99')).toHaveLength(1);
+    });
+
+    it('stream_shouldIgnoreTheViewersOwnNewMessages_andOtherConversations', () => {
+        const base = { content: 'x', senderName: 'Me', timestamp: new Date().toISOString(), type: MessageType.TEXT };
+
+        chatMessagesSubject.next({ ...base, id: 'a', senderId: 'me', conversationId: 'conv1' });
+        chatMessagesSubject.next({ ...base, id: 'b', senderId: 'friend', conversationId: 'other' });
+
+        expect(component.chatMessages()).toEqual([]);
+    });
+
     it('should send message and update UI', () => {
         const outMsg = {
             id: '100',
@@ -456,8 +480,24 @@ describe('ChatComponent', () => {
 
             component.openPhotoFromThread(component.chatMessages()[0]);
 
-            expect(dialogMock.open.mock.calls[0][1].data).toMatchObject({ conversationId: 'conv1', messageId: 'p1', canRemove: true });
+            const data = dialogMock.open.mock.calls[0][1].data as PhotoViewerData;
+            expect(data).toMatchObject({ url: 'https://media/p1.jpg', title: 'Toi', canRemove: true });
             expect(component.chatMessages()[0].photo?.removed).toBe(true);
+        });
+
+        it('openPhotoFromThread_shouldRemoveThroughTheChat_andExplainARefusal', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...mockConv, messages: [stored] }));
+            component.loadConversationById('conv1');
+            chatPhotosMock.remove.mockReturnValue(of(undefined));
+
+            component.openPhotoFromThread(component.chatMessages()[0]);
+
+            const data = dialogMock.open.mock.calls[0][1].data as PhotoViewerData;
+            data.remove?.().subscribe();
+            expect(chatPhotosMock.remove).toHaveBeenCalledWith('conv1', 'p1');
+            expect(data.removeError?.(new HttpErrorResponse({ status: 403, error: { code: 'CHT-BUS-007' } })))
+                .toContain('Seul l’auteur de la photo');
+            expect(data.removeError?.(new Error('502'))).toBeNull();
         });
 
         it('openPhotoFromThread_shouldIgnoreAPhotoStillSending', () => {
@@ -481,6 +521,79 @@ describe('ChatComponent', () => {
 
             component.loadMedia();
             expect(chatPhotosMock.page).toHaveBeenLastCalledWith('conv1', page.at(-1)!.sentAt);
+        });
+
+        it('template_shouldShowAPlaceholderTile_forAPhotoWithoutUrl', () => {
+            component.loadConversationById('conv1');
+            chatPhotosMock.page.mockReturnValue(of([{ conversationId: 'conv1', messageId: 'm1', senderId: 'friend',
+                photo: { width: 1, height: 1, url: null, removed: false }, sentAt: '2026-10-13T20:00:00Z' }]));
+
+            component.toggleMedia();
+            fixture.detectChanges();
+
+            const tile = fixture.nativeElement.querySelector('.media-tile.unavailable') as HTMLElement;
+            expect(tile.textContent).toContain('Photo indisponible');
+            expect(fixture.nativeElement.querySelector('.media-tile img')).toBeNull();
+        });
+
+        it('openPhotoFromMedia_shouldIgnoreAPhotoWithoutUrl', () => {
+            component.loadConversationById('conv1');
+
+            component.openPhotoFromMedia({ conversationId: 'conv1', messageId: 'm1', senderId: 'friend',
+                photo: { width: 1, height: 1, url: null, removed: false }, sentAt: '2026-10-13T20:00:00Z' });
+
+            expect(dialogMock.open).not.toHaveBeenCalled();
+        });
+
+        it('stream_shouldReplaceAnUpdatedMessage_dropItFromTheMediaTab_andCloseItsViewer', () => {
+            const fromFriend = { ...stored, senderId: 'friend', senderName: 'Friend' };
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...mockConv, messages: [fromFriend] }));
+            component.loadConversationById('conv1');
+            chatPhotosMock.page.mockReturnValue(of([{ conversationId: 'conv1', messageId: 'p1', senderId: 'friend',
+                photo: fromFriend.photo, sentAt: fromFriend.timestamp }]));
+            component.toggleMedia();
+            const close = vi.fn();
+            dialogMock.open.mockReturnValue({ afterClosed: () => new Subject(), close });
+            component.openPhotoFromMedia(component.mediaPhotos()[0]);
+
+            chatMessagesSubject.next({ ...fromFriend, kind: 'UPDATED',
+                photo: { key: null, width: 0, height: 0, url: null, removed: true } });
+
+            expect(component.chatMessages()).toHaveLength(1);
+            expect(component.chatMessages()[0].photo?.removed).toBe(true);
+            expect(component.messages()[0].photo?.removed).toBe(true);
+            expect(component.mediaPhotos()).toEqual([]);
+            expect(close).toHaveBeenCalled();
+        });
+
+        it('stream_shouldUpdateTheViewersOwnPhoto_removedByTheOrganizer', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...mockConv, messages: [stored] }));
+            component.loadConversationById('conv1');
+
+            chatMessagesSubject.next({ ...stored, kind: 'UPDATED', photo: { width: 0, height: 0, url: null, removed: true } });
+
+            expect(component.chatMessages()[0].photo?.removed).toBe(true);
+            expect(component.chatMessages()[0].isMe).toBe(true);
+        });
+
+        it('stream_shouldIgnoreAnUpdateToAMessageNotLoaded', () => {
+            component.loadConversationById('conv1');
+
+            chatMessagesSubject.next({ ...stored, id: 'older', kind: 'UPDATED', photo: { width: 0, height: 0, url: null, removed: true } });
+
+            expect(component.chatMessages()).toEqual([]);
+        });
+
+        it('stream_shouldLeaveTheViewerOpen_forAnotherPhotosUpdate', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...mockConv, messages: [stored, { ...stored, id: 'p2' }] }));
+            component.loadConversationById('conv1');
+            const close = vi.fn();
+            dialogMock.open.mockReturnValue({ afterClosed: () => new Subject(), close });
+            component.openPhotoFromThread(component.chatMessages()[0]);
+
+            chatMessagesSubject.next({ ...stored, id: 'p2', kind: 'UPDATED', photo: { width: 0, height: 0, url: null, removed: true } });
+
+            expect(close).not.toHaveBeenCalled();
         });
 
         it('toggleMedia_shouldSayWhenThePhotosCannotBeRead', () => {

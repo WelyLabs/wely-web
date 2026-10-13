@@ -51,4 +51,18 @@ describe('PhotoResizer', () => {
 
     await expect(new PhotoResizer().downscale(new Blob(['x']))).rejects.toThrow('unreadable');
   });
+
+  it('downscale_shouldPassTheLongestSideOn', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 4000, height: 3000, close: vi.fn() }));
+    const canvas = {
+      width: 0, height: 0,
+      getContext: () => ({ fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn() }),
+      toBlob: (done: (blob: Blob) => void, type: string) => done(new Blob(['x'], { type }))
+    };
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement);
+
+    await new PhotoResizer().downscale(new Blob(['photo']), 2000);
+
+    expect([canvas.width, canvas.height]).toEqual([2000, 1500]);
+  });
 });

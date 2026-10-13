@@ -40,7 +40,7 @@ export async function downscalePhoto(file: Blob, maxSide = PHOTO_MAX_SIDE): Prom
 /** The same, as a service: a page injects it, and a test replaces the canvas work. */
 @Injectable({ providedIn: 'root' })
 export class PhotoResizer {
-  downscale(file: Blob): Promise<Blob> {
-    return downscalePhoto(file);
+  downscale(file: Blob, maxSide = PHOTO_MAX_SIDE): Promise<Blob> {
+    return downscalePhoto(file, maxSide);
   }
 }

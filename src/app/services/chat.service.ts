@@ -18,7 +18,7 @@ import {
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { Buffer } from 'buffer';
 import { environment } from '../../environments/environment';
-import { Conversation, ConversationSummary, Message, MessageBucket, MessageType, Presence } from '../models/chat.model';
+import { Conversation, ConversationSummary, Message, MessageBucket, MessageKind, MessageType, Presence } from '../models/chat.model';
 import { UserService } from './user.service';
 import { LoggerService } from '../core/logging/logger.service';
 
@@ -305,7 +305,7 @@ export class ChatService implements OnDestroy {
                 onNext: (frame) => {
                   const message = frame.data as Message | null;
                   if (message) {
-                    observer.next(message);
+                    observer.next({ ...message, kind: message.kind ?? 'NEW' });
                   }
                   this.replenishDemand();
                 },
@@ -351,3 +351,12 @@ export class ChatService implements OnDestroy {
 
 /** Messages requested at a time; demand is renewed as they are consumed. */
 const STREAM_DEMAND = 64;
+
+/** A NEW item replaces the one with its id, else is appended; an UPDATED one only replaces. */
+export function upsertById<T extends { id?: string | null }>(items: readonly T[], item: T, kind: MessageKind = 'NEW'): T[] {
+  const index = item.id ? items.findIndex(existing => existing.id === item.id) : -1;
+  if (index >= 0) {
+    return items.map((existing, i) => i === index ? item : existing);
+  }
+  return kind === 'UPDATED' ? [...items] : [...items, item];
+}

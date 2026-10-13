@@ -17,6 +17,7 @@ import { PlacesMapComponent } from '../places-map/places-map';
 import { countdownOf } from '../event-details/event-details';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { formatCents } from '../../core/ui/money';
+import { eventTint } from '../../core/ui/event-tint';
 
 /** A stat card of « Ton année Wely ». */
 export interface YearStat {
@@ -35,24 +36,6 @@ export interface CircleMember {
   outingsTogether: number;
   /** Width of their bar, relative to the most frequent companion. */
   share: number;
-}
-
-/** Tiles for memories without a cover image, in Wely's colours; picked per event so each keeps its own. */
-const MEMORY_TINTS = [
-  'linear-gradient(135deg, #0f766e, #3b82f6)',
-  'linear-gradient(135deg, #be185d, #f97316)',
-  'linear-gradient(135deg, #7c3aed, #ec4899)',
-  'linear-gradient(135deg, #c2410c, #facc15)',
-  'linear-gradient(135deg, #1e3a8a, #7c3aed)',
-  'linear-gradient(135deg, #4d7c0f, #0f766e)'
-];
-
-export function memoryTint(eventId: string): string {
-  let hash = 0;
-  for (const char of eventId) {
-    hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  }
-  return MEMORY_TINTS[Math.abs(hash) % MEMORY_TINTS.length];
 }
 
 function plural(count: number, word: string): string {
@@ -101,7 +84,7 @@ export class UserProfileComponent implements OnInit {
 
   readonly now = new Date();
   readonly formatCents = formatCents;
-  readonly memoryTint = memoryTint;
+  readonly eventTint = eventTint;
 
   readonly initials = computed(() => {
     const user = this.user();

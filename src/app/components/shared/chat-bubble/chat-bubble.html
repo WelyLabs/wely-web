@@ -18,6 +18,11 @@
           [style.aspect-ratio]="photo.width + ' / ' + photo.height">
           <img [src]="photo.url" alt="" loading="lazy">
         </button>
+      } @else {
+        <div class="photo unavailable" role="img" aria-label="Photo indisponible">
+          <mat-icon>image_not_supported</mat-icon>
+          <span>Photo indisponible</span>
+        </div>
       }
     }
     @if (message().text) {

@@ -81,6 +81,24 @@
       <p class="remaining" [class.done]="remaining() === 0">{{ remainingLabel() }}</p>
     }
 
+    @if (canEditReceipt) {
+      <div class="receipt">
+        @if (receiptShown(); as src) {
+          <img class="receipt-thumb" [src]="src" alt="Ticket de la dépense">
+          <button mat-button type="button" class="receipt-remove" (click)="clearReceipt()" [disabled]="saving()">
+            <mat-icon>delete</mat-icon>Retirer le ticket
+          </button>
+        } @else {
+          <button mat-stroked-button type="button" class="receipt-attach" (click)="receiptInput.click()"
+            [disabled]="saving() || preparingReceipt()" [appPendingTrail]="preparingReceipt()">
+            <mat-icon>receipt_long</mat-icon>Joindre le ticket
+          </button>
+        }
+        <input #receiptInput type="file" accept="image/*" class="visually-hidden" tabindex="-1" aria-hidden="true"
+          (change)="onReceiptPicked($event)">
+      </div>
+    }
+
     @if (errorMessage()) {
       <div class="error-message" role="alert">
         <mat-icon>error</mat-icon>
@@ -97,10 +115,11 @@
       </button>
     }
     <span class="spacer"></span>
-    <button mat-stroked-button type="button" (click)="close()" [disabled]="saving()">Annuler</button>
+    <button mat-stroked-button type="button" (click)="close()" [disabled]="saving()">{{ saved() ? 'Fermer' : 'Annuler' }}</button>
     <button mat-flat-button type="button" class="save-button" (click)="save()"
-      [disabled]="saving() || invalidReason() !== null" [attr.title]="invalidReason()" [appPendingTrail]="saving()">
-      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+      [disabled]="saving() || preparingReceipt() || (!saved() && invalidReason() !== null)" [attr.title]="invalidReason()"
+      [appPendingTrail]="saving()">
+      {{ saving() ? 'Enregistrement…' : saved() ? 'Réessayer le ticket' : 'Enregistrer' }}
     </button>
   </mat-dialog-actions>
 </div>

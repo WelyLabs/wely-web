@@ -213,3 +213,18 @@ mat-dialog-actions {
         color: var(--danger);
     }
 }
+
+.receipt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0 12px;
+}
+
+.receipt-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--border-default);
+}

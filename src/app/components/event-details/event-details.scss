@@ -132,10 +132,58 @@
         background: var(--accent-gradient);
     }
 
+    .cover-actions {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .cover-button {
+        height: 36px;
+        padding: 0 14px;
+        border: none;
+        border-radius: 18px;
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+
+        &:hover:not(:disabled) {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        &:disabled {
+            opacity: 0.7;
+            cursor: default;
+        }
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+    }
+
     @media (min-width: 768px) {
         margin-top: 24px;
         border-radius: 24px;
     }
+}
+
+.cover-error {
+    margin: 8px 20px 0;
+    color: var(--danger, #dc2626);
+    font-size: 14px;
 }
 
 .hero-text {

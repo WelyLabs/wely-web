@@ -33,6 +33,17 @@ export class ExpenseService {
     return this.http.delete<void>(`${this.url(eventId)}/${expenseId}`);
   }
 
+  /** Attaches a receipt, already scaled down; answers with the expense and its new version. */
+  attachReceipt(eventId: string, expenseId: string, receipt: Blob): Observable<Expense> {
+    const form = new FormData();
+    form.append('file', receipt, 'receipt.jpg');
+    return this.http.put<ExpensePayload>(`${this.url(eventId)}/${expenseId}/receipt`, form).pipe(map(toExpense));
+  }
+
+  removeReceipt(eventId: string, expenseId: string): Observable<void> {
+    return this.http.delete<void>(`${this.url(eventId)}/${expenseId}/receipt`);
+  }
+
   /** Records that `fromUserId` paid `toUserId` back. */
   settle(eventId: string, fromUserId: string, toUserId: string, amountCents: number): Observable<Expense> {
     return this.http.post<ExpensePayload>(`${this.url(eventId)}/settlements`, { fromUserId, toUserId, amountCents })

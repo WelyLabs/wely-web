@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 
 import { avatarColor, initialsOf } from '../../../core/ui/avatar';
 import { AvatarService } from '../../../services/avatar.service';
@@ -28,7 +29,7 @@ export interface ChatBubbleMessage {
 @Component({
   selector: 'app-chat-bubble',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, MatIconModule],
   templateUrl: './chat-bubble.html',
   styleUrl: './chat-bubble.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

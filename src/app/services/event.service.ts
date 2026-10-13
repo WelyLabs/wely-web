@@ -14,7 +14,6 @@ export interface EventCreateRequest {
   location: string;
   /** Set when the location was picked on the map. */
   coordinates?: Coordinates | null;
-  image?: string;
   description?: string;
   subscribeByDefault: boolean;
   /** FRIENDS when left out. */
@@ -30,7 +29,8 @@ export interface FeedEvent {
   location: string;
   /** Absent when the location was typed rather than picked on the map. */
   coordinates?: Coordinates | null;
-  image: string;
+  /** The cover: a signed URL, a `/demo/...` path, or null when there is none. */
+  image: string | null;
   description: string;
   visibility?: Visibility;
 }
@@ -173,6 +173,20 @@ export class EventService {
       map((created) => this.toFeedEvent(created)),
       tap(() => this.refreshEvents()),
     );
+  }
+
+  /** Sets the event's cover, already cropped and scaled down; the organizer only. */
+  uploadCover(eventId: string, cover: Blob): Observable<FeedEvent> {
+    const form = new FormData();
+    form.append('file', cover, 'cover.jpg');
+    return this.http.post<EventPayload>(`${this.apiUrl}/${eventId}/cover`, form).pipe(
+      map((event) => this.toFeedEvent(event)),
+      tap(() => this.refreshEvents()),
+    );
+  }
+
+  removeCover(eventId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${eventId}/cover`).pipe(tap(() => this.refreshEvents()));
   }
 
   /** One event, if the user may see it; a 404 otherwise. */

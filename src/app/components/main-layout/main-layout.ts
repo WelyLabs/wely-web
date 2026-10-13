@@ -129,9 +129,9 @@ export class MainLayoutComponent implements OnInit {
         const isViewingThisConversation =
           this.router.url.includes(`/chat/${message.conversationId}`);
 
-        // Only notify for someone else's message, and only when that conversation is not
-        // already on screen.
-        if (message.senderId !== this.userProfile()?.id && !isViewingThisConversation) {
+        // Only notify for someone else's new message, and only when that conversation is not
+        // already on screen: an update (a photo removed) is not news.
+        if (message.kind !== 'UPDATED' && message.senderId !== this.userProfile()?.id && !isViewingThisConversation) {
           this.notificationService.showChatNotification(message);
         }
       });

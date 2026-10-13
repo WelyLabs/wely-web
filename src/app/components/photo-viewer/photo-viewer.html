@@ -1,17 +1,19 @@
 <div class="viewer">
   <div class="image-area">
-    <img [src]="data.url" alt="Photo envoyée par {{ data.senderName }}">
+    <img [src]="data.url" [alt]="data.title">
   </div>
   <div class="footer">
     <div class="meta">
-      <strong>{{ data.senderName }}</strong>
-      <span>{{ data.sentAt | date:'d MMM y, HH:mm' }}</span>
+      <strong>{{ data.title }}</strong>
+      @if (data.subtitle) {
+        <span>{{ data.subtitle }}</span>
+      }
     </div>
     <div class="actions">
-      @if (data.canRemove) {
+      @if (data.canRemove && data.remove) {
         <button type="button" class="remove" [class.confirming]="confirming()" (click)="remove()"
           [disabled]="removing()" [appPendingTrail]="removing()">
-          <mat-icon>delete</mat-icon>{{ confirming() ? 'Retirer pour tous ?' : 'Retirer' }}
+          <mat-icon>delete</mat-icon>{{ confirming() ? (data.confirmLabel ?? 'Retirer pour tous ?') : (data.removeLabel ?? 'Retirer') }}
         </button>
       }
       <a class="open" [href]="data.url" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir dans un nouvel onglet">

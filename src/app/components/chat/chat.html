@@ -67,11 +67,16 @@
             } @else {
               <div class="media-grid">
                 @for (photo of mediaPhotos(); track photo.messageId) {
-                  <button type="button" class="media-tile" (click)="openPhotoFromMedia(photo)" aria-label="Voir la photo">
-                    @if (photo.photo.url) {
+                  @if (photo.photo.url) {
+                    <button type="button" class="media-tile" (click)="openPhotoFromMedia(photo)" aria-label="Voir la photo">
                       <img [src]="photo.photo.url" alt="" loading="lazy">
-                    }
-                  </button>
+                    </button>
+                  } @else {
+                    <div class="media-tile unavailable" role="img" aria-label="Photo indisponible">
+                      <mat-icon>image_not_supported</mat-icon>
+                      <span>Photo indisponible</span>
+                    </div>
+                  }
                 }
               </div>
               @if (mediaHasMore() || mediaState() === 'loading') {

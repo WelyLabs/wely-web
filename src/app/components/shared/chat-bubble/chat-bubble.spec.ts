@@ -86,4 +86,18 @@ describe('ChatBubbleComponent', () => {
     expect(element.querySelector('button.photo')).toBeNull();
     expect(element.textContent).toContain('Photo retirée');
   });
+
+  it('template_shouldShowAPlaceholder_whenAStoredPhotoHasNoUrl', () => {
+    const element = render({ text: '', time: '2026-10-12T19:05:00', isMe: false, senderName: 'Léa', senderId: 'lea',
+      photo: { url: null, width: 1600, height: 1200, removed: false } });
+    let opened = false;
+    fixture.componentInstance.photoOpened.subscribe(() => opened = true);
+
+    const tile = element.querySelector('.photo.unavailable') as HTMLElement;
+    expect(tile.textContent).toContain('Photo indisponible');
+    expect(element.querySelector('.photo img')).toBeNull();
+    expect(element.querySelector('button.photo')).toBeNull();
+    tile.click();
+    expect(opened).toBe(false);
+  });
 });

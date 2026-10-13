@@ -283,4 +283,42 @@ describe('EventService', () => {
         expect(summary!.upcoming[0].startDate).toBeInstanceOf(Date);
         expect(summary!.outingsThisYear).toBe(1);
     });
+
+    it('uploadCover_shouldPostTheFile_thenRefreshTheLists', () => {
+        let result: FeedEvent | undefined;
+        service.uploadCover('ev-1', new Blob(['jpeg'], { type: 'image/jpeg' })).subscribe((event) => (result = event));
+
+        const request = httpMock.expectOne(`${apiUrl}/ev-1/cover`);
+        expect(request.request.method).toBe('POST');
+        expect((request.request.body as FormData).get('file')).toBeInstanceOf(Blob);
+        request.flush(payload({ id: 'ev-1', image: 'https://media/cover.jpg' }));
+
+        expect(result?.image).toBe('https://media/cover.jpg');
+        expect(result?.startDate).toBeInstanceOf(Date);
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+    });
+
+    it('removeCover_shouldDeleteTheCover_thenRefreshTheLists', () => {
+        let done = false;
+        service.removeCover('ev-1').subscribe(() => (done = true));
+
+        const request = httpMock.expectOne(`${apiUrl}/ev-1/cover`);
+        expect(request.request.method).toBe('DELETE');
+        request.flush(null);
+
+        expect(done).toBe(true);
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+    });
+
+    it('uploadCover_shouldNotRefresh_whenTheUploadFails', () => {
+        let failed = false;
+        service.uploadCover('ev-1', new Blob(['x'])).subscribe({ error: () => (failed = true) });
+
+        httpMock.expectOne(`${apiUrl}/ev-1/cover`).flush({ code: 'EVT-BUS-002' }, { status: 403, statusText: 'Forbidden' });
+
+        expect(failed).toBe(true);
+        expect(httpMock.match(`${apiUrl}/me/feed`)).toHaveLength(0);
+    });
 });

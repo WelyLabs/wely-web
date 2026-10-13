@@ -13,7 +13,11 @@ import { EventService, FeedEvent, ProfileSummary } from '../../services/event.se
 import { SocialService } from '../../services/social.service';
 import { AvatarService } from '../../services/avatar.service';
 import { MapLoader } from '../../services/map-loader';
-import { memoryTint } from './user-profile';
+
+// Reaches ChatService through the components it loads: rsocket-js is replaced by the shared stub, so this
+// file never loads the real module first for the specs that share its chunk.
+vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
 
 describe('UserProfileComponent', () => {
     let component: UserProfileComponent;
@@ -217,11 +221,6 @@ describe('UserProfileComponent', () => {
 
             expect(component.summaryState()).toBe('unavailable');
             expect(fixture.nativeElement.textContent).toContain('Tes sorties ne sont pas disponibles');
-        });
-
-        it('memoryTint_shouldKeepTheSameTintForTheSameEvent', () => {
-            expect(memoryTint('abc')).toBe(memoryTint('abc'));
-            expect(memoryTint('abc')).toContain('linear-gradient');
         });
     });
 

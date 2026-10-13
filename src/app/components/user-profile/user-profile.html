@@ -139,7 +139,7 @@
                 } @else {
                   <div class="memories">
                     @for (event of summary.memories; track event.id) {
-                      <a class="memory" [routerLink]="['/event', event.id]" [style.background]="memoryTint(event.id)">
+                      <a class="memory" [routerLink]="['/event', event.id]" [style.background]="eventTint(event.id)">
                         @if (event.image) {
                           <img [src]="event.image" alt="">
                         }

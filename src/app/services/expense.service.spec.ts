@@ -13,7 +13,7 @@ describe('ExpenseService', () => {
   const payload = {
     id: 'x1', title: 'Courses', amountCents: 3000, currency: 'EUR', paidBy: 'alice', createdBy: 'alice',
     kind: 'EXPENSE', split: 'EQUAL', shares: [{ userId: 'alice', value: 0 }], owedCents: { alice: 3000 },
-    spentAt: '2026-10-13T10:00:00Z', version: 0
+    spentAt: '2026-10-13T10:00:00Z', version: 0, receiptUrl: null
   };
   const request: ExpenseRequest = { title: 'Courses', amountCents: 3000, paidBy: 'alice', split: 'EQUAL', shares: [] };
 
@@ -77,5 +77,30 @@ describe('ExpenseService', () => {
     expect(call.request.method).toBe('POST');
     expect(call.request.body).toEqual({ fromUserId: 'bob', toUserId: 'alice', amountCents: 1000 });
     call.flush({ ...payload, kind: 'SETTLEMENT' });
+  });
+
+  it('attachReceipt_shouldPutTheFile_andAnswerWithTheNewVersion', () => {
+    let result: Expense | undefined;
+    service.attachReceipt('ev-1', 'x1', new Blob(['jpeg'], { type: 'image/jpeg' })).subscribe(expense => result = expense);
+
+    const call = httpMock.expectOne(`${url}/x1/receipt`);
+    expect(call.request.method).toBe('PUT');
+    expect((call.request.body as FormData).get('file')).toBeInstanceOf(Blob);
+    call.flush({ ...payload, version: 1, receiptUrl: 'https://media/r.jpg' });
+
+    expect(result?.version).toBe(1);
+    expect(result?.receiptUrl).toBe('https://media/r.jpg');
+    expect(result?.spentAt).toEqual(new Date('2026-10-13T10:00:00Z'));
+  });
+
+  it('removeReceipt_shouldDeleteTheReceipt', () => {
+    let done = false;
+    service.removeReceipt('ev-1', 'x1').subscribe(() => done = true);
+
+    const call = httpMock.expectOne(`${url}/x1/receipt`);
+    expect(call.request.method).toBe('DELETE');
+    call.flush(null);
+
+    expect(done).toBe(true);
   });
 });

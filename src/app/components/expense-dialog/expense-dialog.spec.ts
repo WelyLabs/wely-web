@@ -3,9 +3,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { ExpenseDialogComponent, ExpenseDialogData, previewOwed } from './expense-dialog';
+import { ExpenseDialogComponent, ExpenseDialogData, RECEIPT_MAX_SIDE, previewOwed } from './expense-dialog';
+import { PhotoResizer } from '../../core/ui/photo-resize';
 import { ExpenseService } from '../../services/expense.service';
 import { Expense } from '../../models/expense.model';
 
@@ -37,8 +38,10 @@ describe('previewOwed', () => {
 describe('ExpenseDialogComponent', () => {
   let fixture: ComponentFixture<ExpenseDialogComponent>;
   let component: ExpenseDialogComponent;
-  let expenseService: { add: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
+  let expenseService: Record<'add' | 'update' | 'delete' | 'attachReceipt' | 'removeReceipt', ReturnType<typeof vi.fn>>;
   let dialogRef: { close: ReturnType<typeof vi.fn> };
+  let resizer: { downscale: ReturnType<typeof vi.fn> };
+  const scaled = new Blob(['jpeg'], { type: 'image/jpeg' });
 
   const members = [
     { id: 'me', name: 'Toi', initials: 'TO' },
@@ -48,7 +51,7 @@ describe('ExpenseDialogComponent', () => {
   const stored: Expense = {
     id: 'x1', title: 'Courses', amountCents: 1250, currency: 'EUR', paidBy: 'lea', createdBy: 'me', kind: 'EXPENSE',
     split: 'EXACT', shares: [{ userId: 'me', value: 1000 }, { userId: 'lea', value: 250 }],
-    owedCents: { me: 1000, lea: 250 }, spentAt: new Date(), version: 4
+    owedCents: { me: 1000, lea: 250 }, spentAt: new Date(), version: 4, receiptUrl: null
   };
 
   const create = (data: Partial<ExpenseDialogData> = {}) => {
@@ -57,6 +60,8 @@ describe('ExpenseDialogComponent', () => {
       providers: [
         { provide: ExpenseService, useValue: expenseService },
         { provide: MatDialogRef, useValue: dialogRef },
+        // The canvas work is the browser's: here a receipt is "scaled down" at once.
+        { provide: PhotoResizer, useValue: resizer },
         { provide: MAT_DIALOG_DATA, useValue: { eventId: 'ev-1', members, meId: 'me', ...data } }
       ]
     });
@@ -69,10 +74,16 @@ describe('ExpenseDialogComponent', () => {
     expenseService = {
       add: vi.fn().mockReturnValue(of(stored)),
       update: vi.fn().mockReturnValue(of(stored)),
-      delete: vi.fn().mockReturnValue(of(undefined))
+      delete: vi.fn().mockReturnValue(of(undefined)),
+      attachReceipt: vi.fn().mockReturnValue(of({ ...stored, version: 5, receiptUrl: 'https://media/r.jpg' })),
+      removeReceipt: vi.fn().mockReturnValue(of(undefined))
     };
     dialogRef = { close: vi.fn() };
+    resizer = { downscale: vi.fn().mockResolvedValue(scaled) };
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:receipt'), revokeObjectURL: vi.fn() }));
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it('save_shouldAddAnEqualExpenseForEveryone_paidByTheViewer', () => {
     create();
@@ -170,5 +181,140 @@ describe('ExpenseDialogComponent', () => {
     create({ expense: stored, canDelete: false });
 
     expect(fixture.nativeElement.querySelector('.delete-button')).toBeNull();
+  });
+
+  describe('receipt', () => {
+    const pick = (file: File) => ({ target: { files: [file], value: 'C:/ticket.jpg' } }) as unknown as Event;
+    const withReceipt: Expense = { ...stored, receiptUrl: 'https://media/r.jpg' };
+    const fillIn = () => {
+      component.title.set('Courses');
+      component.amountText.set('30');
+    };
+
+    it('onReceiptPicked_shouldScaleItDownTo2000_andPreviewIt', async () => {
+      create();
+      const file = new File(['raw'], 'ticket.jpg', { type: 'image/jpeg' });
+
+      await component.onReceiptPicked(pick(file));
+      fixture.detectChanges();
+
+      expect(resizer.downscale).toHaveBeenCalledWith(file, RECEIPT_MAX_SIDE);
+      expect(component.receiptBlob()).toBe(scaled);
+      expect(fixture.nativeElement.querySelector('.receipt-thumb')?.getAttribute('src')).toBe('blob:receipt');
+      expect(fixture.nativeElement.querySelector('.receipt-remove')?.textContent).toContain('Retirer le ticket');
+    });
+
+    it('onReceiptPicked_shouldRefuseAnUnreadableFile', async () => {
+      resizer.downscale.mockRejectedValue(new Error('HEIC'));
+      create();
+
+      await component.onReceiptPicked(pick(new File(['raw'], 'ticket.heic')));
+
+      expect(component.receiptBlob()).toBeNull();
+      expect(component.errorMessage()).toContain('ne peut pas être lue');
+      expect(component.preparingReceipt()).toBe(false);
+    });
+
+    it('save_shouldAddTheExpense_thenAttachTheReceipt', async () => {
+      create();
+      fillIn();
+      await component.onReceiptPicked(pick(new File(['raw'], 'ticket.jpg')));
+
+      component.save();
+
+      expect(expenseService.add).toHaveBeenCalled();
+      expect(expenseService.attachReceipt).toHaveBeenCalledWith('ev-1', 'x1', scaled);
+      expect(dialogRef.close).toHaveBeenCalledWith('saved');
+    });
+
+    it('save_shouldNotTouchTheReceipt_whenNoneWasPicked', () => {
+      create();
+      fillIn();
+
+      component.save();
+
+      expect(expenseService.attachReceipt).not.toHaveBeenCalled();
+      expect(expenseService.removeReceipt).not.toHaveBeenCalled();
+      expect(dialogRef.close).toHaveBeenCalledWith('saved');
+    });
+
+    it('save_shouldKeepTheExpense_whenTheReceiptFails_andRetryOnlyTheReceipt', async () => {
+      expenseService.attachReceipt.mockReturnValueOnce(throwError(() =>
+        new HttpErrorResponse({ status: 413, error: { code: 'EVT-BUS-012' } })));
+      create();
+      fillIn();
+      await component.onReceiptPicked(pick(new File(['raw'], 'ticket.jpg')));
+
+      component.save();
+      fixture.detectChanges();
+
+      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(component.errorMessage()).toContain('La dépense est enregistrée, mais pas le ticket');
+      expect(component.errorMessage()).toContain('trop lourde');
+      expect(component.receiptBlob()).toBe(scaled);
+      expect(fixture.nativeElement.querySelector('.save-button').textContent).toContain('Réessayer le ticket');
+
+      component.save();
+
+      expect(expenseService.add).toHaveBeenCalledTimes(1);
+      expect(expenseService.attachReceipt).toHaveBeenCalledTimes(2);
+      expect(dialogRef.close).toHaveBeenCalledWith('saved');
+    });
+
+    it('close_shouldStillReportSaved_onceTheExpenseIsStored', async () => {
+      expenseService.attachReceipt.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+      create();
+      fillIn();
+      await component.onReceiptPicked(pick(new File(['raw'], 'ticket.jpg')));
+      component.save();
+
+      component.close();
+
+      expect(dialogRef.close).toHaveBeenCalledWith('saved');
+    });
+
+    it('template_shouldShowTheStoredReceipt_andOfferToRemoveIt_whenAllowed', () => {
+      create({ expense: withReceipt, canDelete: true });
+
+      expect(fixture.nativeElement.querySelector('.receipt-thumb')?.getAttribute('src')).toBe('https://media/r.jpg');
+      expect(fixture.nativeElement.querySelector('.receipt-remove')).not.toBeNull();
+    });
+
+    it('template_shouldHideTheReceipt_whenTheViewerMayNotEdit', () => {
+      create({ expense: withReceipt, canDelete: false });
+
+      expect(fixture.nativeElement.querySelector('.receipt')).toBeNull();
+    });
+
+    it('template_shouldOfferToAttachAReceipt_toANewExpense', () => {
+      create();
+
+      expect(fixture.nativeElement.querySelector('.receipt-attach')?.textContent).toContain('Joindre le ticket');
+    });
+
+    it('clearReceipt_shouldRemoveTheStoredReceiptOnSave', () => {
+      create({ expense: withReceipt, canDelete: true });
+
+      component.clearReceipt();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.receipt-attach')).not.toBeNull();
+      component.save();
+
+      expect(expenseService.update).toHaveBeenCalled();
+      expect(expenseService.removeReceipt).toHaveBeenCalledWith('ev-1', 'x1');
+      expect(dialogRef.close).toHaveBeenCalledWith('saved');
+    });
+
+    it('clearReceipt_shouldDropAPickedReceipt_beforeTheStoredOne', async () => {
+      create({ expense: withReceipt, canDelete: true });
+      await component.onReceiptPicked(pick(new File(['raw'], 'ticket.jpg')));
+
+      component.clearReceipt();
+
+      expect(component.receiptBlob()).toBeNull();
+      expect(component.receiptRemoved()).toBe(false);
+      expect(component.receiptShown()).toBe('https://media/r.jpg');
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:receipt');
+    });
   });
 });
