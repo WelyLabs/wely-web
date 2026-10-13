@@ -11,6 +11,10 @@ import { of, BehaviorSubject, Subject, throwError } from 'rxjs';
 import { Conversation, ConversationType, MessageType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatDialog } from '@angular/material/dialog';
+import { ChatPhotoService } from '../../services/chat-photo.service';
+import { MEDIA_PAGE_SIZE } from './chat';
+import { PhotoResizer } from '../../core/ui/photo-resize';
 
 // The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
 // the module rather than redefining an object, so the service and the test work on the same
@@ -28,6 +32,8 @@ describe('ChatComponent', () => {
     let paramMapSubject: BehaviorSubject<any>;
     let chatMessagesSubject: Subject<any>;
     let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
+    let chatPhotosMock: { send: ReturnType<typeof vi.fn>; page: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
+    let dialogMock: { open: ReturnType<typeof vi.fn> };
 
     const mockUser = { id: 'me', userName: 'Me' };
     const mockConv: Conversation = {
@@ -57,6 +63,9 @@ describe('ChatComponent', () => {
         };
 
         socialServiceMock = { listFriendships: vi.fn().mockReturnValue(of([])) };
+        chatPhotosMock = { send: vi.fn(), page: vi.fn().mockReturnValue(of([])), remove: vi.fn() };
+        dialogMock = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
+        vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:local'), revokeObjectURL: vi.fn() }));
 
         navigationServiceMock = {
             back: vi.fn()
@@ -75,6 +84,10 @@ describe('ChatComponent', () => {
                 { provide: UserService, useValue: userServiceMock },
                 { provide: NavigationService, useValue: navigationServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
+                { provide: ChatPhotoService, useValue: chatPhotosMock },
+                { provide: MatDialog, useValue: dialogMock },
+                // The canvas work is the browser's: here a photo is "scaled down" to a small JPEG at once.
+                { provide: PhotoResizer, useValue: { downscale: vi.fn().mockResolvedValue(new Blob(['jpeg'], { type: 'image/jpeg' })) } },
                 // The friend has a picture; nobody else does.
                 { provide: AvatarService, useValue: { url: (id: string | null) => signal(id === 'friend' ? '/pics/friend.jpg' : null) } },
                 { provide: Router, useValue: routerMock },
@@ -384,5 +397,101 @@ describe('ChatComponent', () => {
             expect(presenceLabel(null, now)).toBeNull();
         });
     });
-});
 
+    describe('photos', () => {
+        const stored = {
+            id: 'p1', senderId: 'me', senderName: 'Me', receiverId: '', conversationId: 'conv1', content: '',
+            type: MessageType.TEXT, timestamp: '2026-10-13T20:00:00Z', reactions: {},
+            photo: { width: 1600, height: 1200, url: 'https://media/p1.jpg', removed: false }
+        };
+        const eventGroup = (organizerId: string | null): Conversation => ({
+            ...mockConv, type: ConversationType.EVENT, participantIds: ['olivia', 'me', 'friend'], organizerId
+        });
+
+        it('canRemovePhotoOf_shouldBeTheSender_orTheEventOrganizer', () => {
+            component.loadConversationById('conv1');
+            expect(component.canRemovePhotoOf('me')).toBe(true);
+            expect(component.canRemovePhotoOf('friend')).toBe(false);
+
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...eventGroup('me') }));
+            component.loadConversationById('conv1');
+            expect(component.canRemovePhotoOf('friend')).toBe(true);
+        });
+
+        it('moderatorId_shouldFallBackOnTheFirstMember_forOlderGroups', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of(eventGroup(null)));
+            component.loadConversationById('conv1');
+
+            expect(component.moderatorId()).toBe('olivia');
+        });
+
+        it('onSendPhoto_shouldShowItAtOnce_thenSwapInWhatTheServerStored', async () => {
+            component.loadConversationById('conv1');
+            chatPhotosMock.send.mockReturnValue(of(stored));
+
+            await component.onSendPhoto(new File(['raw'], 'IMG_1.HEIC'));
+
+            expect(chatPhotosMock.send).toHaveBeenCalledWith('conv1', expect.any(Blob));
+            const last = component.chatMessages().at(-1)!;
+            expect(last.id).toBe('p1');
+            expect(last.isMe).toBe(true);
+            expect(last.photo?.url).toBe('https://media/p1.jpg');
+        });
+
+        it('onSendPhoto_shouldMarkThePhotoNotSent_whenTheUploadFails', async () => {
+            component.loadConversationById('conv1');
+            chatPhotosMock.send.mockReturnValue(throwError(() => new Error('502')));
+
+            await component.onSendPhoto(new File(['raw'], 'a.jpg'));
+
+            const last = component.chatMessages().at(-1)!;
+            expect(last.failed).toBe(true);
+            expect(last.photo?.url).toBe('blob:local');
+        });
+
+        it('openPhotoFromThread_shouldOpenTheViewer_andShowARemovalEverywhere', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...mockConv, messages: [stored] }));
+            component.loadConversationById('conv1');
+            dialogMock.open.mockReturnValue({ afterClosed: () => of('removed') });
+
+            component.openPhotoFromThread(component.chatMessages()[0]);
+
+            expect(dialogMock.open.mock.calls[0][1].data).toMatchObject({ conversationId: 'conv1', messageId: 'p1', canRemove: true });
+            expect(component.chatMessages()[0].photo?.removed).toBe(true);
+        });
+
+        it('openPhotoFromThread_shouldIgnoreAPhotoStillSending', () => {
+            component.openPhotoFromThread({ id: 'local', text: '', time: '', isMe: true, pending: true,
+                photo: { url: 'blob:x', width: 1, height: 1, removed: false } });
+
+            expect(dialogMock.open).not.toHaveBeenCalled();
+        });
+
+        it('toggleMedia_shouldLoadThePhotos_thenPageFromTheOldest', () => {
+            component.loadConversationById('conv1');
+            const page = Array.from({ length: MEDIA_PAGE_SIZE }, (_, i) => ({
+                conversationId: 'conv1', messageId: `m${i}`, senderId: 'friend',
+                photo: { width: 1, height: 1, url: `u${i}`, removed: false }, sentAt: `2026-10-13T20:${String(59 - i).padStart(2, '0')}:00Z`
+            }));
+            chatPhotosMock.page.mockReturnValue(of(page));
+
+            component.toggleMedia();
+            expect(chatPhotosMock.page).toHaveBeenCalledWith('conv1', undefined);
+            expect(component.mediaHasMore()).toBe(true);
+
+            component.loadMedia();
+            expect(chatPhotosMock.page).toHaveBeenLastCalledWith('conv1', page.at(-1)!.sentAt);
+        });
+
+        it('toggleMedia_shouldSayWhenThePhotosCannotBeRead', () => {
+            component.loadConversationById('conv1');
+            chatPhotosMock.page.mockReturnValue(throwError(() => new Error('down')));
+
+            component.toggleMedia();
+            fixture.detectChanges();
+
+            expect(component.mediaState()).toBe('unavailable');
+            expect(fixture.nativeElement.textContent).toContain('Les photos ne sont pas disponibles');
+        });
+    });
+});

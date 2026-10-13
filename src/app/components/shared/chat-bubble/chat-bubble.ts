@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
 import { avatarColor, initialsOf } from '../../../core/ui/avatar';
@@ -17,6 +17,8 @@ export interface ChatBubbleMessage {
   pending?: boolean;
   /** The server refused it, or the connection failed. */
   failed?: boolean;
+  /** A photo the message carries: a signed or local URL, its size, or that it was removed. */
+  photo?: { url: string | null; width: number; height: number; removed: boolean } | null;
 }
 
 /**
@@ -35,6 +37,8 @@ export class ChatBubbleComponent {
   private readonly avatars = inject(AvatarService);
 
   readonly message = input.required<ChatBubbleMessage>();
+  /** A tap on the photo; the page decides what opens. */
+  readonly photoOpened = output<void>();
 
   readonly author = computed(() => this.message().senderName ?? '');
   readonly initials = computed(() => initialsOf(this.author()));

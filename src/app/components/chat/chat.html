@@ -24,6 +24,10 @@
           }
         </div>
       </div>
+      <button mat-icon-button class="media-toggle" [class.active]="showMedia()" (click)="toggleMedia()"
+        [attr.aria-pressed]="showMedia()" aria-label="Photos de la conversation">
+        <mat-icon>photo_library</mat-icon>
+      </button>
       @if (isEventGroup()) {
         <button mat-button class="event-link" (click)="openEvent()">
           <mat-icon>event</mat-icon>Voir l'événement
@@ -50,12 +54,43 @@
       }
 
       @if (!isLoading() && !error()) {
-        <div class="chat-shared-wrapper">
-          <app-shared-chat [messages]="chatMessages()" [loading]="isSending()" [historyLoading]="isHistoryLoading()"
-            [hasMore]="hasMoreHistory()" [placeholder]="placeholder" (send)="onSendMessage($event)"
-            (loadMore)="onLoadMoreMessages()">
-          </app-shared-chat>
-        </div>
+        @if (showMedia()) {
+          <section class="media-panel" aria-label="Photos de la conversation">
+            <div class="media-header">
+              <h3>Photos</h3>
+              <button type="button" class="back-to-chat" (click)="toggleMedia()">Retour à la discussion</button>
+            </div>
+            @if (mediaState() === 'unavailable') {
+              <p class="media-empty">Les photos ne sont pas disponibles pour le moment.</p>
+            } @else if (mediaState() === 'ready' && mediaPhotos().length === 0) {
+              <p class="media-empty">Aucune photo pour l’instant. Envoie la première avec le bouton photo.</p>
+            } @else {
+              <div class="media-grid">
+                @for (photo of mediaPhotos(); track photo.messageId) {
+                  <button type="button" class="media-tile" (click)="openPhotoFromMedia(photo)" aria-label="Voir la photo">
+                    @if (photo.photo.url) {
+                      <img [src]="photo.photo.url" alt="" loading="lazy">
+                    }
+                  </button>
+                }
+              </div>
+              @if (mediaHasMore() || mediaState() === 'loading') {
+                <button type="button" class="more" (click)="loadMedia()" [disabled]="mediaState() === 'loading'"
+                  [appPendingTrail]="mediaState() === 'loading'">
+                  {{ mediaState() === 'loading' ? 'Chargement…' : 'Voir plus' }}
+                </button>
+              }
+            }
+          </section>
+        } @else {
+          <div class="chat-shared-wrapper">
+            <app-shared-chat [messages]="chatMessages()" [loading]="isSending()" [historyLoading]="isHistoryLoading()"
+              [hasMore]="hasMoreHistory()" [placeholder]="placeholder" [photos]="true" (send)="onSendMessage($event)"
+              (sendPhoto)="onSendPhoto($event)" (openPhoto)="openPhotoFromThread($event)"
+              (loadMore)="onLoadMoreMessages()">
+            </app-shared-chat>
+          </div>
+        }
       }
     </div>
   </div>

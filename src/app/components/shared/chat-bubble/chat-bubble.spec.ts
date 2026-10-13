@@ -64,4 +64,26 @@ describe('ChatBubbleComponent', () => {
 
     expect(fixture.componentInstance.color()).toBe(avatarColor('leo'));
   });
+
+  it('template_shouldShowAPhotoAtItsProportions_andReportATap', () => {
+    const element = render({ text: '', time: '2026-10-12T19:05:00', isMe: false, senderName: 'Léa', senderId: 'lea',
+      photo: { url: 'https://media/p.jpg', width: 1600, height: 1200, removed: false } });
+    let opened = false;
+    fixture.componentInstance.photoOpened.subscribe(() => opened = true);
+
+    const button = element.querySelector('button.photo') as HTMLButtonElement;
+    expect(button.style.aspectRatio).toBe('1600 / 1200');
+    expect(button.querySelector('img')?.getAttribute('src')).toBe('https://media/p.jpg');
+    expect(element.querySelector('p')).toBeNull();
+    button.click();
+    expect(opened).toBe(true);
+  });
+
+  it('template_shouldSayAPhotoWasRemoved', () => {
+    const element = render({ text: '', time: '2026-10-12T19:05:00', isMe: true,
+      photo: { url: null, width: 0, height: 0, removed: true } });
+
+    expect(element.querySelector('button.photo')).toBeNull();
+    expect(element.textContent).toContain('Photo retirée');
+  });
 });

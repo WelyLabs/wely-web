@@ -1,0 +1,28 @@
+<div class="viewer">
+  <div class="image-area">
+    <img [src]="data.url" alt="Photo envoyée par {{ data.senderName }}">
+  </div>
+  <div class="footer">
+    <div class="meta">
+      <strong>{{ data.senderName }}</strong>
+      <span>{{ data.sentAt | date:'d MMM y, HH:mm' }}</span>
+    </div>
+    <div class="actions">
+      @if (data.canRemove) {
+        <button type="button" class="remove" [class.confirming]="confirming()" (click)="remove()"
+          [disabled]="removing()" [appPendingTrail]="removing()">
+          <mat-icon>delete</mat-icon>{{ confirming() ? 'Retirer pour tous ?' : 'Retirer' }}
+        </button>
+      }
+      <a class="open" [href]="data.url" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir dans un nouvel onglet">
+        <mat-icon>open_in_new</mat-icon>
+      </a>
+      <button type="button" class="close" (click)="close()" aria-label="Fermer">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+  @if (errorMessage()) {
+    <p class="error-message" role="alert">{{ errorMessage() }}</p>
+  }
+</div>

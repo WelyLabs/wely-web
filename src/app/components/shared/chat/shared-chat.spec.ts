@@ -209,5 +209,34 @@ describe('SharedChatComponent', () => {
 
         expect((fixture.nativeElement.querySelector('.send-btn') as HTMLButtonElement).disabled).toBe(true);
     });
-});
 
+    it('template_shouldOfferThePhotoButton_onlyWhenPhotosAreOn', () => {
+        expect(fixture.nativeElement.querySelector('.photo-btn')).toBeNull();
+
+        fixture.componentRef.setInput('photos', true);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.photo-btn')).not.toBeNull();
+    });
+
+    it('onPhotoPicked_shouldSendTheFile_andClearThePicker', () => {
+        const sent: File[] = [];
+        component.sendPhoto.subscribe(file => sent.push(file));
+        const file = new File(['x'], 'a.jpg');
+        const field = { files: [file], value: 'C:/fakepath/a.jpg' } as unknown as HTMLInputElement;
+
+        component.onPhotoPicked({ target: field } as unknown as Event);
+
+        expect(sent).toEqual([file]);
+        expect(field.value).toBe('');
+    });
+
+    it('onPhotoPicked_shouldDoNothing_whenThePickerIsCancelled', () => {
+        const sent: File[] = [];
+        component.sendPhoto.subscribe(file => sent.push(file));
+
+        component.onPhotoPicked({ target: { files: [], value: '' } } as unknown as Event);
+
+        expect(sent).toEqual([]);
+    });
+});

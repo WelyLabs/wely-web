@@ -32,6 +32,12 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
 
     readonly send = output<string>();
     readonly loadMore = output<void>();
+    /** A photo picked to send; the page scales it down and uploads it. Absent: no photo button. */
+    readonly sendPhoto = output<File>();
+    /** A photo tapped in the thread. */
+    readonly openPhoto = output<ChatMessage>();
+    /** Whether this conversation takes photos; the event page's read-only preview does not. */
+    readonly photos = input(false);
 
     private readonly scrollContainer = viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
     private readonly topSentinel = viewChild<ElementRef<HTMLElement>>('topSentinel');
@@ -177,6 +183,17 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
         this.send.emit(text);
         this.newMessage.set('');
         this.shouldScrollToBottom = true;
+    }
+
+    /** One photo at a time; the input is cleared so picking the same file again still fires. */
+    onPhotoPicked(event: Event): void {
+        const field = event.target as HTMLInputElement;
+        const file = field.files?.[0];
+        field.value = '';
+        if (file) {
+            this.sendPhoto.emit(file);
+            this.shouldScrollToBottom = true;
+        }
     }
 
     /** An optimistic message has no server id yet, so its position stands in for one. */

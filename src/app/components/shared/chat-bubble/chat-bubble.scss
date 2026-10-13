@@ -69,3 +69,29 @@
     opacity: 0.7;
     text-align: right;
 }
+
+/* A photo fills the bubble's width at its own proportions, so the thread does not jump when it loads. */
+.photo {
+    display: block;
+    width: min(260px, 60vw);
+    max-height: 340px;
+    margin: 0 -8px 6px;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-subtle);
+    cursor: zoom-in;
+
+    img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+.photo-removed {
+    color: inherit;
+    opacity: 0.75;
+}

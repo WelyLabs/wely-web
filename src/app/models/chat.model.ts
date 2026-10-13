@@ -24,6 +24,26 @@ export interface Message {
     /** ISO instant with its zone, as wely-chat sends it. */
     timestamp: string;
     reactions: Record<string, number>;
+    /** A photo the message carries; its URL is signed by wely-chat and works for an hour. */
+    photo?: MessagePhoto | null;
+}
+
+/** A photo in a conversation. A removed one keeps its place in the thread, without a URL. */
+export interface MessagePhoto {
+    width: number;
+    height: number;
+    url?: string | null;
+    removed: boolean;
+}
+
+/** One entry of a conversation's media tab. */
+export interface ConversationPhoto {
+    conversationId: string;
+    messageId: string;
+    senderId: string;
+    photo: MessagePhoto;
+    /** ISO instant; the cursor for the next page. */
+    sentAt: string;
 }
 
 export interface Conversation {
@@ -34,6 +54,8 @@ export interface Conversation {
     title?: string | null;
     /** The event an EVENT conversation belongs to. */
     eventId?: string | null;
+    /** An event group's organizer, who may remove its photos. Older groups do not name one. */
+    organizerId?: string | null;
     updatedAt: string; // ISO DateTime
     lastMessage?: Message;
     messages: Message[];
