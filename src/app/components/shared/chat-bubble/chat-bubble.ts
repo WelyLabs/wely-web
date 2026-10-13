@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
 import { avatarColor, initialsOf } from '../../../core/ui/avatar';
+import { AvatarService } from '../../../services/avatar.service';
 
 /** What a bubble shows: one message, from the viewer or from someone else. */
 export interface ChatBubbleMessage {
@@ -31,9 +32,13 @@ export interface ChatBubbleMessage {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatBubbleComponent {
+  private readonly avatars = inject(AvatarService);
+
   readonly message = input.required<ChatBubbleMessage>();
 
   readonly author = computed(() => this.message().senderName ?? '');
   readonly initials = computed(() => initialsOf(this.author()));
   readonly color = computed(() => avatarColor(this.message().senderId ?? this.author()));
+  /** The author's photo; the coloured initials stand in until it arrives, or when there is none. */
+  readonly picture = computed(() => this.message().isMe ? null : this.avatars.url(this.message().senderId)());
 }

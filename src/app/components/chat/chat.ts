@@ -11,6 +11,9 @@ import { ChatService, PendingMessage } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
 import { Conversation, ConversationType, Message, Presence } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
+import { SocialService } from '../../services/social.service';
+import { AvatarService } from '../../services/avatar.service';
+import { FriendSummary } from '../../models/friendship.model';
 
 /** How often the other participant's presence is re-read: wely-chat refreshes it every 30 s. */
 const PRESENCE_POLL_MS = 30_000;
@@ -64,6 +67,8 @@ export class ChatComponent implements OnInit {
     private readonly chatService = inject(ChatService);
     private readonly userService = inject(UserService);
     private readonly navigationService = inject(NavigationService);
+    private readonly socialService = inject(SocialService);
+    private readonly avatars = inject(AvatarService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly conversation = signal<Conversation | null>(null);
@@ -89,7 +94,28 @@ export class ChatComponent implements OnInit {
      */
     readonly chatMessages = signal<ChatMessage[]>([]);
 
-    readonly conversationTitle = computed(() => this.conversation()?.title ?? null);
+    /** The user's friends, by id: where a private conversation's name comes from. */
+    private readonly friends = signal<ReadonlyMap<string, FriendSummary>>(new Map());
+
+    /**
+     * An event's group is named after the event. A private conversation has no title: it is named
+     * after the partner, from the friend list, else from a message they sent. It used to wait for
+     * such a message, and read « Chargement... » for good when the partner had not written yet.
+     */
+    readonly conversationTitle = computed(() => {
+        const conversation = this.conversation();
+        if (!conversation) {
+            return null;
+        }
+        const partnerId = this.partnerId();
+        return conversation.title
+            || (partnerId ? this.friends().get(partnerId)?.userName : undefined)
+            || this.messages().find(message => message.senderId === partnerId)?.senderName
+            || 'Conversation';
+    });
+
+    /** The partner's photo in the header; a group shows its icon instead. */
+    readonly partnerPicture = computed(() => this.isEventGroup() ? null : this.avatars.url(this.partnerId())());
 
     /** An event's group: no single partner, every member may write. */
     readonly isEventGroup = computed(() => this.conversation()?.type === ConversationType.EVENT);
@@ -116,6 +142,14 @@ export class ChatComponent implements OnInit {
     ngOnInit(): void {
         const currentUser = this.userService.getCurrentUserValue();
         this.currentUserId = currentUser ? currentUser.id : null;
+
+        // Without the friend list the title falls back to a message's author, then « Conversation ».
+        this.socialService.listFriendships()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: friends => this.friends.set(new Map(friends.map(friend => [friend.userId, friend]))),
+                error: (err: unknown) => this.logger.error('ChatComponent', 'Could not load friends', err)
+            });
 
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -171,13 +205,7 @@ export class ChatComponent implements OnInit {
     private handleConversationResponse(conversation: Conversation): void {
         const sorted = [...(conversation.messages ?? [])].sort(byTimestamp);
 
-        // The title is not always sent: for a direct conversation it is the other participant's
-        // name, which the first message they sent carries. An event's group has the event's.
-        const title = conversation.title
-            ?? sorted.find(message => message.senderId !== this.currentUserId)?.senderName
-            ?? conversation.title;
-
-        this.conversation.set({ ...conversation, title });
+        this.conversation.set(conversation);
 
         // Loading by conversation id gives no friend id, and a private conversation's presence needs
         // one: it is whichever participant is not the current user. A group has none.

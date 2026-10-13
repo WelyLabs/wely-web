@@ -1,6 +1,10 @@
 <div class="row" [class.mine]="message().isMe" [class.pending]="message().pending" [class.failed]="message().failed">
   @if (!message().isMe) {
-    <span class="avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+    @if (picture(); as src) {
+      <img class="avatar" [src]="src" alt="" aria-hidden="true">
+    } @else {
+      <span class="avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+    }
   }
   <div class="bubble">
     @if (!message().isMe && author()) {
