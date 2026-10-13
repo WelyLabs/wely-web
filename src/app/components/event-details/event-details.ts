@@ -22,6 +22,8 @@ import { ChatBubbleComponent, ChatBubbleMessage } from '../shared/chat-bubble/ch
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { AvatarService } from '../../services/avatar.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
+import { EventExpensesComponent } from '../event-expenses/event-expenses';
+import { ExpenseMember } from '../../models/expense.model';
 
 /**
  * What the page is for, given who looks and when.
@@ -106,7 +108,8 @@ export function countdownOf(event: FeedEvent, now: Date): string {
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent],
+  imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent,
+    EventExpensesComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -172,6 +175,22 @@ export class EventDetailsComponent implements OnInit {
   readonly people = computed(() => {
     const all = (this.participants()?.participantIds ?? []).map(id => this.person(id));
     return [...all.filter(person => person.isFriend), ...all.filter(person => !person.isFriend)];
+  });
+
+  /** The viewer's id, once known: the expenses card needs it to say where they stand. */
+  readonly meId = computed(() => this.me()?.id ?? null);
+
+  /** Who an expense can be paid by or for: the organizer, then everyone taking part. */
+  readonly expenseMembers = computed<ExpenseMember[]>(() => {
+    const event = this.event();
+    if (!event) {
+      return [];
+    }
+    const ids = [...new Set([event.organizerId, ...(this.participants()?.participantIds ?? [])])];
+    return ids.map(id => {
+      const { name, initials, picture } = this.person(id);
+      return { id, name, initials, picture };
+    });
   });
 
   /** Members are the organizer and those taking part: they get the group's thread. */

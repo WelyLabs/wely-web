@@ -1,0 +1,215 @@
+.dialog-container {
+    // Never wider than the dialog panel, which is 95vw on a phone.
+    min-width: min(400px, 100%);
+    max-width: 520px;
+    overflow-x: hidden;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+
+    h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .close-button {
+        color: var(--text-secondary);
+        margin-right: 8px;
+    }
+}
+
+.fields {
+    display: flex;
+    gap: 12px;
+
+    .title-field {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .amount-field {
+        flex: 0 0 130px;
+    }
+}
+
+.full-width {
+    width: 100%;
+}
+
+.split-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 4px 0 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.segmented {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+
+    button {
+        border: 0;
+        background: transparent;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+
+        &.active {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 3px 10px var(--brand-glow);
+        }
+    }
+}
+
+.people {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 4px;
+        border-radius: 12px;
+
+        &.excluded {
+            opacity: 0.55;
+        }
+    }
+
+    .person {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1 1 auto;
+        min-width: 0;
+        cursor: pointer;
+
+        input {
+            accent-color: var(--brand-blue);
+            width: 18px;
+            height: 18px;
+        }
+    }
+
+    .avatar {
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        overflow: hidden;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .owed {
+        font-variant-numeric: tabular-nums;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+
+    .small-input {
+        width: 56px;
+        padding: 6px 8px;
+        border: 1px solid color-mix(in srgb, var(--text-primary) 18%, transparent);
+        border-radius: 8px;
+        font: inherit;
+        text-align: right;
+
+        &.amount {
+            width: 84px;
+        }
+    }
+}
+
+.remaining {
+    margin: 10px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--danger-ink);
+
+    &.done {
+        color: var(--success-ink);
+    }
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    border-left: 4px solid var(--danger);
+    border-radius: 8px;
+    color: var(--danger);
+    font-size: 14px;
+}
+
+mat-dialog-actions {
+    padding: 16px 24px !important;
+    gap: 8px;
+    display: flex;
+
+    .spacer {
+        flex: 1;
+    }
+
+    button {
+        border-radius: 12px;
+        font-weight: 600;
+    }
+
+    .save-button {
+        background: var(--accent-gradient);
+        color: white;
+        box-shadow: 0 4px 12px var(--brand-glow);
+
+        &:disabled {
+            opacity: 0.55;
+            box-shadow: none;
+        }
+    }
+
+    .delete-button {
+        color: var(--danger);
+    }
+}

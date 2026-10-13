@@ -1,0 +1,86 @@
+<section class="card expenses" aria-label="Dépenses">
+  <header class="expenses-header">
+    <div>
+      <h2>Dépenses</h2>
+      @if (ledger(); as ledger) {
+        <p class="total">{{ formatCents(ledger.totalCents) }} au total</p>
+      }
+    </div>
+    <button type="button" class="small-gradient-button" (click)="add()">
+      <mat-icon>add</mat-icon>Ajouter
+    </button>
+  </header>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="muted">Chargement des comptes…</p>
+    }
+    @case ('unavailable') {
+      <p class="muted">Les comptes ne sont pas disponibles pour le moment.</p>
+    }
+    @default {
+      @if (expenses().length === 0) {
+        <p class="muted empty">Aucune dépense pour l’instant. Ajoute la première : courses, essence, location…</p>
+      } @else {
+        <p class="balance" [class.owed]="myBalance() > 0" [class.owes]="myBalance() < 0">{{ balanceLabel() }}</p>
+
+        @if (transfers().length > 0) {
+          <h3>Pour être quittes</h3>
+          <ul class="transfers">
+            @for (transfer of transfers(); track transfer.fromUserId + transfer.toUserId) {
+              <li>
+                <span class="transfer-label">{{ transferLabel(transfer) }}</span>
+                <span class="amount">{{ formatCents(transfer.amountCents) }}</span>
+                @if (canSettle(transfer)) {
+                  <button type="button" class="small-outline-button" (click)="settle(transfer)"
+                    [disabled]="isSettling(transfer)" [appPendingTrail]="isSettling(transfer)">
+                    Remboursé
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+
+        <h3>Dernières dépenses</h3>
+        <ul class="list">
+          @for (expense of visibleExpenses(); track expense.id) {
+            @let payer = member(expense.paidBy);
+            <li [class.settlement]="expense.kind === 'SETTLEMENT'">
+              <button type="button" class="row" (click)="edit(expense)" [disabled]="!canEdit(expense)"
+                [attr.aria-label]="canEdit(expense) ? 'Modifier ' + expense.title : null">
+                <span class="avatar small" [style.background]="avatarColor(payer.id)" aria-hidden="true">
+                  @if (payer.picture) {
+                    <img [src]="payer.picture" alt="">
+                  } @else {
+                    {{ payer.initials }}
+                  }
+                </span>
+                <span class="text">
+                  @if (expense.kind === 'SETTLEMENT') {
+                    <strong>{{ name(expense.paidBy) }} a remboursé {{ name(expense.shares[0].userId) }}</strong>
+                  } @else {
+                    <strong>{{ expense.title }}</strong>
+                    <span class="meta">Payé par {{ name(expense.paidBy) }} · {{ expense.shares.length }} personne{{ expense.shares.length > 1 ? 's' : '' }}</span>
+                  }
+                </span>
+                <span class="amount">{{ formatCents(expense.amountCents) }}</span>
+              </button>
+              @if (canUndo(expense)) {
+                <button type="button" class="icon-button" (click)="undo(expense)" [disabled]="undoing().has(expense.id)"
+                  [appPendingTrail]="undoing().has(expense.id)" aria-label="Annuler ce remboursement">
+                  <mat-icon>undo</mat-icon>
+                </button>
+              }
+            </li>
+          }
+        </ul>
+        @if (expenses().length > visibleExpenses().length) {
+          <button type="button" class="text-button" (click)="showAll.set(true)">
+            Tout voir ({{ expenses().length }})
+          </button>
+        }
+      }
+    }
+  }
+</section>

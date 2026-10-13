@@ -101,6 +101,7 @@
           @if (thread().length > 0) {
             <ng-container *ngTemplateOutlet="timeline" />
           }
+          <ng-container *ngTemplateOutlet="expenses" />
         }
 
         @default {
@@ -132,6 +133,7 @@
             <ng-container *ngTemplateOutlet="peopleList" />
           }
           <ng-container *ngTemplateOutlet="timeline" />
+          <ng-container *ngTemplateOutlet="expenses" />
 
           <section class="card info-card" aria-label="Quand et où">
             <div class="info-row">
@@ -244,6 +246,16 @@
         </div>
       }
     </section>
+  </ng-template>
+
+  <!-- Members only: wely-events answers 404 to anyone else, so a guest would only see an error. -->
+  <ng-template #expenses>
+    @if (member() && this.event(); as current) {
+      @if (meId(); as meId) {
+        <app-event-expenses [eventId]="current.id" [members]="expenseMembers()" [meId]="meId"
+          [isOrganizer]="isOrganizer()" />
+      }
+    }
   </ng-template>
 
   <ng-template #timeline>
