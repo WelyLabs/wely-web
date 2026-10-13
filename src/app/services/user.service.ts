@@ -7,6 +7,15 @@ import { KeycloakService } from 'keycloak-angular';
 import { User } from '../models/user.model';
 
 /** What the profile form may change; the email stays with Keycloak. */
+/** What a user says about themselves on their profile. No bio is null, no interest an empty list. */
+export interface ProfileAbout {
+    bio: string | null;
+    interests: string[];
+}
+
+/** wely-users' limits, mirrored so the form says so before sending. */
+export const ABOUT_LIMITS = { bio: 160, interests: 5, interest: 24 } as const;
+
 export interface ProfileUpdate {
     userName: string;
     firstName: string;
@@ -80,6 +89,16 @@ export class UserService {
      * refreshed at once: its preferred_username is the name wely-chat signs messages with.
      * A failed refresh is not the save failing: the scheduled one will catch up.
      */
+    /** The signed-in user's bio and interests. */
+    getAbout(): Observable<ProfileAbout> {
+        return this.http.get<ProfileAbout>(`${this.apiUrl}/profile/about`);
+    }
+
+    /** Answers with what was stored: tidied, duplicates removed. */
+    updateAbout(about: ProfileAbout): Observable<ProfileAbout> {
+        return this.http.put<ProfileAbout>(`${this.apiUrl}/profile/about`, about);
+    }
+
     updateProfile(update: ProfileUpdate): Observable<User> {
         return this.http.put<User>(`${this.apiUrl}/profile`, update).pipe(
             tap(saved => this.updateCurrentUser({

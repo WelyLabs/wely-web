@@ -1,0 +1,55 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Ta présentation</h2>
+    <button mat-icon-button type="button" class="close-button" (click)="close()" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <label class="field-label" for="about-bio">En une phrase</label>
+    <textarea id="about-bio" class="bio" rows="2" [value]="bio()" (input)="bio.set($any($event.target).value)"
+      placeholder="Toujours partante pour un jeu de société ou une rando."></textarea>
+    <p class="counter" [class.over]="bioLeft() < 0">{{ bioLeft() }}</p>
+
+    <label class="field-label" for="about-interest">Centres d’intérêt <span class="hint">({{ interests().length }}/{{ limits.interests }})</span></label>
+    @if (interests().length > 0) {
+      <ul class="chips">
+        @for (interest of interests(); track interest) {
+          <li class="chip">
+            {{ interest }}
+            <button type="button" (click)="remove(interest)" [attr.aria-label]="'Retirer ' + interest">
+              <mat-icon>close</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+    @if (!full()) {
+      <div class="add-row">
+        <input id="about-interest" type="text" [value]="draft()" (input)="draft.set($any($event.target).value)"
+          (keydown)="onDraftKey($event)" [attr.maxlength]="limits.interest" placeholder="Ajoute un intérêt puis Entrée">
+        <button type="button" class="add-button" (click)="add()" [disabled]="!draft().trim()">Ajouter</button>
+      </div>
+      @if (suggestions().length > 0) {
+        <div class="suggestions" aria-label="Suggestions">
+          @for (idea of suggestions(); track idea) {
+            <button type="button" class="suggestion" (click)="add(idea)">+ {{ idea }}</button>
+          }
+        </div>
+      }
+    }
+
+    @if (errorMessage()) {
+      <p class="error-message" role="alert">{{ errorMessage() }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-stroked-button type="button" (click)="close()" [disabled]="saving()">Annuler</button>
+    <button mat-flat-button type="button" class="save-button" (click)="save()"
+      [disabled]="saving() || bioLeft() < 0" [appPendingTrail]="saving()">
+      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </mat-dialog-actions>
+</div>
