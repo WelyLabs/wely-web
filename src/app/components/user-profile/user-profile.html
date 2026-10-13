@@ -42,6 +42,25 @@
               <span class="since">· sur Wely depuis {{ user.joinedDate | date:'MMMM y' }}</span>
             }
           </p>
+          @if (about(); as about) {
+            @if (hasAbout()) {
+              @if (about.bio) {
+                <p class="bio">{{ about.bio }}</p>
+              }
+              <div class="interests">
+                @for (interest of about.interests; track interest; let i = $index) {
+                  <span [class]="'interest tint-' + (i % 4)">{{ interest }}</span>
+                }
+                <button type="button" class="edit-about" (click)="openAboutDialog()" aria-label="Modifier ta présentation">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <button type="button" class="add-about" (click)="openAboutDialog()">
+                <mat-icon>add</mat-icon>Ajoute une phrase et tes centres d’intérêt
+              </button>
+            }
+          }
         </div>
         <button type="button" class="outline-button" (click)="openEditDialog()">
           <mat-icon>edit</mat-icon>Modifier le profil

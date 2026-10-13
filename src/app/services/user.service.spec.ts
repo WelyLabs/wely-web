@@ -119,4 +119,22 @@ describe('UserService', () => {
         service.updateCurrentUser({ profilePicUrl: 'new.jpg' });
         expect(service.getCurrentUserValue()).toBeNull();
     });
+
+    it('getAbout_shouldReadThePresentation', () => {
+        let about: unknown = null;
+        service.getAbout().subscribe(value => about = value);
+
+        httpMock.expectOne(`${apiUrl}/profile/about`).flush({ bio: 'Partante', interests: ['Rando'] });
+
+        expect(about).toEqual({ bio: 'Partante', interests: ['Rando'] });
+    });
+
+    it('updateAbout_shouldPutThePresentation', () => {
+        service.updateAbout({ bio: null, interests: ['Ciné'] }).subscribe();
+
+        const call = httpMock.expectOne(`${apiUrl}/profile/about`);
+        expect(call.request.method).toBe('PUT');
+        expect(call.request.body).toEqual({ bio: null, interests: ['Ciné'] });
+        call.flush({ bio: null, interests: ['Ciné'] });
+    });
 });

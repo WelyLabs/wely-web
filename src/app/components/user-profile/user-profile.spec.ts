@@ -41,6 +41,7 @@ describe('UserProfileComponent', () => {
         userServiceMock = {
             currentUser$: userSubject.asObservable(),
             loadAndSetCurrentUser: vi.fn().mockReturnValue(of(MOCK_USER)),
+            getAbout: vi.fn().mockReturnValue(of({ bio: 'Toujours partante', interests: ['Rando', 'Ciné'] })),
             updateCurrentUser: vi.fn()
         };
         dialogMock = {
@@ -221,6 +222,41 @@ describe('UserProfileComponent', () => {
         it('memoryTint_shouldKeepTheSameTintForTheSameEvent', () => {
             expect(memoryTint('abc')).toBe(memoryTint('abc'));
             expect(memoryTint('abc')).toContain('linear-gradient');
+        });
+    });
+
+    describe('presentation', () => {
+        it('template_shouldShowTheBioAndInterests', () => {
+            const text = fixture.nativeElement.textContent as string;
+
+            expect(text).toContain('Toujours partante');
+            expect([...fixture.nativeElement.querySelectorAll('.interest')].map((chip: Element) => chip.textContent?.trim()))
+                .toEqual(['Rando', 'Ciné']);
+        });
+
+        it('template_shouldInviteToWriteOne_whenThereIsNone', () => {
+            component.about.set({ bio: null, interests: [] });
+            fixture.detectChanges();
+
+            expect(component.hasAbout()).toBe(false);
+            expect(fixture.nativeElement.querySelector('.add-about')).not.toBeNull();
+        });
+
+        it('openAboutDialog_shouldShowWhatWasStored_onceSaved', () => {
+            dialogMock.open.mockImplementation(() => ({ afterClosed: () => of({ bio: 'Nouvelle', interests: [] }) }));
+
+            component.openAboutDialog();
+
+            expect(dialogMock.open.mock.calls.at(-1)[1].data).toEqual({ bio: 'Toujours partante', interests: ['Rando', 'Ciné'] });
+            expect(component.about()).toEqual({ bio: 'Nouvelle', interests: [] });
+        });
+
+        it('openAboutDialog_shouldKeepThePresentation_whenCancelled', () => {
+            dialogMock.open.mockImplementation(() => ({ afterClosed: () => of(undefined) }));
+
+            component.openAboutDialog();
+
+            expect(component.about()?.bio).toBe('Toujours partante');
         });
     });
 });

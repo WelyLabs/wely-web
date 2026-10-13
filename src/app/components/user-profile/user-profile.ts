@@ -6,12 +6,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { LoggerService } from '../../core/logging/logger.service';
-import { UserService } from '../../services/user.service';
+import { ProfileAbout, UserService } from '../../services/user.service';
 import { AvatarService } from '../../services/avatar.service';
 import { EventService, FeedEvent, ProfileSummary } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { EditProfileDialogComponent } from '../edit-profile-dialog/edit-profile-dialog.component';
 import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-upload-dialog.component';
+import { AboutDialogComponent } from '../about-dialog/about-dialog';
 import { PlacesMapComponent } from '../places-map/places-map';
 import { countdownOf } from '../event-details/event-details';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
@@ -89,6 +90,12 @@ export class UserProfileComponent implements OnInit {
   readonly summary = signal<ProfileSummary | null>(null);
   readonly summaryState = signal<'loading' | 'ready' | 'unavailable'>('loading');
   readonly friendCount = signal<number | null>(null);
+  /** Bio and interests; null until read, and left null if they cannot be (the hero just shows none). */
+  readonly about = signal<ProfileAbout | null>(null);
+  readonly hasAbout = computed(() => {
+    const about = this.about();
+    return about !== null && (about.bio !== null || about.interests.length > 0);
+  });
   /** Everyone's username, by id: the circle names people who are not always friends. */
   private readonly names = signal<ReadonlyMap<string, string>>(new Map());
 
@@ -157,6 +164,10 @@ export class UserProfileComponent implements OnInit {
   ngOnInit(): void {
     this.reloadUserProfile();
     this.loadSummary();
+    this.userService.getAbout().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: about => this.about.set(about),
+      error: (error: unknown) => this.logger.error('UserProfileComponent', 'Could not load the presentation', error)
+    });
     this.socialService.listFriendships().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: friends => this.friendCount.set(friends.length),
       error: (error: unknown) => this.logger.error('UserProfileComponent', 'Could not count friends', error)
@@ -209,6 +220,22 @@ export class UserProfileComponent implements OnInit {
       .subscribe(result => {
         if (result) {
           this.reloadUserProfile();
+        }
+      });
+  }
+
+  /** Closes with what was stored, tidied by the server: shown as it is. */
+  openAboutDialog(): void {
+    this.dialog.open<AboutDialogComponent, ProfileAbout, ProfileAbout>(AboutDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      data: this.about() ?? { bio: null, interests: [] },
+      panelClass: 'edit-profile-dialog'
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(stored => {
+        if (stored) {
+          this.about.set(stored);
         }
       });
   }
