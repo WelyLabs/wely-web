@@ -36,8 +36,9 @@
     display: none;
     position: fixed;
     right: 20px;
-    // Above the bottom bar: its 10px padding, a 44px item, and the safe area.
-    bottom: calc(84px + env(safe-area-inset-bottom));
+    // Above the bottom bar, which publishes its height, and follows it when it slides away.
+    bottom: calc(max(var(--bottom-nav-space, 64px), env(safe-area-inset-bottom)) + 16px);
+    transition: bottom 0.25s ease;
     z-index: 900;
     width: 56px;
     height: 56px;

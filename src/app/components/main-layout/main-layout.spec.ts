@@ -9,7 +9,7 @@ import { ChatService } from '../../services/chat.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { of, BehaviorSubject, Subject } from 'rxjs';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -274,5 +274,118 @@ describe('MainLayoutComponent', () => {
         expect(fixture.nativeElement.textContent).not.toContain('Mes Discussions');
         expect(fixture.nativeElement.textContent).not.toContain('Mes Amis');
     });
-});
 
+    describe('bottom bar on a phone', () => {
+        let list: HTMLDivElement;
+        const scrollTo = (top: number) => {
+            list.scrollTop = top;
+            list.dispatchEvent(new Event('scroll'));
+        };
+
+        beforeEach(() => {
+            vi.useFakeTimers();
+            fixture.detectChanges();
+            breakpointSubject.next({ matches: true });
+            fixture.detectChanges();
+            list = document.createElement('div');
+            document.body.appendChild(list);
+            scrollTo(100);
+        });
+
+        afterEach(() => {
+            list.remove();
+            vi.useRealTimers();
+        });
+
+        it('template_shouldOfferTheProfileAsATab_insteadOfAFloatingAvatar', () => {
+            const tab: HTMLButtonElement = fixture.nativeElement.querySelector('.bottom-nav .me-item');
+
+            expect(tab.textContent).toContain('Moi');
+            expect(fixture.nativeElement.querySelector('.mobile-profile-trigger')).toBeNull();
+            tab.click();
+            expect(component.showMobileMenu()).toBe(true);
+        });
+
+        it('onAnyScroll_shouldHideTheBar_whenAListScrollsDown', () => {
+            scrollTo(140);
+
+            expect(component.navHidden()).toBe(true);
+        });
+
+        it('onAnyScroll_shouldIgnoreASmallMove', () => {
+            scrollTo(110);
+
+            expect(component.navHidden()).toBe(false);
+        });
+
+        it('onAnyScroll_shouldAddUpSmallMovesTheSameWay', () => {
+            scrollTo(115);
+            scrollTo(130);
+
+            expect(component.navHidden()).toBe(true);
+        });
+
+        it('onAnyScroll_shouldBringTheBarBack_onAScrollUp', () => {
+            scrollTo(200);
+            vi.advanceTimersByTime(400);
+
+            scrollTo(150);
+
+            expect(component.navHidden()).toBe(false);
+        });
+
+        it('onAnyScroll_shouldIgnoreTheJumpCausedByTheBarMoving', () => {
+            scrollTo(200);
+
+            // The page grew by the bar's height and pulled the list back up.
+            scrollTo(140);
+
+            expect(component.navHidden()).toBe(true);
+        });
+
+        it('onAnyScroll_shouldShowTheBar_backAtTheTop', () => {
+            scrollTo(200);
+            vi.advanceTimersByTime(400);
+
+            scrollTo(0);
+
+            expect(component.navHidden()).toBe(false);
+        });
+
+        it('onAnyScroll_shouldDoNothing_onADesktop', () => {
+            breakpointSubject.next({ matches: false });
+
+            scrollTo(300);
+
+            expect(component.navHidden()).toBe(false);
+        });
+
+        it('navigation_shouldBringTheBarBack', () => {
+            scrollTo(200);
+
+            routerEventsSubject.next(new NavigationEnd(2, '/feed', '/feed'));
+
+            expect(component.navHidden()).toBe(false);
+        });
+
+        it('toggleMobileMenu_shouldBringTheBarBack', () => {
+            scrollTo(200);
+
+            component.toggleMobileMenu();
+
+            expect(component.navHidden()).toBe(false);
+        });
+
+        it('bottomNavSpace_shouldBeZero_whileTheBarIsHidden', () => {
+            component.navHeight.set(64);
+            fixture.detectChanges();
+            expect(document.documentElement.style.getPropertyValue('--bottom-nav-space')).toBe('64px');
+
+            scrollTo(200);
+            fixture.detectChanges();
+
+            expect(document.documentElement.style.getPropertyValue('--bottom-nav-space')).toBe('0px');
+            expect((fixture.nativeElement.querySelector('.bottom-nav') as HTMLElement).style.marginBottom).toBe('-64px');
+        });
+    });
+});
