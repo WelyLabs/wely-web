@@ -1,199 +1,199 @@
 @if (isLoading()) {
-  <div class="skeleton-profile-container">
-    <div class="profile-header">
-      <div class="banner skeleton"></div>
-      <div class="header-content">
-        <div class="avatar-container">
-          <div class="avatar skeleton"></div>
-        </div>
-        <div class="user-identity">
-          <div class="skeleton skeleton-title"></div>
-          <div class="badges">
-            <div class="skeleton skeleton-chip"></div>
-            <div class="skeleton skeleton-chip"></div>
-          </div>
-        </div>
-        <div class="actions">
-          <div class="skeleton skeleton-chip" style="width: 100px; height: 40px; border-radius: 12px;"></div>
-          <div class="skeleton skeleton-chip" style="width: 100px; height: 40px; border-radius: 12px;"></div>
+  <div class="profile-page" aria-busy="true">
+    <div class="hero card skeleton-hero">
+      <div class="banner"></div>
+      <div class="hero-body">
+        <div class="avatar-ring skeleton"></div>
+        <div class="identity">
+          <div class="skeleton line wide"></div>
+          <div class="skeleton line"></div>
         </div>
       </div>
     </div>
-    <div class="profile-grid">
-      <div class="main-info">
-        <div class="stats-row">
-          <div class="stat-card skeleton"></div>
-          <div class="stat-card skeleton"></div>
-          <div class="stat-card skeleton"></div>
-        </div>
-        <div class="info-card">
-          <div class="skeleton skeleton-title" style="width: 30%;"></div>
-          <div class="details-list">
-            @for (i of [1,2,3,4]; track i) {
-              <div class="detail-item">
-                <div class="skeleton skeleton-text" style="width: 40%; height: 20px;"></div>
-                <div class="skeleton skeleton-text" style="width: 25%; height: 20px;"></div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-      <div class="secondary-info">
-        <div class="info-card skeleton" style="height: 320px; border: none;"></div>
-      </div>
+    <div class="stats">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="stat card skeleton-card"></div>
+      }
     </div>
   </div>
 }
 
 @if (!isLoading() && user(); as user) {
-  <div class="profile-container fade-in">
-    <!-- Header Section -->
-    <div class="profile-header">
+  <div class="profile-page fade-in">
+    <!-- Identity -->
+    <section class="hero card" aria-label="Identité">
       <div class="banner"></div>
-      <div class="header-content">
-        <div class="avatar-container" role="button" tabindex="0" (click)="openAvatarDialog()"
-            (keydown.enter)="openAvatarDialog()" (keydown.space)="openAvatarDialog()">
+      <div class="hero-body">
+        <button type="button" class="avatar-ring" (click)="openAvatarDialog()" aria-label="Changer de photo de profil">
           @let picture = avatars.url(user.id)();
-          <div class="avatar" [class.has-image]="picture">
+          <span class="avatar" [class.has-image]="picture">
             @if (picture) {
-              <img [src]="picture"
-                [alt]="'Photo de profil de ' + user.userName" class="avatar-image">
+              <img [src]="picture" [alt]="'Photo de profil de ' + user.userName">
+            } @else {
+              <span aria-hidden="true">{{ initials() || 'U' }}</span>
             }
-            @if (!picture) {
-              <span class="avatar-initials" aria-hidden="true">
-                {{ user.firstName[0] || 'U' }}{{ user.lastName[0] || '' }}
-              </span>
-            }
-          </div>
-          <div class="avatar-overlay">
-            <mat-icon>photo_camera</mat-icon>
-            <span>Modifier</span>
-          </div>
-        </div>
-        <div class="user-identity">
-          <h1>{{ user.userName }}</h1>
-          <div class="badges">
-            @if (user.jobTitle) {
-              <span class="role-badge">
-                <mat-icon>work</mat-icon>
-                {{ user.jobTitle }}
-              </span>
-            }
-            @if (user.location) {
-              <span class="location-badge">
-                <mat-icon>place</mat-icon>
-                {{ user.location }}
-              </span>
-            }
-          </div>
-        </div>
-        <div class="actions">
-          <button mat-stroked-button class="edit-btn" (click)="openEditDialog()" aria-label="Modifier le profil">
-            <mat-icon>edit</mat-icon>
-            Modifier
-          </button>
-          <button mat-flat-button color="primary" class="contact-btn" aria-label="Envoyer un email">
-            <mat-icon>mail</mat-icon>
-            Contacter
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="profile-grid">
-      <!-- Left Column: Info & Skills -->
-      <div class="main-info">
-        <!-- Stats Cards -->
-        @if (user.stats) {
-          <div class="stats-row">
-            <div class="stat-card">
-              <div class="stat-value">{{ user.stats.projectsCompleted || 0 }}</div>
-              <div class="stat-label">Projets</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ user.stats.hoursLogged || 0 }}h</div>
-              <div class="stat-label">Heures</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ user.stats.efficiency || 0 }}%</div>
-              <div class="stat-label">Efficacité</div>
-            </div>
-          </div>
-        }
-        <div class="info-card">
-          <h3>À propos</h3>
-          @if (user.bio) {
-            <p class="bio">{{ user.bio }}</p>
-          }
-          <div class="details-list">
-            <div class="detail-item">
-              <span class="label">Prénom</span>
-              <span class="value">{{ user.firstName }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">Nom</span>
-              <span class="value">{{ user.lastName }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">Email</span>
-              <span class="value">{{ user.email }}</span>
-            </div>
-            @if (user.department) {
-              <div class="detail-item">
-                <span class="label">Département</span>
-                <span class="value">{{ user.department }}</span>
-              </div>
-            }
+          </span>
+          <span class="avatar-overlay" aria-hidden="true"><mat-icon>photo_camera</mat-icon></span>
+        </button>
+        <div class="identity">
+          <h1>{{ user.firstName }} {{ user.lastName }}</h1>
+          <p class="handle">{{ user.userName }}#{{ user.hashtag }}
             @if (user.joinedDate) {
-              <div class="detail-item">
-                <span class="label">Membre depuis</span>
-                <span class="value">{{ user.joinedDate | date:'longDate' }}</span>
-              </div>
+              <span class="since">· sur Wely depuis {{ user.joinedDate | date:'MMMM y' }}</span>
             }
-          </div>
+          </p>
         </div>
-        @if (user.skills && user.skills.length > 0) {
-          <div class="info-card">
-            <h3>Compétences</h3>
-            <div class="skills-wrapper">
-              @for (skill of user.skills; track skill) {
-                <span class="skill-chip">
-                  {{ skill }}
-                </span>
-              }
-            </div>
-          </div>
-        }
+        <button type="button" class="outline-button" (click)="openEditDialog()">
+          <mat-icon>edit</mat-icon>Modifier le profil
+        </button>
       </div>
-      <!-- Right Column: Projects & Activity -->
-      @if (user.projects && user.projects.length > 0) {
-        <div class="secondary-info">
-          <div class="info-card projects-card">
-            <div class="card-header">
-              <h3>Projets Récents</h3>
-              <button mat-icon-button aria-label="Voir tous les projets">
-                <mat-icon>arrow_forward</mat-icon>
-              </button>
-            </div>
-            <div class="projects-list">
-              @for (project of user.projects; track project) {
-                <div class="project-item">
-                  <div class="project-icon" [style.background]="project.color + '20'"
-                    [style.color]="project.color">
-                    <mat-icon>folder</mat-icon>
-                  </div>
-                  <div class="project-info">
-                    <span class="project-name">{{ project.name }}</span>
-                    <span class="project-role">{{ project.role }}</span>
-                  </div>
-                  <span class="status-badge" [class]="project.status">
-                    {{ project.status }}
-                  </span>
+    </section>
+
+    @switch (summaryState()) {
+      @case ('loading') {
+        <div class="stats">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="stat card skeleton-card"></div>
+          }
+        </div>
+      }
+      @case ('unavailable') {
+        <p class="card muted unavailable">Tes sorties ne sont pas disponibles pour le moment.</p>
+      }
+      @default {
+        @if (summary(); as summary) {
+          <!-- Ton année Wely -->
+          <section aria-label="Ton année Wely" class="year">
+            <h2 class="overline">Ton année Wely</h2>
+            <div class="stats">
+              @for (stat of stats(); track stat.label) {
+                <div class="stat card">
+                  <span class="stat-value">{{ stat.value }}</span>
+                  <span class="stat-label">{{ stat.label }}</span>
+                  <span class="stat-hint">{{ stat.hint }}</span>
                 </div>
               }
             </div>
+          </section>
+
+          <div class="columns">
+            <div class="main-column">
+              <!-- Prochaines sorties -->
+              <section class="card section" aria-label="Prochaines sorties">
+                <div class="section-header">
+                  <h2>Prochaines sorties</h2>
+                  <a routerLink="/calendar">Voir le calendrier</a>
+                </div>
+                @if (summary.upcoming.length === 0) {
+                  <p class="muted">Rien de prévu pour l’instant. <a routerLink="/feed">Trouve une sortie</a></p>
+                } @else {
+                  <ul class="upcoming">
+                    @for (event of summary.upcoming; track event.id) {
+                      <li>
+                        <a class="upcoming-item" [routerLink]="['/event', event.id]">
+                          <span class="date-tile" aria-hidden="true">
+                            <span class="month">{{ event.startDate | date:'MMM' }}</span>
+                            <span class="day">{{ event.startDate | date:'d' }}</span>
+                          </span>
+                          <span class="upcoming-text">
+                            <strong>{{ event.title }}</strong>
+                            <span class="muted">{{ event.location }}</span>
+                          </span>
+                          <span class="when">{{ countdown(event) }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
+
+              <!-- Souvenirs -->
+              <section class="card section" aria-label="Souvenirs">
+                <div class="section-header">
+                  <h2>Souvenirs</h2>
+                  @if (summary.pastCount > 0) {
+                    <span class="muted">{{ summary.pastCount }} événement{{ summary.pastCount > 1 ? 's' : '' }} passé{{ summary.pastCount > 1 ? 's' : '' }}</span>
+                  }
+                </div>
+                @if (summary.memories.length === 0) {
+                  <p class="muted">Tes sorties passées apparaîtront ici.</p>
+                } @else {
+                  <div class="memories">
+                    @for (event of summary.memories; track event.id) {
+                      <a class="memory" [routerLink]="['/event', event.id]" [style.background]="memoryTint(event.id)">
+                        @if (event.image) {
+                          <img [src]="event.image" alt="">
+                        }
+                        <span class="memory-caption">
+                          <strong>{{ event.title }}</strong>
+                          <span>{{ event.startDate | date:'MMM y' }}</span>
+                        </span>
+                      </a>
+                    }
+                  </div>
+                }
+              </section>
+            </div>
+
+            <div class="side-column">
+              <!-- Ton cercle -->
+              <section class="card section" aria-label="Ton cercle">
+                <h2>Ton cercle</h2>
+                @if (circle().length === 0) {
+                  <p class="muted">Ceux avec qui tu sors le plus apparaîtront ici.</p>
+                } @else {
+                  <p class="muted">Ceux avec qui tu sors le plus.</p>
+                  <ul class="circle">
+                    @for (member of circle(); track member.id) {
+                      <li>
+                        <span class="avatar small" [style.background]="member.color" aria-hidden="true">
+                          @if (member.picture) {
+                            <img [src]="member.picture" alt="">
+                          } @else {
+                            {{ member.initials }}
+                          }
+                        </span>
+                        <span class="circle-text">
+                          <strong>{{ member.name }}</strong>
+                          <span class="muted">{{ member.outingsTogether }} sortie{{ member.outingsTogether > 1 ? 's' : '' }} ensemble</span>
+                        </span>
+                        <span class="bar" aria-hidden="true"><span [style.width.%]="member.share"></span></span>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
+
+              <!-- Tes lieux -->
+              <section class="card section" aria-label="Tes lieux">
+                <div class="section-header">
+                  <h2>Tes lieux</h2>
+                  @if (summary.places.length > 0) {
+                    <span class="muted">{{ summary.places.length }} endroit{{ summary.places.length > 1 ? 's' : '' }}</span>
+                  }
+                </div>
+                <app-places-map [places]="summary.places" />
+              </section>
+
+              <!-- Tes comptes -->
+              <section class="card section" aria-label="Tes comptes">
+                <h2>Tes comptes</h2>
+                <p class="accounts" [class.owes]="owedOverall() > 0" [class.even]="summary.balances.length === 0">
+                  {{ accountsLabel() }}
+                </p>
+                @for (balance of summary.balances; track balance.eventId) {
+                  <a class="balance-link" [routerLink]="['/event', balance.eventId]">
+                    <span>{{ balance.title }}</span>
+                    <span class="amount" [class.negative]="balance.netCents < 0">
+                      {{ balance.netCents < 0 ? '−' : '+' }}{{ formatCents(balance.netCents < 0 ? -balance.netCents : balance.netCents) }}
+                    </span>
+                  </a>
+                }
+              </section>
+            </div>
           </div>
-        </div>
+        }
       }
-    </div>
+    }
   </div>
 }

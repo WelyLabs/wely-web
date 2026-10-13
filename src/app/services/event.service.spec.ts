@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { EventService, FeedEvent } from './event.service';
+import { EventService, FeedEvent, ProfileSummary } from './event.service';
 import { environment } from '../../environments/environment';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -268,5 +268,19 @@ describe('EventService', () => {
             endDate: new Date('2026-10-16T20:00:00Z'),
             coordinates: { latitude: 45.784, longitude: 4.8608 }
         })]);
+    });
+
+    it('getMySummary_shouldReadTheSummary_withEventDates', () => {
+        let summary: ProfileSummary | null = null;
+        service.getMySummary().subscribe(value => summary = value);
+
+        httpMock.expectOne(`${apiUrl}/me/summary`).flush({
+            outingsThisYear: 1, outingsThisMonth: 0, organizedThisYear: 0, placesThisYear: 1,
+            upcoming: [payload()], memories: [], pastCount: 0, circle: [], places: [], balances: []
+        });
+
+        expect(summary).not.toBeNull();
+        expect(summary!.upcoming[0].startDate).toBeInstanceOf(Date);
+        expect(summary!.outingsThisYear).toBe(1);
     });
 });

@@ -7,6 +7,13 @@ import { User } from '../../models/user.model';
 import { MOCK_USER } from '../../models/user.mock';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { EventService, FeedEvent, ProfileSummary } from '../../services/event.service';
+import { SocialService } from '../../services/social.service';
+import { AvatarService } from '../../services/avatar.service';
+import { MapLoader } from '../../services/map-loader';
+import { memoryTint } from './user-profile';
 
 describe('UserProfileComponent', () => {
     let component: UserProfileComponent;
@@ -14,6 +21,20 @@ describe('UserProfileComponent', () => {
     let userServiceMock: any;
     let dialogMock: any;
     let userSubject: BehaviorSubject<User | null>;
+    let eventServiceMock: { getMySummary: ReturnType<typeof vi.fn> };
+    let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn>; searchUsers: ReturnType<typeof vi.fn> };
+
+    const feedEvent = (id: string, start: string): FeedEvent => ({
+        id, title: `Event ${id}`, organizerId: 'me', startDate: new Date(start), endDate: new Date(start),
+        location: 'Chez Léa', image: '', description: ''
+    });
+    const summary = (overrides: Partial<ProfileSummary> = {}): ProfileSummary => ({
+        outingsThisYear: 23, outingsThisMonth: 4, organizedThisYear: 6, placesThisYear: 9,
+        upcoming: [feedEvent('next', '2099-10-14T18:00:00Z')], memories: [feedEvent('past', '2026-09-01T18:00:00Z')],
+        pastCount: 23,
+        circle: [{ userId: 'lea', outingsTogether: 12 }, { userId: 'bob', outingsTogether: 3 }],
+        places: [], balances: [], ...overrides
+    });
 
     beforeEach(async () => {
         userSubject = new BehaviorSubject<User | null>(MOCK_USER);
@@ -29,8 +50,21 @@ describe('UserProfileComponent', () => {
             }))
         };
 
+        eventServiceMock = { getMySummary: vi.fn().mockReturnValue(of(summary())) };
+        socialServiceMock = {
+            listFriendships: vi.fn().mockReturnValue(of([{ userId: 'lea' }, { userId: 'bob' }, { userId: 'zoe' }])),
+            searchUsers: vi.fn().mockReturnValue(of([{ userId: 'lea', userName: 'lea' }, { userId: 'bob', userName: 'bob' }]))
+        };
+
         await TestBed.configureTestingModule({
-            imports: [UserProfileComponent, NoopAnimationsModule]
+            imports: [UserProfileComponent, NoopAnimationsModule],
+            providers: [
+                provideRouter([]),
+                { provide: EventService, useValue: eventServiceMock },
+                { provide: SocialService, useValue: socialServiceMock },
+                { provide: AvatarService, useValue: { url: () => signal(null) } },
+                { provide: MapLoader, useValue: { load: vi.fn().mockRejectedValue(new Error('no map in tests')) } }
+            ]
         }).overrideComponent(UserProfileComponent, {
             set: {
                 providers: [
@@ -119,5 +153,74 @@ describe('UserProfileComponent', () => {
 
         expect(component.isLoading()).toBe(true);
         expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    describe('summary', () => {
+        it('stats_shouldShowTheYearInRealFigures', () => {
+            expect(component.stats().map(stat => [stat.value, stat.label, stat.hint])).toEqual([
+                [23, 'Sorties', 'dont 4 ce mois-ci'],
+                [6, 'Organisées', 'par toi, cette année'],
+                [3, 'Amis', 'sur Wely'],
+                [9, 'Lieux', 'cette année']
+            ]);
+        });
+
+        it('stats_shouldLeaveOutTheFriends_whenTheyCannotBeCounted', () => {
+            component.friendCount.set(null);
+
+            expect(component.stats().map(stat => stat.label)).toEqual(['Sorties', 'Organisées', 'Lieux']);
+        });
+
+        it('circle_shouldNameEachCompanion_andScaleTheirBar', () => {
+            expect(component.circle().map(member => [member.name, member.share])).toEqual([['lea', 100], ['bob', 25]]);
+        });
+
+        it('accountsLabel_shouldSumWhatIsOwed_acrossEvents', () => {
+            component.summary.set(summary({ balances: [
+                { eventId: 'e1', title: 'Soirée jeux', netCents: -800 },
+                { eventId: 'e2', title: 'Lac', netCents: -400 },
+                { eventId: 'e3', title: 'Resto', netCents: 1500 }
+            ] }));
+
+            expect(component.accountsLabel().replace(/\s/g, ' ')).toBe('Tu dois 12,00 € sur 2 événements');
+        });
+
+        it('accountsLabel_shouldSayWhenTheMemberIsOwed_orEven', () => {
+            component.summary.set(summary({ balances: [{ eventId: 'e3', title: 'Resto', netCents: 1500 }] }));
+            expect(component.accountsLabel()).toBe('On te doit de l’argent sur 1 événement');
+
+            component.summary.set(summary({ balances: [] }));
+            expect(component.accountsLabel()).toBe('Tu es à jour sur tous tes événements');
+        });
+
+        it('template_shouldListTheNextOutingsAndMemories_withLinksToTheirEvents', () => {
+            const links = [...fixture.nativeElement.querySelectorAll('a')].map((a: HTMLAnchorElement) => a.getAttribute('href'));
+
+            expect(links).toContain('/event/next');
+            expect(links).toContain('/event/past');
+            expect(fixture.nativeElement.textContent).toContain('23 événements passés');
+        });
+
+        it('template_shouldDropTheOldPlaceholderSections', () => {
+            const text = fixture.nativeElement.textContent as string;
+
+            expect(text).not.toContain('Efficacité');
+            expect(text).not.toContain('Projets');
+            expect(text).not.toContain('Contacter');
+        });
+
+        it('template_shouldSayWhenTheSummaryIsUnavailable', () => {
+            eventServiceMock.getMySummary.mockReturnValue(throwError(() => new Error('down')));
+            component.loadSummary();
+            fixture.detectChanges();
+
+            expect(component.summaryState()).toBe('unavailable');
+            expect(fixture.nativeElement.textContent).toContain('Tes sorties ne sont pas disponibles');
+        });
+
+        it('memoryTint_shouldKeepTheSameTintForTheSameEvent', () => {
+            expect(memoryTint('abc')).toBe(memoryTint('abc'));
+            expect(memoryTint('abc')).toContain('linear-gradient');
+        });
     });
 });
