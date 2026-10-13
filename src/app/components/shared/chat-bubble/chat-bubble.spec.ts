@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 import { ChatBubbleComponent, ChatBubbleMessage } from './chat-bubble';
 import { avatarColor } from '../../../core/ui/avatar';
+import { AvatarService } from '../../../services/avatar.service';
+import { signal } from '@angular/core';
 
 describe('ChatBubbleComponent', () => {
   let fixture: ComponentFixture<ChatBubbleComponent>;
@@ -14,7 +16,11 @@ describe('ChatBubbleComponent', () => {
   };
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [ChatBubbleComponent] });
+    // Lea has a picture; nobody else does.
+    TestBed.configureTestingModule({
+      imports: [ChatBubbleComponent],
+      providers: [{ provide: AvatarService, useValue: { url: (id?: string | null) => signal(id === 'lea' ? '/pics/lea.jpg' : null) } }]
+    });
     fixture = TestBed.createComponent(ChatBubbleComponent);
   });
 
@@ -27,6 +33,13 @@ describe('ChatBubbleComponent', () => {
     expect(element.querySelector('.author')?.textContent).toBe('Inès Bernard');
     expect(element.querySelector('p')?.textContent).toBe('Je ramène Dixit');
     expect(element.querySelector('.time')?.textContent?.trim()).toBe('19:05');
+  });
+
+  it('template_shouldShowTheAuthorsPicture_whenTheyHaveOne', () => {
+    const element = render({ text: 'Salut', time: '2026-10-12T19:05:00', isMe: false, senderName: 'Léa', senderId: 'lea' });
+
+    expect(element.querySelector('img.avatar')?.getAttribute('src')).toBe('/pics/lea.jpg');
+    expect(element.querySelector('span.avatar')).toBeNull();
   });
 
   it('template_shouldShowTheViewersOwnMessageWithoutAvatarNorName', () => {

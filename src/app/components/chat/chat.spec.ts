@@ -4,6 +4,9 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
 import { NavigationService } from '../../services/navigation.service';
+import { SocialService } from '../../services/social.service';
+import { AvatarService } from '../../services/avatar.service';
+import { signal } from '@angular/core';
 import { of, BehaviorSubject, Subject, throwError } from 'rxjs';
 import { Conversation, ConversationType, MessageType } from '../../models/chat.model';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -24,6 +27,7 @@ describe('ChatComponent', () => {
     let routerMock: any;
     let paramMapSubject: BehaviorSubject<any>;
     let chatMessagesSubject: Subject<any>;
+    let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
 
     const mockUser = { id: 'me', userName: 'Me' };
     const mockConv: Conversation = {
@@ -52,6 +56,8 @@ describe('ChatComponent', () => {
             getCurrentUserValue: vi.fn().mockReturnValue(mockUser)
         };
 
+        socialServiceMock = { listFriendships: vi.fn().mockReturnValue(of([])) };
+
         navigationServiceMock = {
             back: vi.fn()
         };
@@ -68,6 +74,9 @@ describe('ChatComponent', () => {
                 { provide: ChatService, useValue: chatServiceMock },
                 { provide: UserService, useValue: userServiceMock },
                 { provide: NavigationService, useValue: navigationServiceMock },
+                { provide: SocialService, useValue: socialServiceMock },
+                // The friend has a picture; nobody else does.
+                { provide: AvatarService, useValue: { url: (id: string | null) => signal(id === 'friend' ? '/pics/friend.jpg' : null) } },
                 { provide: Router, useValue: routerMock },
                 {
                     provide: ActivatedRoute,
@@ -120,6 +129,39 @@ describe('ChatComponent', () => {
         component.loadConversationById('conv1');
 
         expect(component.conversationTitle()).toBe('Friend');
+    });
+
+    it('conversationTitle_shouldNameThePartnerFromTheFriendList_beforeTheyWrite', () => {
+        // With no message from the partner yet, the title used to stay on « Chargement... ».
+        socialServiceMock.listFriendships.mockReturnValue(of([{ userId: 'friend', userName: 'lea', hashtag: 6000 }]));
+        component.ngOnInit();
+
+        component.loadConversationById('conv1');
+
+        expect(component.conversationTitle()).toBe('lea');
+    });
+
+    it('conversationTitle_shouldSayConversation_whenNothingNamesThePartner', () => {
+        component.loadConversationById('conv1');
+
+        expect(component.conversationTitle()).toBe('Conversation');
+    });
+
+    it('conversationTitle_shouldStillName_whenTheFriendListCannotBeRead', () => {
+        socialServiceMock.listFriendships.mockReturnValue(throwError(() => new Error('down')));
+        component.ngOnInit();
+
+        component.loadConversationById('conv1');
+
+        expect(component.conversationTitle()).toBe('Conversation');
+    });
+
+    it('template_shouldShowThePartnersPictureInTheHeader', () => {
+        component.loadConversationById('conv1');
+        fixture.detectChanges();
+
+        expect(component.partnerPicture()).toBe('/pics/friend.jpg');
+        expect(fixture.nativeElement.querySelector('.avatar-sm img')?.getAttribute('src')).toBe('/pics/friend.jpg');
     });
 
     it('should report an error when the conversation cannot be loaded', () => {
