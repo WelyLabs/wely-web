@@ -165,3 +165,12 @@
     background: rgba(15, 15, 20, 0.45);
     cursor: default;
 }
+
+// A long press on the grid starts a selection: it must not select the hours' text or open the
+// system's callout on top of it.
+.hours-container,
+.days-grid {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}

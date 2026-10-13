@@ -143,6 +143,28 @@ body {
   // No text inflation when a phone turns to landscape.
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  // No pull-to-refresh nor rubber band on the page itself: the app's own lists scroll inside it.
+  overscroll-behavior: none;
+}
+
+/*
+ * Behaving like an app on a touch screen: no grey flash on a tapped control, and no word
+ * selected nor callout opened by a long press on one. Text people read and fields keep both.
+ */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+label,
+mat-icon,
+[role="button"],
+[role="tab"],
+[role="radio"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /*
