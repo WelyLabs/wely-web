@@ -99,28 +99,17 @@ export class UserProfileComponent implements OnInit {
         return ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase();
     });
 
+    /**
+     * Nothing to do on close: saving updates UserService's current user, which every component
+     * reading currentUser$ follows, this one included.
+     */
     openEditDialog(): void {
-        const dialogRef = this.dialog.open(EditProfileDialogComponent, {
+        this.dialog.open(EditProfileDialogComponent, {
             width: '500px',
             maxWidth: '95vw',
             data: this.user(),
             disableClose: false,
             panelClass: 'edit-profile-dialog'
         });
-
-        // Updating the service propagates to every component reading currentUser$, this one
-        // included — which is why nothing is assigned locally here.
-        dialogRef.afterClosed()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(result => {
-                if (result) {
-                    this.userService.updateCurrentUser({
-                        userName: result.userName,
-                        firstName: result.firstName,
-                        lastName: result.lastName,
-                        email: result.email
-                    });
-                }
-            });
     }
 }

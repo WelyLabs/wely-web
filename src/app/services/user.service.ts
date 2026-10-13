@@ -2,9 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { LoggerService } from '../core/logging/logger.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, catchError, from, map, of, switchMap, tap } from 'rxjs';
 import { KeycloakService } from 'keycloak-angular';
 import { User } from '../models/user.model';
+
+/** What the profile form may change; the email stays with Keycloak. */
+export interface ProfileUpdate {
+    userName: string;
+    firstName: string;
+    lastName: string;
+}
 
 @Injectable({
     providedIn: 'root'
@@ -67,8 +74,23 @@ export class UserService {
         return this.http.get<User>(`${this.apiUrl}/profile`);
     }
 
-    updateProfile(updates: { username: string; firstName: string; lastName: string; email: string }) {
-        return this.http.put(`${this.apiUrl}/profile`, updates);
+    /**
+     * Saves the caller's username and names; wely-users answers with the profile as stored (the
+     * username lowercased, as Keycloak keeps it). The current user follows, and the token is
+     * refreshed at once: its preferred_username is the name wely-chat signs messages with.
+     * A failed refresh is not the save failing: the scheduled one will catch up.
+     */
+    updateProfile(update: ProfileUpdate): Observable<User> {
+        return this.http.put<User>(`${this.apiUrl}/profile`, update).pipe(
+            tap(saved => this.updateCurrentUser({
+                userName: saved.userName,
+                firstName: saved.firstName,
+                lastName: saved.lastName
+            })),
+            switchMap(saved => from(this.keycloak.updateToken(-1)).pipe(
+                map(() => saved),
+                catchError(() => of(saved))))
+        );
     }
 
     uploadAvatar(file: File): Observable<{ profilePicUrl: string }> {
