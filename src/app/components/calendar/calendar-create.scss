@@ -156,3 +156,12 @@
         height: 20px;
     }
 }
+
+// Under the new-event dialog: dims the calendar, and a click on it closes the dialog.
+.popover-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    background: rgba(15, 15, 20, 0.45);
+    cursor: default;
+}

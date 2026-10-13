@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
@@ -74,7 +74,7 @@ export interface CalendarEvent {
   endDate: Date;
 }
 
-import { QuickEventPopoverComponent, PopoverPosition } from '../quick-event-popover/quick-event-popover';
+import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-popover';
 import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
 import { DayLayout, DaySummary, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, layoutDay, summarizeDay } from '../calendar-overlay/overlay-layout';
 import { MonthDayOverlayComponent } from '../month-day-overlay/month-day-overlay';
@@ -85,24 +85,6 @@ const NO_EVENTS: CalendarEvent[] = [];
 
 /** How many event titles a month cell names before it starts counting the rest. */
 const MONTH_CELL_EVENTS = 3;
-
-/** Popover geometry, in CSS pixels. */
-const POPOVER_WIDTH = 320;
-const POPOVER_HEIGHT = 400;
-const POPOVER_PADDING = 20;
-const POPOVER_GAP = 5;
-/**
- * Below this width, or this height, the popover is centred on screen rather than anchored to
- * its cell: anchored inside the calendar's clipped box, it lost its buttons on a phone held
- * sideways (wide, but under 450px tall).
- */
-const POPOVER_MOBILE_BREAKPOINT = 1023;
-const POPOVER_MIN_ANCHORED_HEIGHT = 560;
-/** Columns up to this index open to the right of their cell; later ones flip. */
-const POPOVER_FLIP_COLUMN = 3;
-/** The arrow stays within the popover's own height, as a percentage. */
-const POPOVER_ARROW_MIN = 10;
-const POPOVER_ARROW_MAX = 90;
 
 /** How far a finger may drift before a hold counts as a scroll. */
 const TOUCH_SLOP_PX = 10;
@@ -152,8 +134,6 @@ function writeHintDone(): void {
 /** How long after opening the popover ignores clicks on its backdrop. */
 const POPOVER_CLICK_GUARD_MS = 500;
 
-/** Keeps a value inside a range. */
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
 
 @Component({
   selector: 'app-calendar',
@@ -168,7 +148,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly eventService = inject(EventService);
   private readonly router = inject(Router);
-  private readonly el = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly socialService = inject(SocialService);
   private readonly notifications = inject(NotificationService);
@@ -187,9 +166,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   // Popover state
   readonly isPopoverVisible = signal(false);
-  readonly popoverPosition = signal<PopoverPosition>({ x: 0, y: 0, arrowSide: 'top' });
-  readonly arrowOffset = signal(50);
-  readonly isMobilePopover = signal(false);
   readonly popoverData = signal<EventCreateRequest>({
     title: '',
     description: '',
@@ -906,9 +882,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.pendingTap = null;
     if (tap && !this.isSelectingRange()) {
       const start = atHour(tap.date, tap.startHour);
-      const uiEvent = (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
       this.selectionDate.set(tap.date);
-      this.startCreatingEvent(uiEvent, undefined, start, new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60000));
+      this.startCreatingEvent(undefined, start, new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60000));
       return;
     }
 
@@ -922,8 +897,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (range && range.end > range.start) {
       this.selectedDate.set(range.start);
 
-      const uiEvent = isMouse ? event : (event as TouchEvent).changedTouches[0] as unknown as MouseEvent;
-      this.startCreatingEvent(uiEvent, undefined, range.start, range.end);
+      this.startCreatingEvent(undefined, range.start, range.end);
     } else {
       // Clear if it was just a click
       this.cancelCreatingEvent();
@@ -983,15 +957,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.isPopoverVisible.set(false);
   }
 
-  /**
-   * The "Nouvel événement" button, and the day panel's: the form opens on that day at a sensible
-   * hour. From the panel it points at the day's cell; from the button it is centred.
-   */
-  openNewEvent(day?: Date, trigger?: MouseEvent): void {
+  /** The "Nouvel événement" button, and the day panel's: the form opens on that day at a sensible hour. */
+  openNewEvent(day?: Date): void {
     this.cancelCreatingEvent();
     const start = defaultStart(day ?? this.defaultDay());
     const end = new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60000);
-    this.startCreatingEvent(trigger ?? null, day, start, end);
+    this.startCreatingEvent(day, start, end);
   }
 
   /** The day the button creates on: the day shown, or today when it is on screen. */
@@ -1013,8 +984,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     writeHintDone();
   }
 
-  /** `event` is where the form was asked for; null centres it. */
-  startCreatingEvent(event: MouseEvent | null, targetDate?: Date, startDate?: Date, endDate?: Date) {
+  /** Opens the form, centred on screen, on the given range or day. */
+  startCreatingEvent(targetDate?: Date, startDate?: Date, endDate?: Date) {
     if (!this.selectedDate() && !targetDate && !startDate) return;
 
     const baseDate = startDate || targetDate || this.selectedDate() || new Date();
@@ -1030,127 +1001,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
       subscribeByDefault: false,
     });
 
-    // Use current selectedDate if not provided to ensure calculation matches
-    const dateToAnchor = targetDate || this.selectedDate();
-
-    // Calculate position based on the click/drag event
-    this.calculatePopoverPosition(event, dateToAnchor);
     this.isPopoverVisible.set(true);
     this.popoverOpenedAt = Date.now();
     // Closed, but selectedDate is kept: it is the date the new event belongs to.
     this.isDetailsOpen.set(false);
-  }
-
-  /**
-   * Places the new-event popover next to the day the user clicked.
-   *
-   * <p>This used to be one 130-line function with a cognitive complexity of 50. It resolved
-   * the anchor's geometry twice — once to position the popover, once to aim its arrow — in
-   * two near-identical blocks that had already drifted apart. The geometry is resolved once
-   * here, by {@link anchorGeometry}, and everything else reads from it.
-   */
-  private calculatePopoverPosition(event: MouseEvent | null, targetDate?: Date | null) {
-    const container = this.el.nativeElement.querySelector('.calendar-container');
-    const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
-    const dateToAnchor = targetDate || this.selectedDate();
-
-    this.isMobilePopover.set(!event || window.innerWidth <= POPOVER_MOBILE_BREAKPOINT || window.innerHeight < POPOVER_MIN_ANCHORED_HEIGHT);
-    if (!event || this.isMobilePopover()) {
-      this.popoverPosition.set({ x: 0, y: 0, arrowSide: 'top' });
-      return;
-    }
-
-    const anchor = this.anchorGeometry(dateToAnchor, containerRect);
-
-    // With no anchor on screen the popover simply opens where the pointer is.
-    let x = event.clientX - containerRect.left;
-    let y = event.clientY - containerRect.top;
-    let arrowSide: 'top' | 'left' | 'right' = 'top';
-
-    if (anchor) {
-      // Columns in the left half open to the right of the cell, and the reverse, so the
-      // popover never hangs off the side of the grid.
-      const opensRight = anchor.columnIndex <= POPOVER_FLIP_COLUMN;
-      arrowSide = opensRight ? 'left' : 'right';
-      x = opensRight ? anchor.right + POPOVER_GAP : anchor.left - POPOVER_WIDTH - POPOVER_GAP;
-      y = anchor.centerY - POPOVER_HEIGHT / 2;
-    }
-
-    const maxWidth = containerRect.width || window.innerWidth;
-    const maxHeight = containerRect.height || window.innerHeight;
-    x = clamp(x, POPOVER_PADDING, maxWidth - POPOVER_WIDTH - POPOVER_PADDING);
-    y = clamp(y, POPOVER_PADDING, maxHeight - POPOVER_HEIGHT - POPOVER_PADDING);
-
-    this.popoverPosition.set({ x, y, arrowSide });
-
-    // The popover is clamped, the thing it points at is not, so the arrow is offset to span
-    // the gap. A missing anchor leaves it centred.
-    const pointsSideways = arrowSide === 'left' || arrowSide === 'right';
-    const canAim = pointsSideways && dateToAnchor && anchor && anchor.centerY > 0;
-    this.arrowOffset.set(
-      canAim
-        ? clamp(((anchor.centerY - y) / POPOVER_HEIGHT) * 100, POPOVER_ARROW_MIN, POPOVER_ARROW_MAX)
-        : 50,
-    );
-  }
-
-  /**
-   * The on-screen box the popover should point at, in container coordinates.
-   *
-   * <p>In month view that is the day cell. In week and day view it is the selection overlay
-   * when the user dragged a range, and the whole column otherwise — and the date comes from
-   * {@link selectionDate} in preference to the clicked one, because a drag ends on a
-   * different cell than it started.
-   *
-   * <p>Returns null when the date is not currently rendered, which is what tells the caller
-   * to fall back to the pointer position.
-   */
-  private anchorGeometry(
-    date: Date | null | undefined,
-    containerRect: { left: number; top: number },
-  ): { left: number; right: number; centerY: number; columnIndex: number } | null {
-    const toContainer = (rect: DOMRect) => ({
-      left: rect.left - containerRect.left,
-      right: rect.right - containerRect.left,
-      centerY: rect.top - containerRect.top + rect.height / 2,
-    });
-
-    if (this.viewMode() === 'month') {
-      if (!date) {
-        return null;
-      }
-      const index = this.days().findIndex((day) => this.isSameDate(day.date, date));
-      if (index === -1) {
-        return null;
-      }
-      const cell = this.el.nativeElement.querySelectorAll('.day-cell')[index] as HTMLElement;
-      return { ...toContainer(cell.getBoundingClientRect()), columnIndex: index % 7 };
-    }
-
-    const activeDate = this.selectionDate() || date;
-    if (!activeDate) {
-      return null;
-    }
-    const index = this.days().findIndex((day) => this.isSameDate(day.date, activeDate));
-    if (index === -1) {
-      return null;
-    }
-    const column = this.el.nativeElement.querySelectorAll('.day-column')[index] as HTMLElement;
-    if (!column) {
-      return null;
-    }
-
-    // Week view carries a leading hours gutter among its siblings; day view does not.
-    const siblings = Array.from(column.parentElement?.children || []);
-    const columnIndex = siblings.indexOf(column) - (this.viewMode() === 'week' ? 1 : 0);
-
-    const overlay = column.querySelector('.selection-overlay');
-    const box = toContainer(column.getBoundingClientRect());
-    const centerY = overlay
-      ? toContainer(overlay.getBoundingClientRect()).centerY
-      : box.centerY;
-
-    return { left: box.left, right: box.right, centerY, columnIndex };
   }
 
   /**

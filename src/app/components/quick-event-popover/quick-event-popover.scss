@@ -1,144 +1,74 @@
+// A dialog centred on screen, over a dimmed calendar (the calendar draws the backdrop).
 :host {
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
+    position: fixed;
+    inset: 0;
     z-index: 2000;
-}
-
-.popover-container {
-    position: absolute;
-    width: 320px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
-    z-index: 2000;
+    display: grid;
+    place-items: center;
     padding: 16px;
+    pointer-events: none;
+}
+
+.dialog-card {
     pointer-events: auto;
-    cursor: grab;
-    // Premium Avatar-style animation
-    animation: premiumPop 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-    transform-origin: center center;
-
-    &.mobile-centered {
-        position: fixed;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        margin: 0;
-        animation: premiumPopMobile 0.5s cubic-bezier(0.32, 0.72, 0, 1);
-
-        .popover-arrow {
-            display: none;
-        }
-    }
-
-    &.dragging {
-        cursor: grabbing;
-        user-select: none;
-    }
-
-    // Once moved, the arrow no longer points at the slot.
-    &.moved .popover-arrow {
-        display: none;
-    }
-
-    input,
-    textarea,
-    button {
-        cursor: auto;
-    }
-
-    button {
-        cursor: pointer;
-    }
-
-    &.arrow-left {
-        transform-origin: left center;
-
-        .popover-arrow {
-            left: -10px;
-            margin-top: -10px;
-            transform: none;
-            border-width: 10px 10px 10px 0;
-            border-color: transparent rgba(255, 255, 255, 0.85) transparent transparent;
-        }
-    }
-
-    &.arrow-right {
-        transform-origin: right center;
-
-        .popover-arrow {
-            right: -10px;
-            left: auto;
-            margin-top: -10px;
-            transform: none;
-            border-width: 10px 0 10px 10px;
-            border-color: transparent transparent transparent rgba(255, 255, 255, 0.85);
-        }
-    }
-
-    &.arrow-top {
-        transform-origin: center top;
-
-        .popover-arrow {
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 0 10px 10px 10px;
-            border-color: transparent transparent rgba(255, 255, 255, 0.85) transparent;
-        }
-    }
-}
-
-@keyframes premiumPop {
-    from {
-        opacity: 0;
-        transform: scale(0.12);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes premiumPopMobile {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.12);
-    }
-
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-}
-
-.drag-handle {
-    width: 36px;
-    height: 4px;
-    margin: -6px auto 10px;
-    border-radius: 2px;
-    background: rgba(0, 0, 0, 0.15);
-    // The handle is where a touch drags instead of scrolling.
-    touch-action: none;
-}
-
-.popover-content {
-    max-height: calc(100vh - 64px);
-    // dvh: the visible height, toolbars and keyboard excluded, so « Ajouter » stays reachable.
-    max-height: calc(100dvh - 64px);
+    width: min(440px, 100%);
+    max-height: calc(100vh - 32px);
+    // dvh: the visible height, toolbars and keyboard excluded, so « Créer » stays reachable.
+    max-height: calc(100dvh - 32px);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+    padding: 20px;
+    // Opaque: through a translucent card, the calendar behind showed under the fields.
+    background: var(--bg-card);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    animation: dialogIn 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+
+    &.wide {
+        width: min(760px, 100%);
+        padding: 24px 28px;
+    }
+
+    // One column on a phone, in reading order.
+    .dialog-body {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    // Two columns on a wide screen: when on the left, where and who on the right, the rest
+    // across the bottom.
+    &.wide .dialog-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "when where"
+            "extra extra";
+        gap: 18px 28px;
+
+        .when {
+            grid-area: when;
+        }
+
+        .where {
+            grid-area: where;
+        }
+
+        .extra {
+            grid-area: extra;
+            padding-top: 14px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+    }
 
     .form-group {
         display: flex;
@@ -435,14 +365,20 @@
     }
 }
 
-.popover-arrow {
-    position: absolute;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 10px 10px 10px;
-    border-color: transparent transparent rgba(255, 255, 255, 0.85) transparent;
-    // top will be set via [style.top.%]
-    left: 50%;
-    transform: translateX(-50%);
+@keyframes dialogIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialog-card {
+        animation: none;
+    }
 }

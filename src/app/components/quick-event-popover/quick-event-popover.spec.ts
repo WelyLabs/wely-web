@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { QuickEventPopoverComponent, clampDelta, toDateValue, toTimeValue, upwardShift, withDate, withTime } from './quick-event-popover';
+import { QuickEventPopoverComponent, toDateValue, toTimeValue, withDate, withTime } from './quick-event-popover';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { EventCreateRequest } from '../../services/event.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -107,12 +108,6 @@ describe('QuickEventPopoverComponent', () => {
         expect(emit).toHaveBeenCalled();
     });
 
-    it('should default the position to a top arrow at the centre', () => {
-        expect(component.position()).toEqual({ x: 0, y: 0, arrowSide: 'top' });
-        expect(component.arrowOffset()).toBe(50);
-        expect(component.isMobile()).toBe(false);
-    });
-
     describe('finding a slot with friends', () => {
         it('searchWindow_shouldBeTheSlotThePopoverWasOpenedOn', () => {
             expect(component.searchWindow()).toEqual({ start: startDate, end: endDate });
@@ -203,15 +198,6 @@ describe('QuickEventPopoverComponent', () => {
             expect(saved).toHaveBeenCalledWith(expect.objectContaining({ coordinates: place.coordinates }));
         });
 
-        it('onPointerDown_shouldLeaveTheMapItsOwnDrag', () => {
-            const map = document.createElement('div');
-            map.className = 'location-map';
-            const event = { button: 0, target: map, preventDefault: vi.fn() } as unknown as PointerEvent;
-
-            component.onPointerDown(event);
-
-            expect(component.dragging()).toBe(false);
-        });
     });
 
     describe('spansSeveralDays', () => {
@@ -223,114 +209,6 @@ describe('QuickEventPopoverComponent', () => {
             fixture.componentRef.setInput('data', { ...request(), endDate: new Date('2025-06-03T11:00:00Z') });
 
             expect(component.spansSeveralDays()).toBe(true);
-        });
-    });
-
-    describe('dragging', () => {
-        const card = () => fixture.nativeElement.querySelector('.popover-container') as HTMLElement;
-
-        const pointer = (overrides: Partial<Record<string, unknown>>) => ({
-            button: 0,
-            pointerId: 1,
-            clientX: 0,
-            clientY: 0,
-            target: card(),
-            currentTarget: card(),
-            preventDefault: vi.fn(),
-            ...overrides
-        }) as unknown as PointerEvent;
-
-        beforeEach(() => {
-            vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
-            vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
-            vi.spyOn(card(), 'getBoundingClientRect').mockReturnValue(
-                { left: 100, right: 420, top: 100, bottom: 500, width: 320, height: 400, x: 100, y: 100 } as DOMRect);
-        });
-
-        it('clampDelta_shouldKeepTheMoveInsideTheRoomOnEachSide', () => {
-            expect(clampDelta(50, 100, 200)).toBe(50);
-            expect(clampDelta(-150, 100, 200)).toBe(-100);
-            expect(clampDelta(300, 100, 200)).toBe(200);
-        });
-
-        it('clampDelta_shouldPullBackAPopoverThatOverflows', () => {
-            expect(clampDelta(10, 100, -40)).toBe(-40);
-        });
-
-        it('onPointerMove_shouldFollowThePointer', () => {
-            component.onPointerDown(pointer({ clientX: 200, clientY: 200 }));
-            component.onPointerMove(pointer({ clientX: 260, clientY: 150 }));
-
-            expect(component.offset()).toEqual({ x: 60, y: -50 });
-            expect(component.moved()).toBe(true);
-            expect(component.dragging()).toBe(true);
-        });
-
-        it('onPointerMove_shouldStopAtTheEdgeOfTheScreen', () => {
-            component.onPointerDown(pointer({ clientX: 200, clientY: 200 }));
-            component.onPointerMove(pointer({ clientX: 2000, clientY: -500 }));
-
-            expect(component.offset()).toEqual({ x: 580, y: -100 });
-        });
-
-        it('onPointerMove_shouldDoNothing_withoutAPressFirst', () => {
-            component.onPointerMove(pointer({ clientX: 260, clientY: 150 }));
-
-            expect(component.moved()).toBe(false);
-        });
-
-        it('onPointerDown_shouldLeaveFieldsAndButtonsAlone', () => {
-            const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
-            const press = pointer({ target: input });
-
-            component.onPointerDown(press);
-            component.onPointerMove(pointer({ clientX: 100, clientY: 100 }));
-
-            expect(press.preventDefault).not.toHaveBeenCalled();
-            expect(component.moved()).toBe(false);
-        });
-
-        it('onPointerDown_shouldIgnoreOtherButtons', () => {
-            component.onPointerDown(pointer({ button: 2 }));
-
-            expect(component.dragging()).toBe(false);
-        });
-
-        it('onPointerUp_shouldEndTheDragAndKeepThePosition', () => {
-            component.onPointerDown(pointer({ clientX: 200, clientY: 200 }));
-            component.onPointerMove(pointer({ clientX: 230, clientY: 200 }));
-
-            component.onPointerUp(pointer({}));
-            component.onPointerMove(pointer({ clientX: 400, clientY: 400 }));
-
-            expect(component.dragging()).toBe(false);
-            expect(component.offset()).toEqual({ x: 30, y: 0 });
-        });
-
-        it('onPointerUp_shouldIgnoreAnotherPointer', () => {
-            component.onPointerDown(pointer({}));
-
-            component.onPointerUp(pointer({ pointerId: 2 }));
-
-            expect(component.dragging()).toBe(true);
-        });
-
-        it('offset_shouldResetWhenANewSlotIsOpened', () => {
-            component.onPointerDown(pointer({ clientX: 200, clientY: 200 }));
-            component.onPointerMove(pointer({ clientX: 260, clientY: 150 }));
-
-            fixture.componentRef.setInput('data', request());
-
-            expect(component.offset()).toEqual({ x: 0, y: 0 });
-        });
-
-        it('template_shouldHideTheArrowOnceMoved', () => {
-            component.onPointerDown(pointer({ clientX: 200, clientY: 200 }));
-            component.onPointerMove(pointer({ clientX: 260, clientY: 150 }));
-            fixture.detectChanges();
-
-            expect(card().classList).toContain('moved');
-            expect(card().style.translate).toBe('60px -50px');
         });
     });
 
@@ -358,53 +236,6 @@ describe('QuickEventPopoverComponent', () => {
 
             const active = fixture.nativeElement.querySelector('.visibility-chip.active') as HTMLElement;
             expect(active.textContent).toContain('Public');
-        });
-    });
-
-    describe('staying on screen', () => {
-        const card = () => fixture.nativeElement.querySelector('.popover-container') as HTMLElement;
-        const placeCard = (top: number, bottom: number) => vi.spyOn(card(), 'getBoundingClientRect')
-            .mockReturnValue({ top, bottom, left: 100, right: 420, width: 320, height: bottom - top, x: 100, y: top } as DOMRect);
-
-        beforeEach(() => {
-            vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
-        });
-
-        it('upwardShift_shouldBeZero_whenTheBoxFits', () => {
-            expect(upwardShift(100, 700, 800)).toBe(0);
-        });
-
-        it('upwardShift_shouldLiftTheBottomAboveTheEdge', () => {
-            expect(upwardShift(300, 900, 800)).toBe(108);
-        });
-
-        it('upwardShift_shouldNeverLiftTheTopPastTheMargin', () => {
-            expect(upwardShift(50, 1200, 800)).toBe(42);
-        });
-
-        it('keepOnScreen_shouldMoveTheCardUp_whenItGrowsPastTheBottom', () => {
-            placeCard(300, 900);
-
-            component.keepOnScreen();
-
-            expect(component.offset()).toEqual({ x: 0, y: -108 });
-        });
-
-        it('keepOnScreen_shouldLeaveACardThatFits', () => {
-            placeCard(100, 500);
-
-            component.keepOnScreen();
-
-            expect(component.offset()).toEqual({ x: 0, y: 0 });
-        });
-
-        it('keepOnScreen_shouldLeaveTheCentredPhoneLayoutAlone', () => {
-            fixture.componentRef.setInput('isMobile', true);
-            placeCard(300, 900);
-
-            component.keepOnScreen();
-
-            expect(component.offset()).toEqual({ x: 0, y: 0 });
         });
     });
 
@@ -584,5 +415,37 @@ describe('QuickEventPopoverComponent', () => {
 
             expect(component.showMoreOptions()).toBe(false);
         });
+    });
+
+    it('template_shouldBeADialog', () => {
+        const card: HTMLElement = fixture.nativeElement.querySelector('.dialog-card');
+
+        expect(card.getAttribute('role')).toBe('dialog');
+        expect(card.getAttribute('aria-modal')).toBe('true');
+    });
+});
+
+describe('QuickEventPopoverComponent on a wide screen', () => {
+    it('template_shouldUseTwoColumns_andShowEveryOptionWithoutFolding', async () => {
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+            imports: [QuickEventPopoverComponent, NoopAnimationsModule],
+            providers: [
+                { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
+                { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
+                { provide: BreakpointObserver, useValue: { observe: () => of({ matches: true, breakpoints: {} }) } }
+            ]
+        }).compileComponents();
+        const fixture = TestBed.createComponent(QuickEventPopoverComponent);
+        fixture.componentRef.setInput('data', {
+            title: '', location: '', startDate: new Date(2026, 9, 16, 19), endDate: new Date(2026, 9, 16, 20),
+            description: '', subscribeByDefault: false
+        });
+        fixture.detectChanges();
+        const el: HTMLElement = fixture.nativeElement;
+
+        expect(el.querySelector('.dialog-card')?.classList).toContain('wide');
+        expect(el.querySelector('#quick-event-notes')).not.toBeNull();
+        expect(el.querySelector('.more-options-toggle')).toBeNull();
     });
 });

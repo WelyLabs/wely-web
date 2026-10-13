@@ -1,124 +1,129 @@
-<div #card class="popover-container" [style.left.px]="isMobile() ? 0 : position().x" [style.top.px]="isMobile() ? 0 : position().y"
-    [class.arrow-left]="!isMobile() && position().arrowSide === 'left'"
-    [class.arrow-right]="!isMobile() && position().arrowSide === 'right'"
-    [class.arrow-top]="!isMobile() && position().arrowSide === 'top'" [class.mobile-centered]="isMobile()"
-    [class.moved]="moved()" [class.dragging]="dragging()" [style.translate]="offset().x + 'px ' + offset().y + 'px'"
-    (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
-    (pointerup)="onPointerUp($event)" (pointercancel)="onPointerUp($event)">
-    <div class="drag-handle" title="Déplacer"></div>
-    <div class="popover-content">
-        <div class="form-group title-group">
-            <label class="visually-hidden" for="quick-event-title">Titre de l'événement</label>
-            <input #titleInput id="quick-event-title" type="text" [ngModel]="draft().title" (ngModelChange)="update('title', $event)"
-                placeholder="Titre de l'événement" (keyup.enter)="onSave()">
-        </div>
+<div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="quick-event-heading" [class.wide]="wide()">
+    <h2 id="quick-event-heading" class="visually-hidden">Nouvel événement</h2>
 
-        <div class="form-group">
-            <mat-icon>location_on</mat-icon>
-            <label class="visually-hidden" for="quick-event-location">Lieu de l'événement</label>
-            <input id="quick-event-location" type="text" [ngModel]="draft().location"
-                (ngModelChange)="update('location', $event)" placeholder="Ajouter un lieu">
-            <button type="button" class="map-toggle" [class.open]="pickingLocation()" [class.pinned]="pickedPlace()"
-                [attr.aria-expanded]="pickingLocation()" (click)="toggleLocationPicker()"
-                [attr.aria-label]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'"
-                [title]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'">
-                <mat-icon>map</mat-icon>
-            </button>
-        </div>
-        @if (pickingLocation()) {
-            <!-- Its own chunk: MapLibre is only downloaded by those who open the map. -->
-            @defer (on immediate) {
-                <app-location-picker [value]="pickedPlace()" (picked)="onPlacePicked($event)" />
-            } @placeholder {
-                <div class="location-placeholder"></div>
-            }
-        }
+    <div class="form-group title-group">
+        <label class="visually-hidden" for="quick-event-title">Titre de l'événement</label>
+        <input #titleInput id="quick-event-title" type="text" [ngModel]="draft().title" (ngModelChange)="update('title', $event)"
+            placeholder="Titre de l'événement" (keyup.enter)="onSave()">
+    </div>
 
-        <div class="form-group date-group">
-            <mat-icon>schedule</mat-icon>
-            <div class="date-fields">
-                <div class="date-row">
-                    <label class="visually-hidden" for="quick-event-start-day">Date de début</label>
-                    <input id="quick-event-start-day" type="date" class="day-input" [ngModel]="startDay()"
-                        (ngModelChange)="onStartChange('date', $event)">
-                    <label class="visually-hidden" for="quick-event-start-time">Heure de début</label>
-                    <input id="quick-event-start-time" type="time" class="time-input" [ngModel]="startTime()"
-                        (ngModelChange)="onStartChange('time', $event)">
-                    <span class="arrow" aria-hidden="true">→</span>
-                    @if (!spansSeveralDays()) {
-                        <label class="visually-hidden" for="quick-event-end-time">Heure de fin</label>
-                        <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
-                            (ngModelChange)="onEndChange('time', $event)">
+    <div class="dialog-body">
+        <!-- When: the date, the hours, and the search for a moment that suits friends. -->
+        <section class="when">
+            <div class="form-group date-group">
+                <mat-icon>schedule</mat-icon>
+                <div class="date-fields">
+                    <div class="date-row">
+                        <label class="visually-hidden" for="quick-event-start-day">Date de début</label>
+                        <input id="quick-event-start-day" type="date" class="day-input" [ngModel]="startDay()"
+                            (ngModelChange)="onStartChange('date', $event)">
+                        <label class="visually-hidden" for="quick-event-start-time">Heure de début</label>
+                        <input id="quick-event-start-time" type="time" class="time-input" [ngModel]="startTime()"
+                            (ngModelChange)="onStartChange('time', $event)">
+                        <span class="arrow" aria-hidden="true">→</span>
+                        @if (!spansSeveralDays()) {
+                            <label class="visually-hidden" for="quick-event-end-time">Heure de fin</label>
+                            <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
+                                (ngModelChange)="onEndChange('time', $event)">
+                        }
+                    </div>
+                    @if (spansSeveralDays()) {
+                        <div class="date-row">
+                            <label class="visually-hidden" for="quick-event-end-day">Date de fin</label>
+                            <input id="quick-event-end-day" type="date" class="day-input" [ngModel]="endDay()"
+                                (ngModelChange)="onEndChange('date', $event)">
+                            <label class="visually-hidden" for="quick-event-end-time">Heure de fin</label>
+                            <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
+                                (ngModelChange)="onEndChange('time', $event)">
+                        </div>
+                    }
+                    @if (invalidRange()) {
+                        <small class="field-error">La fin doit venir après le début.</small>
                     }
                 </div>
-                @if (spansSeveralDays()) {
-                    <div class="date-row">
-                        <label class="visually-hidden" for="quick-event-end-day">Date de fin</label>
-                        <input id="quick-event-end-day" type="date" class="day-input" [ngModel]="endDay()"
-                            (ngModelChange)="onEndChange('date', $event)">
-                        <label class="visually-hidden" for="quick-event-end-time">Heure de fin</label>
-                        <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
-                            (ngModelChange)="onEndChange('time', $event)">
-                    </div>
-                }
-                @if (invalidRange()) {
-                    <small class="field-error">La fin doit venir après le début.</small>
-                }
             </div>
-        </div>
 
-        @if (searchWindow(); as window) {
-            <button type="button" class="find-slot-toggle" [class.open]="findingSlot()" (click)="toggleFindSlot()">
-                <mat-icon>group</mat-icon>
-                <span>Trouver un moment avec des amis</span>
-            </button>
-            @if (findingSlot()) {
-                <app-find-slot [window]="window" (picked)="onSlotPicked($event)" />
+            @if (searchWindow(); as window) {
+                <button type="button" class="find-slot-toggle" [class.open]="findingSlot()" (click)="toggleFindSlot()">
+                    <mat-icon>group</mat-icon>
+                    <span>Trouver un moment avec des amis</span>
+                </button>
+                @if (findingSlot()) {
+                    <app-find-slot [window]="window" (picked)="onSlotPicked($event)" />
+                }
             }
-        }
+        </section>
 
-        <div class="form-group visibility-group">
-            <div class="visibility-choices" role="radiogroup" aria-label="Visibilité">
-                @for (option of visibilityOptions; track option.value) {
-                    <button type="button" role="radio" class="visibility-chip" [class.active]="visibility() === option.value"
-                        [attr.aria-checked]="visibility() === option.value" (click)="update('visibility', option.value)">
-                        <mat-icon>{{ option.icon }}</mat-icon>{{ option.label }}
-                    </button>
+        <!-- Where, and who sees it. -->
+        <section class="where">
+            <div class="form-group">
+                <mat-icon>location_on</mat-icon>
+                <label class="visually-hidden" for="quick-event-location">Lieu de l'événement</label>
+                <input id="quick-event-location" type="text" [ngModel]="draft().location"
+                    (ngModelChange)="update('location', $event)" placeholder="Ajouter un lieu">
+                <button type="button" class="map-toggle" [class.open]="pickingLocation()" [class.pinned]="pickedPlace()"
+                    [attr.aria-expanded]="pickingLocation()" (click)="toggleLocationPicker()"
+                    [attr.aria-label]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'"
+                    [title]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'">
+                    <mat-icon>map</mat-icon>
+                </button>
+            </div>
+            @if (pickingLocation()) {
+                <!-- Its own chunk: MapLibre is only downloaded by those who open the map. -->
+                @defer (on immediate) {
+                    <app-location-picker [value]="pickedPlace()" (picked)="onPlacePicked($event)" />
+                } @placeholder {
+                    <div class="location-placeholder"></div>
                 }
+            }
+
+            <div class="form-group visibility-group">
+                <div class="visibility-choices" role="radiogroup" aria-label="Visibilité">
+                    @for (option of visibilityOptions; track option.value) {
+                        <button type="button" role="radio" class="visibility-chip" [class.active]="visibility() === option.value"
+                            [attr.aria-checked]="visibility() === option.value" (click)="update('visibility', option.value)">
+                            <mat-icon>{{ option.icon }}</mat-icon>{{ option.label }}
+                        </button>
+                    }
+                </div>
+                <small class="visibility-hint">{{ visibilityHint() }}</small>
             </div>
-            <small class="visibility-hint">{{ visibilityHint() }}</small>
-        </div>
+        </section>
 
-        <button type="button" class="more-options-toggle" [class.open]="showMoreOptions()"
-            [attr.aria-expanded]="showMoreOptions()" (click)="toggleMoreOptions()">
-            <mat-icon>chevron_right</mat-icon>
-            <span>Plus d'options</span>
-        </button>
-        @if (showMoreOptions()) {
-            <div class="form-group notes-group">
-                <mat-icon>notes</mat-icon>
-                <label class="visually-hidden" for="quick-event-notes">Notes de l'événement</label>
-                <textarea id="quick-event-notes" [ngModel]="draft().description"
-                    (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
-            </div>
+        <!-- The rest: folded on a phone, shown across the bottom on a wide screen. -->
+        <section class="extra">
+            @if (!wide()) {
+                <button type="button" class="more-options-toggle" [class.open]="showMoreOptions()"
+                    [attr.aria-expanded]="showMoreOptions()" (click)="toggleMoreOptions()">
+                    <mat-icon>chevron_right</mat-icon>
+                    <span>Plus d'options</span>
+                </button>
+            }
+            @if (optionsShown()) {
+                <div class="form-group notes-group">
+                    <mat-icon>notes</mat-icon>
+                    <label class="visually-hidden" for="quick-event-notes">Notes de l'événement</label>
+                    <textarea id="quick-event-notes" [ngModel]="draft().description"
+                        (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
+                </div>
 
-            <div class="form-group checkbox-group">
-                <label class="checkbox-container">
-                    <input type="checkbox" [ngModel]="draft().subscribeByDefault" (ngModelChange)="update('subscribeByDefault', $event)">
-                    <span>S'inscrire par défaut</span>
-                </label>
-            </div>
-        }
-
-        @if (error(); as message) {
-            <p class="save-error" role="alert">{{ message }}</p>
-        }
-
-        <div class="form-actions">
-            <button type="button" class="cancel-btn" (click)="onCancel()">Annuler</button>
-            <button type="button" class="submit-btn" [disabled]="!draft().title.trim() || invalidRange() || saving()"
-                (click)="onSave()">{{ saving() ? 'Création…' : 'Créer' }}</button>
-        </div>
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" [ngModel]="draft().subscribeByDefault" (ngModelChange)="update('subscribeByDefault', $event)">
+                        <span>S'inscrire par défaut</span>
+                    </label>
+                </div>
+            }
+        </section>
     </div>
-    <div class="popover-arrow" [style.top.%]="arrowOffset()"></div>
+
+    @if (error(); as message) {
+        <p class="save-error" role="alert">{{ message }}</p>
+    }
+
+    <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="onCancel()">Annuler</button>
+        <button type="button" class="submit-btn" [disabled]="!draft().title.trim() || invalidRange() || saving()"
+            (click)="onSave()">{{ saving() ? 'Création…' : 'Créer' }}</button>
+    </div>
 </div>

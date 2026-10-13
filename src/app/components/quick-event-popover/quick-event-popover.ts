@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, linkedSignal, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, linkedSignal, output, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { map } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,49 +11,12 @@ import { FindSlotComponent, TimeWindow } from '../find-slot/find-slot';
 import { LocationPickerComponent } from '../location-picker/location-picker';
 import { Place } from '../../models/place.model';
 
-/** Where the popover sits relative to the slot that opened it. */
-export interface PopoverPosition {
-    x: number;
-    y: number;
-    arrowSide: 'top' | 'left' | 'right';
-}
-
-/** How far the user dragged the popover from where it opened, in pixels. */
-export interface DragOffset {
-    x: number;
-    y: number;
-}
-
 /** The visibility choices, in the order shown. */
 export const VISIBILITY_OPTIONS: readonly { value: Visibility; label: string; icon: string; hint: string }[] = [
     { value: 'FRIENDS', label: 'Amis', icon: 'group', hint: 'Vos amis le voient dans leur fil' },
     { value: 'PUBLIC', label: 'Public', icon: 'public', hint: 'Tout le monde le voit' },
     { value: 'PRIVATE', label: 'Privé', icon: 'lock', hint: 'Vos amis ne voient que « occupé »' }
 ];
-
-/** Elements that keep their own pointer behaviour instead of starting a drag. */
-const INTERACTIVE = 'input, textarea, button, select, label, a, [role="option"], .location-map';
-
-/**
- * Bounds a drag delta so the popover stays on screen: `before` and `after` are the room left
- * on each side. A popover already overflowing is pulled back in; one larger than the screen
- * keeps its start edge visible.
- */
-export function clampDelta(delta: number, before: number, after: number): number {
-    return Math.max(-before, Math.min(delta, after));
-}
-
-/** Space kept between the popover and the edge of the screen. */
-const SCREEN_MARGIN_PX = 8;
-
-/**
- * How far up a box must move to end above the bottom of the screen, without its top going past
- * the top margin: 0 when it already fits.
- */
-export function upwardShift(top: number, bottom: number, viewportHeight: number, margin = SCREEN_MARGIN_PX): number {
-    const overflow = bottom - (viewportHeight - margin);
-    return overflow > 0 ? Math.min(overflow, Math.max(top - margin, 0)) : 0;
-}
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
@@ -88,16 +54,13 @@ export function withTime(date: Date, value: string): Date | null {
 
 const DAY_MS = 86400000;
 
-interface DragState {
-    pointerId: number;
-    startX: number;
-    startY: number;
-    origin: DragOffset;
-    rect: DOMRect;
-}
+/** From this width the form is laid out in two columns. */
+const WIDE_LAYOUT = '(min-width: 1024px)';
 
 /**
- * The small form that opens on a calendar slot to create an event in place.
+ * The form that creates an event: a dialog centred on screen, in one column on a phone and two
+ * on a wide screen. It used to open next to its slot and could be dragged around: fixed and
+ * centred, it has the room for both columns, over a dimmed calendar.
  */
 @Component({
     selector: 'app-quick-event-popover',
@@ -109,10 +72,6 @@ interface DragState {
 })
 export class QuickEventPopoverComponent {
     readonly data = input.required<EventCreateRequest>();
-    readonly position = input<PopoverPosition>({ x: 0, y: 0, arrowSide: 'top' });
-    /** Percentage from the top of the popover at which the arrow points. */
-    readonly arrowOffset = input(50);
-    readonly isMobile = input(false);
     /** Why the last save failed, shown above the buttons. */
     readonly error = input<string | null>(null);
     /** While the event is being created: the button waits instead of sending it twice. */
@@ -146,51 +105,25 @@ export class QuickEventPopoverComponent {
     /** An end at or before the start cannot be saved. */
     readonly invalidRange = computed(() => this.endOf(this.draft()) <= this.draft().startDate);
 
-    /** Notes and « S'inscrire par défaut », folded away; closed again on each new slot. */
-    readonly showMoreOptions = linkedSignal({ source: this.data, computation: () => false });
+    /** Two columns: wide enough to show every option without folding any away. */
+    readonly wide = toSignal(inject(BreakpointObserver).observe(WIDE_LAYOUT).pipe(map(state => state.matches)),
+        { initialValue: window.matchMedia?.(WIDE_LAYOUT).matches ?? false });
 
-    /** Back to where the popover opened, next to its slot, whenever a new slot is opened. */
-    private readonly card = viewChild<ElementRef<HTMLElement>>('card');
+    /** Notes and « S'inscrire par défaut », folded away on a phone; closed again on each new slot. */
+    readonly showMoreOptions = linkedSignal({ source: this.data, computation: () => false });
+    readonly optionsShown = computed(() => this.wide() || this.showMoreOptions());
+
     private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
 
-    readonly offset = linkedSignal<EventCreateRequest, DragOffset>({ source: this.data, computation: () => ({ x: 0, y: 0 }) });
-    readonly moved = computed(() => this.offset().x !== 0 || this.offset().y !== 0);
-    readonly dragging = signal(false);
-
     constructor() {
-        // The card grows when « Avec des amis… » opens and when results come in: anchored next to a
-        // slot low on the screen, its buttons then ended below the bottom edge. Each growth moves
-        // it back up, through the same offset a drag uses.
-        const destroyRef = inject(DestroyRef);
         afterNextRender(() => {
             // Straight to the title with a mouse; on a touch screen that would throw the keyboard
             // over a form the user has not looked at yet.
             if (window.matchMedia?.('(pointer: fine)').matches) {
                 this.titleInput()?.nativeElement.focus();
             }
-            const card = this.card()?.nativeElement;
-            if (!card || typeof ResizeObserver === 'undefined') {
-                return;
-            }
-            const observer = new ResizeObserver(() => this.keepOnScreen());
-            observer.observe(card);
-            destroyRef.onDestroy(() => observer.disconnect());
         });
     }
-
-    /** Moves the card up as far as needed for its bottom to be on screen. Not when centred on a phone. */
-    keepOnScreen(): void {
-        const card = this.card()?.nativeElement;
-        if (!card || this.isMobile() || this.dragging()) {
-            return;
-        }
-        const rect = card.getBoundingClientRect();
-        const shift = upwardShift(rect.top, rect.bottom, window.innerHeight);
-        if (shift > 0) {
-            this.offset.update(offset => ({ x: offset.x, y: offset.y - shift }));
-        }
-    }
-    private drag: DragState | null = null;
 
     /** Whether the "find a slot with friends" panel is open; closed again on each new slot. */
     readonly findingSlot = linkedSignal({ source: this.data, computation: () => false });
@@ -273,45 +206,6 @@ export class QuickEventPopoverComponent {
     /** Written by each field's `ngModelChange`, which is how a signal replaces two-way binding. */
     update<K extends keyof EventCreateRequest>(field: K, value: EventCreateRequest[K]): void {
         this.draft.update(draft => ({ ...draft, [field]: value }));
-    }
-
-    /** Starts moving the popover, unless the press lands on a field or a button. */
-    onPointerDown(event: PointerEvent): void {
-        if (event.button !== 0 || (event.target instanceof Element && event.target.closest(INTERACTIVE))) {
-            return;
-        }
-        const card = event.currentTarget as HTMLElement;
-        this.drag = {
-            pointerId: event.pointerId,
-            startX: event.clientX,
-            startY: event.clientY,
-            origin: this.offset(),
-            rect: card.getBoundingClientRect()
-        };
-        card.setPointerCapture?.(event.pointerId);
-        this.dragging.set(true);
-        event.preventDefault();
-    }
-
-    onPointerMove(event: PointerEvent): void {
-        const drag = this.drag;
-        if (!drag || event.pointerId !== drag.pointerId) {
-            return;
-        }
-        const { rect } = drag;
-        const dx = clampDelta(event.clientX - drag.startX, rect.left, window.innerWidth - rect.right);
-        const dy = clampDelta(event.clientY - drag.startY, rect.top, window.innerHeight - rect.bottom);
-        this.offset.set({ x: drag.origin.x + dx, y: drag.origin.y + dy });
-    }
-
-    /** Also bound to pointercancel: a touch the browser turns into a scroll ends the drag. */
-    onPointerUp(event: PointerEvent): void {
-        if (!this.drag || event.pointerId !== this.drag.pointerId) {
-            return;
-        }
-        (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
-        this.drag = null;
-        this.dragging.set(false);
     }
 
     onSave(): void {

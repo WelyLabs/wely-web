@@ -200,7 +200,7 @@
       }
 
       @if (selectedDate(); as day) {
-        <button type="button" class="add-on-day" (click)="openNewEvent(day, $event)">
+        <button type="button" class="add-on-day" (click)="openNewEvent(day)">
           <mat-icon>add</mat-icon>Ajouter un événement le {{ day | date:'EEEE d' }}
         </button>
       }
@@ -236,8 +236,7 @@
     <div class="popover-backdrop" (click)="onPopoverBackdropClick()"></div>
   }
   @if (isPopoverVisible()) {
-    <app-quick-event-popover [data]="popoverData()" [position]="popoverPosition()"
-      [arrowOffset]="arrowOffset()" [isMobile]="isMobilePopover()" [error]="createError()"
+    <app-quick-event-popover [data]="popoverData()" [error]="createError()"
       [saving]="savingEvent()" (save)="submitEvent($event)"
       (dismissed)="cancelCreatingEvent()">
     </app-quick-event-popover>
