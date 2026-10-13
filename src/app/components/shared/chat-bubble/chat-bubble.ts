@@ -20,6 +20,8 @@ export interface ChatBubbleMessage {
   failed?: boolean;
   /** A photo the message carries: a signed or local URL, its size, or that it was removed. */
   photo?: { url: string | null; width: number; height: number; removed: boolean } | null;
+  /** A notice from Wely: a centred line, no author, no avatar. */
+  system?: boolean;
 }
 
 /**
@@ -45,5 +47,6 @@ export class ChatBubbleComponent {
   readonly initials = computed(() => initialsOf(this.author()));
   readonly color = computed(() => avatarColor(this.message().senderId ?? this.author()));
   /** The author's photo; the coloured initials stand in until it arrives, or when there is none. */
-  readonly picture = computed(() => this.message().isMe ? null : this.avatars.url(this.message().senderId)());
+  readonly picture = computed(() =>
+    this.message().isMe || this.message().system ? null : this.avatars.url(this.message().senderId)());
 }

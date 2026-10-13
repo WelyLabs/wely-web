@@ -20,7 +20,8 @@ export interface Message {
     receiverId: string;
     conversationId: string;
     content: string;
-    type: MessageType;
+    /** Missing means TEXT; SYSTEM is a notice from Wely itself, such as a fixed date. */
+    type?: MessageType;
     /** ISO instant with its zone, as wely-chat sends it. */
     timestamp: string;
     reactions: Record<string, number>;
@@ -28,6 +29,11 @@ export interface Message {
     photo?: MessagePhoto | null;
     /** On the live stream only: a new message, or a change to one already sent. */
     kind?: MessageKind;
+}
+
+/** A notice from Wely, shown as a muted line rather than someone's message. */
+export function isSystemMessage(message: { type?: MessageType }): boolean {
+    return message.type === MessageType.SYSTEM;
 }
 
 /** NEW is appended, UPDATED replaces the message with the same id; a frame without one is NEW. */

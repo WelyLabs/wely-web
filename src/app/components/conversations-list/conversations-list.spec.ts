@@ -145,6 +145,13 @@ describe('ConversationsListComponent', () => {
         expect(component.getLastMessageContent(summaryWithMyMsg as any)).toBe('Vous: hi');
     });
 
+    it('getLastMessageContent_shouldShowASystemNotice_withoutPrefix', () => {
+        const summary = { ...mockConversations[0],
+            lastMessage: { content: '📅 Date fixée : jeudi 15 octobre', senderId: 'system', senderName: 'Wely', type: 'SYSTEM' } };
+
+        expect(component.getLastMessageContent(summary as never)).toBe('📅 Date fixée : jeudi 15 octobre');
+    });
+
     it('getLastMessageContent_shouldSayPhoto_forAPhotoWithoutCaption', () => {
         const photo = (removed: boolean) => ({ ...mockConversations[0],
             lastMessage: { content: '', senderId: 'friend', photo: { width: 1, height: 1, removed } } });

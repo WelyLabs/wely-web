@@ -12,7 +12,7 @@ import { ChatService } from '../../services/chat.service';
 import { SocialService } from '../../services/social.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { catchError, forkJoin, map, of } from 'rxjs';
-import { ConversationSummary, ConversationType } from '../../models/chat.model';
+import { ConversationSummary, ConversationType, isSystemMessage } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 import { AvatarService } from '../../services/avatar.service';
 
@@ -115,6 +115,9 @@ export class ConversationsListComponent implements OnInit {
             return 'Pas encore de messages';
         }
 
+        if (isSystemMessage(conversation.lastMessage)) {
+            return conversation.lastMessage.content;
+        }
         const prefix = conversation.lastMessage.senderId === this.currentUserId ? 'Vous: ' : '';
         const photo = conversation.lastMessage.photo;
         if (photo && !conversation.lastMessage.content) {

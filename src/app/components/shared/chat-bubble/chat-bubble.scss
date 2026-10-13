@@ -108,3 +108,13 @@
     color: inherit;
     opacity: 0.75;
 }
+
+// A notice from Wely (a fixed date): centred and muted, nobody's bubble.
+.system-notice {
+    margin: 4px auto;
+    max-width: 85%;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}

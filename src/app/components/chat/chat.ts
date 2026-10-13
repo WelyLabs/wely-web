@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
 import { ChatService, PendingMessage, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, ConversationPhoto, ConversationType, Message, MessagePhoto, Presence } from '../../models/chat.model';
+import { Conversation, ConversationPhoto, ConversationType, Message, MessagePhoto, Presence, isSystemMessage } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 import { SocialService } from '../../services/social.service';
 import { AvatarService } from '../../services/avatar.service';
@@ -276,6 +276,7 @@ export class ChatComponent implements OnInit {
             isMe: message.senderId === this.currentUserId,
             senderName: message.senderName,
             senderId: message.senderId,
+            system: isSystemMessage(message) || undefined,
             pending: 'pending' in message ? message.pending : undefined,
             failed: 'failed' in message ? message.failed : undefined,
             photo: 'photo' in message && message.photo ? bubblePhoto(message.photo) : undefined

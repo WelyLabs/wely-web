@@ -288,6 +288,20 @@ describe('EventDetailsComponent', () => {
         expect(fixture.nativeElement.textContent).toContain('2 messages plus tôt');
     });
 
+    it('threadPreview_shouldShowADateFixedNotice_asASystemLine', () => {
+        const notice = chatMessage({ id: 'sys', senderId: 'system', senderName: 'Wely', type: MessageType.SYSTEM,
+            content: '📅 Date fixée : jeudi 15 octobre, 19:00 – 21:00' });
+        chatService.getEventConversation.mockReturnValue(of(group([chatMessage(), notice])));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+
+        create();
+
+        const shown = component.threadPreview().at(-1);
+        expect(shown?.system).toBe(true);
+        expect(shown?.senderName).toBe('Wely');
+        expect(fixture.nativeElement.querySelector('.system-notice')?.textContent).toContain('Date fixée');
+    });
+
     it('openDiscussion_shouldOpenTheGroupInTheChat', () => {
         eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
         create();

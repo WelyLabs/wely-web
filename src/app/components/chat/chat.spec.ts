@@ -254,6 +254,28 @@ describe('ChatComponent', () => {
         expect(component.chatMessages().some(m => m.text === 'hello from stream')).toBe(true);
     });
 
+    it('stream_shouldShowADateFixedNotice_asASystemLine', () => {
+        chatMessagesSubject.next({
+            id: 'sys1', content: '📅 Date fixée : jeudi 15 octobre, 19:00 – 21:00', senderId: 'system', senderName: 'Wely',
+            conversationId: 'conv1', timestamp: new Date().toISOString(), type: MessageType.SYSTEM, kind: 'NEW', photo: null
+        });
+        fixture.detectChanges();
+
+        const notice = component.chatMessages().find(m => m.id === 'sys1');
+        expect(notice?.system).toBe(true);
+        expect(notice?.isMe).toBe(false);
+        expect(fixture.nativeElement.querySelector('.system-notice')?.textContent).toContain('Date fixée');
+    });
+
+    it('toChatMessage_shouldTreatAMessageWithoutTypeAsText', () => {
+        chatMessagesSubject.next({
+            id: 'old', content: 'avant', senderId: 'friend', senderName: 'Friend', conversationId: 'conv1',
+            timestamp: new Date().toISOString()
+        });
+
+        expect(component.chatMessages().find(m => m.id === 'old')?.system).toBeUndefined();
+    });
+
     it('stream_shouldNotShowTheSameMessageTwice', () => {
         const streamMsg = {
             id: '99', content: 'once', senderId: 'friend', senderName: 'Friend', conversationId: 'conv1',

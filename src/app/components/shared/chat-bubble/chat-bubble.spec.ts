@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { ChatBubbleComponent, ChatBubbleMessage } from './chat-bubble';
 import { avatarColor } from '../../../core/ui/avatar';
@@ -33,6 +33,26 @@ describe('ChatBubbleComponent', () => {
     expect(element.querySelector('.author')?.textContent).toBe('Inès Bernard');
     expect(element.querySelector('p')?.textContent).toBe('Je ramène Dixit');
     expect(element.querySelector('.time')?.textContent?.trim()).toBe('19:05');
+  });
+
+  it('template_shouldShowASystemNoticeAsAMutedLine_withoutAvatarNameNorTime', () => {
+    const element = render({ text: '📅 Date fixée : jeudi 15 octobre, 19:00 – 21:00', time: '2026-10-12T19:05:00', isMe: false,
+      senderName: 'Wely', senderId: 'system', system: true });
+
+    expect(element.querySelector('.system-notice')?.textContent).toContain('Date fixée');
+    expect(element.querySelector('.avatar')).toBeNull();
+    expect(element.querySelector('.author')).toBeNull();
+    expect(element.querySelector('.bubble')).toBeNull();
+    expect(element.querySelector('.time')).toBeNull();
+  });
+
+  it('picture_shouldNotLookUpAnAvatar_forASystemNotice', () => {
+    const avatars = TestBed.inject(AvatarService);
+    const url = vi.spyOn(avatars, 'url');
+    render({ text: 'Date fixée', time: '2026-10-12T19:05:00', isMe: false, senderId: 'system', system: true });
+
+    expect(fixture.componentInstance.picture()).toBeNull();
+    expect(url).not.toHaveBeenCalled();
   });
 
   it('template_shouldShowTheAuthorsPicture_whenTheyHaveOne', () => {

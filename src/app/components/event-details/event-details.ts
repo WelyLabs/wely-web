@@ -16,7 +16,7 @@ import { EventPollComponent, Voter } from '../event-poll/event-poll';
 import { SocialService } from '../../services/social.service';
 import { ChatService, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, Message, MessagePhoto } from '../../models/chat.model';
+import { Conversation, Message, MessagePhoto, isSystemMessage } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
@@ -58,6 +58,7 @@ export interface ThreadMessage {
   content: string;
   timestamp: string;
   photo?: MessagePhoto | null;
+  system?: boolean;
 }
 
 /** loading: asking wely-chat. ready: the group exists. unavailable: it could not be read. */
@@ -239,6 +240,7 @@ export class EventDetailsComponent implements OnInit {
     isMe: this.isMine(message),
     senderName: this.authorOf(message),
     senderId: message.senderId,
+    system: message.system,
     photo: message.photo
       ? { url: message.photo.url ?? null, width: message.photo.width, height: message.photo.height, removed: message.photo.removed }
       : undefined
@@ -441,6 +443,9 @@ export class EventDetailsComponent implements OnInit {
 
   /** The name a message is signed with: "Toi" for the viewer, the directory's name when known. */
   authorOf(message: ThreadMessage): string {
+    if (message.system) {
+      return message.senderName;
+    }
     const me = this.me();
     if (me !== null && message.senderId === me.id) {
       return 'Toi';
@@ -572,6 +577,7 @@ function toThreadMessage(message: Message): ThreadMessage {
     senderName: message.senderName,
     content: message.content,
     timestamp: message.timestamp,
-    photo: message.photo ?? null
+    photo: message.photo ?? null,
+    system: isSystemMessage(message) || undefined
   };
 }
