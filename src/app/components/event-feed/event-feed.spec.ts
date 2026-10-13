@@ -356,4 +356,35 @@ describe('EventFeedComponent', () => {
         expect(card.style.backgroundImage).toContain('linear-gradient');
         expect(card.style.backgroundImage).not.toContain('url(');
     });
+
+    describe('date poll badge', () => {
+        const polled = {
+            id: 'p', title: 'Apéro', organizerId: 'Org 1', startDate: new Date(), endDate: new Date(), location: 'Loc', image: null,
+            description: '', poll: { status: 'OPEN', fixedSlotId: null, slots: [] }
+        };
+        const showOnly = (events: unknown[]) => {
+            (component as any).feed.set(events);
+            (component as any).events.set(events);
+            fixture.detectChanges();
+        };
+
+        it('template_shouldBadgeACardWhoseDateIsBeingVotedOn', () => {
+            showOnly([polled]);
+
+            expect(fixture.nativeElement.querySelector('.card-image .poll-badge')?.textContent).toContain('Sondage en cours');
+        });
+
+        it('template_shouldBadgeTheGridCardToo', () => {
+            component.showView('grid');
+            showOnly([polled]);
+
+            expect(fixture.nativeElement.querySelector('.grid-card-image .poll-badge')).not.toBeNull();
+        });
+
+        it('template_shouldNotBadgeAnEventWithAFixedDate', () => {
+            showOnly([{ ...polled, poll: { ...polled.poll, status: 'CLOSED' } }, { ...polled, id: 'n', poll: null }]);
+
+            expect(fixture.nativeElement.querySelector('.poll-badge')).toBeNull();
+        });
+    });
 });

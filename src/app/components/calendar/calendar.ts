@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { LoggerService } from '../../core/logging/logger.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -77,7 +78,43 @@ export interface CalendarEvent {
   description: string;
   startDate: Date;
   endDate: Date;
+  /** One proposed slot of an open date poll, not a fixed event. */
+  tentative?: boolean;
+  /** For a tentative entry: which slot, so the event's several slots stay apart. */
+  slotId?: string;
 }
+
+/** Fixed events as they are; each open poll as one tentative entry per proposed slot, polls deduplicated. */
+export function toCalendarEvents(subscribed: FeedEvent[], polls: FeedEvent[]): CalendarEvent[] {
+  const isOpenPoll = (event: FeedEvent) => event.poll?.status === 'OPEN';
+  const openPolls = new Map([...subscribed, ...polls].filter(isOpenPoll).map(event => [event.id, event]));
+  const fixed = subscribed.filter(event => !isOpenPoll(event)).map(event => toCalendarEvent(event, event.startDate, event.endDate));
+  const tentative = [...openPolls.values()].flatMap(event => (event.poll?.slots ?? []).map(slot => ({
+    ...toCalendarEvent(event, slot.start, slot.end),
+    tentative: true,
+    slotId: slot.id
+  })));
+  return [...fixed, ...tentative];
+}
+
+function toCalendarEvent(event: FeedEvent, start: Date, end: Date): CalendarEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    time: formatTimeRange(start, end),
+    description: event.description,
+    startDate: new Date(start),
+    endDate: new Date(end)
+  };
+}
+
+/** 24-hour clock, as read in France. */
+export function formatTimeRange(start: Date, end: Date): string {
+  const format = (d: Date) => `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  return `${format(start)} – ${format(end)}`;
+}
+
+const POLL_INVALID_CODE = 'EVT-BUS-014';
 
 import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-popover';
 import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
@@ -147,7 +184,7 @@ const POPOVER_CLICK_GUARD_MS = 500;
   templateUrl: './calendar.html',
   // The ways in to a new event, and the phone layout, have their own sheets: the calendar's is at
   // its size budget.
-  styleUrls: ['./calendar.scss', './calendar-create.scss', './calendar-phone.scss'],
+  styleUrls: ['./calendar.scss', './calendar-create.scss', './calendar-phone.scss', './calendar-poll.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalendarComponent implements OnInit, OnDestroy {
@@ -421,14 +458,24 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // could only come back 401.
     this.eventService.refreshEvents();
 
-    this.eventService.subscribedEvents$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((feedEvents: FeedEvent[]) => {
-        const subscribedEvents = feedEvents.map(event => this.convertFeedEventToCalendarEvent(event));
-
-        this.events.set(subscribedEvents);
-        this.generateCalendar();
-      });
+    // Open polls show as tentative slots: those subscribed to, plus those organized or voted on,
+    // read again whenever the subscribed list is.
+    this.eventService.subscribedEvents$.pipe(
+      tap(feedEvents => {
+        this.subscribedFeed = feedEvents;
+        this.showEvents();
+      }),
+      switchMap(() => this.eventService.getMyPolls().pipe(catchError((err: unknown) => {
+        this.logger.error('CalendarComponent', 'Could not load the open polls', err);
+        return of(null);
+      }))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(polls => {
+      if (polls) {
+        this.pollFeed = polls;
+        this.showEvents();
+      }
+    });
 
     // Started once, outside the subscription. It used to be created inside it, so every emission
     // of subscribedEvents$ started another interval and only the last handle was kept — the rest
@@ -602,25 +649,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
-  private convertFeedEventToCalendarEvent(feedEvent: FeedEvent): CalendarEvent {
-    const start = new Date(feedEvent.startDate);
-    const end = feedEvent.endDate ? new Date(feedEvent.endDate) : new Date(start.getTime() + 3600000);
+  private subscribedFeed: FeedEvent[] = [];
+  private pollFeed: FeedEvent[] = [];
 
-    return {
-      id: feedEvent.id,
-      title: feedEvent.title,
-      time: this.formatTimeRange(start, end),
-      description: feedEvent.description,
-      startDate: start,
-      endDate: end
-    };
-  }
-
-  private formatTimeRange(start: Date, end: Date): string {
-    // 24-hour clock, as read in France: it printed "2:00 PM".
-    const format = (d: Date) =>
-      `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-    return `${format(start)} – ${format(end)}`;
+  private showEvents(): void {
+    this.events.set(toCalendarEvents(this.subscribedFeed, this.pollFeed));
+    this.generateCalendar();
   }
 
   generateCalendar(): void {
@@ -1124,7 +1158,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
       },
       error: (err: unknown) => {
         this.savingEvent.set(false);
-        this.createError.set('L\'événement n\'a pas pu être créé. Réessayez dans un instant.');
+        const invalidPoll = err instanceof HttpErrorResponse && err.error?.code === POLL_INVALID_CODE;
+        this.createError.set(invalidPoll
+          ? 'Les créneaux proposés ne sont pas valides : chacun doit être à venir et différent des autres.'
+          : 'L\'événement n\'a pas pu être créé. Réessayez dans un instant.');
         this.logger.error('CalendarComponent', 'Error creating event:', err);
       }
     });

@@ -8,9 +8,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
-import { Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
+import { EMPTY, Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
 
-import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
+import { EventParticipants, EventService, FeedEvent, Poll } from '../../services/event.service';
+import { PollStreamService } from '../../services/poll-stream.service';
+import { EventPollComponent, Voter } from '../event-poll/event-poll';
 import { SocialService } from '../../services/social.service';
 import { ChatService, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
@@ -113,7 +115,7 @@ export function countdownOf(event: FeedEvent, now: Date): string {
   selector: 'app-event-details',
   standalone: true,
   imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent,
-    EventExpensesComponent],
+    EventExpensesComponent, EventPollComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -129,6 +131,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
+  private readonly pollStream = inject(PollStreamService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly heroEnd = viewChild<ElementRef<HTMLElement>>('heroEnd');
@@ -162,14 +165,34 @@ export class EventDetailsComponent implements OnInit {
     return me !== null && (this.participants()?.participantIds ?? []).includes(me.id);
   });
 
+  /** The date is still being voted on: the event's dates are only its earliest proposal. */
+  readonly polling = computed(() => this.event()?.poll?.status === 'OPEN');
+
   readonly phase = computed<EventPhase | null>(() => {
     const event = this.event();
-    return event ? phaseOf(event, this.joined() || this.isOrganizer(), this.now()) : null;
+    if (!event) {
+      return null;
+    }
+    const member = this.joined() || this.isOrganizer();
+    // No live or past page for a date nobody fixed yet.
+    return this.polling() ? (member ? 'member' : 'guest') : phaseOf(event, member, this.now());
   });
 
   readonly countdown = computed(() => {
     const event = this.event();
-    return event ? countdownOf(event, this.now()) : '';
+    if (!event) {
+      return '';
+    }
+    return this.polling() ? 'Date à fixer' : countdownOf(event, this.now());
+  });
+
+  /** Name and picture of a voter, for the poll's avatars. */
+  readonly voterOf = (id: string): Voter => this.person(id);
+
+  /** The event whose open poll is followed live; null when there is none. */
+  private readonly openPollId = computed(() => {
+    const event = this.event();
+    return event?.poll?.status === 'OPEN' ? event.id : null;
   });
 
   readonly organizerName = computed(() => {
@@ -246,6 +269,16 @@ export class EventDetailsComponent implements OnInit {
   });
 
   constructor() {
+    // Follows the open poll live; a closed one brings the event back with its fixed date.
+    toObservable(this.openPollId).pipe(
+      distinctUntilChanged(),
+      switchMap(id => id ? this.pollStream.follow(id).pipe(catchError((error: unknown) => {
+        this.logger.error('EventDetailsComponent', 'Could not follow the poll', error);
+        return EMPTY;
+      })) : EMPTY),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(poll => this.applyPoll(poll));
+
     // Watches the end of the full header rather than a scroll offset: it works whichever ancestor scrolls.
     effect(onCleanup => {
       const target = this.heroEnd()?.nativeElement;
@@ -265,21 +298,35 @@ export class EventDetailsComponent implements OnInit {
       return;
     }
 
-    this.eventService.getEvent(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: event => this.event.set(event),
-      error: (error: HttpErrorResponse) => {
-        if (error.status !== 404) {
-          this.logger.error('EventDetailsComponent', 'Could not load the event', error);
-        }
-        this.notFound.set(true);
-      }
-    });
+    this.loadEvent(id);
     this.loadParticipants(id);
 
     this.loadDirectory();
     this.followThread(id);
 
     interval(MINUTE_MS).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.now.set(new Date()));
+  }
+
+  /** A new state of the poll, voted here or streamed; once closed the event is read again. */
+  applyPoll(poll: Poll): void {
+    const event = this.event();
+    if (!event) {
+      return;
+    }
+    if (poll.status === 'CLOSED') {
+      this.onDateFixed();
+      return;
+    }
+    this.event.set({ ...event, poll });
+  }
+
+  /** The date was fixed: the event and its participants (the yes voters joined) are read again. */
+  onDateFixed(): void {
+    const event = this.event();
+    if (event) {
+      this.loadEvent(event.id);
+      this.loadParticipants(event.id);
+    }
   }
 
   toggleParticipation(): void {
@@ -366,6 +413,11 @@ export class EventDetailsComponent implements OnInit {
 
   dayLabel(date: Date): string {
     return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+
+  /** Day and hours, or « Sondage en cours » while the date is voted on. */
+  whenLabel(event: FeedEvent): string {
+    return event.poll?.status === 'OPEN' ? 'Sondage en cours' : `${this.dayLabel(event.startDate)} · ${this.timeRange(event)}`;
   }
 
   timeRange(event: FeedEvent): string {
@@ -474,6 +526,18 @@ export class EventDetailsComponent implements OnInit {
     this.thread.set((conversation.messages ?? []).map(toThreadMessage));
     this.threadState.set('ready');
     this.chatService.initializeStream();
+  }
+
+  private loadEvent(id: string): void {
+    this.eventService.getEvent(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: event => this.event.set(event),
+      error: (error: HttpErrorResponse) => {
+        if (error.status !== 404) {
+          this.logger.error('EventDetailsComponent', 'Could not load the event', error);
+        }
+        this.notFound.set(true);
+      }
+    });
   }
 
   private loadParticipants(id: string): void {

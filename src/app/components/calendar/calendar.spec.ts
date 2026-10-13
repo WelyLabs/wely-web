@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CalendarComponent, CalendarEvent, defaultStart } from './calendar';
+import { CalendarComponent, CalendarEvent, defaultStart, formatTimeRange, toCalendarEvents } from './calendar';
 import { NotificationService } from '../../services/notification.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { EventService, FeedEvent, EventCreateRequest } from '../../services/event.service';
+import { EventService, FeedEvent, EventCreateRequest, Poll } from '../../services/event.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -34,7 +35,8 @@ describe('CalendarComponent', () => {
             subscribedEvents$: of(mockEvents),
             createEvent: vi.fn().mockReturnValue(of(mockEvents[0])),
             getFriendCalendar: vi.fn().mockReturnValue(of([])),
-            findFreeSlots: vi.fn().mockReturnValue(of([]))
+            findFreeSlots: vi.fn().mockReturnValue(of([])),
+            getMyPolls: vi.fn().mockReturnValue(of([]))
         };
         routerMock = {
             navigate: vi.fn()
@@ -884,9 +886,7 @@ describe('CalendarComponent', () => {
         });
 
         it('formatTimeRange_shouldUseThe24HourClock', () => {
-            const format = (component as unknown as { formatTimeRange: (a: Date, b: Date) => string }).formatTimeRange;
-
-            expect(format(new Date(2026, 9, 14, 9, 5), new Date(2026, 9, 14, 14, 30))).toBe('09:05 – 14:30');
+            expect(formatTimeRange(new Date(2026, 9, 14, 9, 5), new Date(2026, 9, 14, 14, 30))).toBe('09:05 – 14:30');
         });
 
         it('startCreatingEvent_shouldLeaveTheTitleEmpty_forThePlaceholderToShow', () => {
@@ -1153,6 +1153,142 @@ describe('CalendarComponent', () => {
             component.onViewPicked({ target: select } as unknown as Event);
 
             expect(component.viewMode()).toBe('day');
+        });
+    });
+
+    describe('date polls', () => {
+        const today = (hour: number) => {
+            const date = new Date();
+            date.setHours(hour, 0, 0, 0);
+            return date;
+        };
+        const openPoll = (): Poll => ({
+            status: 'OPEN',
+            fixedSlotId: null,
+            slots: [
+                { id: 's1', start: today(10), end: today(11), yes: [], maybe: [], no: [] },
+                { id: 's2', start: today(15), end: today(16), yes: [], maybe: [], no: [] }
+            ]
+        });
+        const feedEvent = (overrides: Partial<FeedEvent> = {}): FeedEvent => ({
+            id: 'p1', title: 'Apéro', organizerId: 'me', startDate: today(10), endDate: today(11),
+            location: '', image: null, description: '', poll: openPoll(), ...overrides
+        });
+        const setSubscribed = (source: Observable<FeedEvent[]>) =>
+            ((eventServiceMock as { subscribedEvents$: Observable<FeedEvent[]> }).subscribedEvents$ = source);
+        const getMyPolls = () => eventServiceMock.getMyPolls as ReturnType<typeof vi.fn>;
+        const el = (): HTMLElement => fixture.nativeElement;
+
+        it('toCalendarEvents_shouldShowEachProposedSlot_andNotTheProvisionalDate', () => {
+            const events = toCalendarEvents([feedEvent(), feedEvent({ id: 'f1', title: 'Ciné', poll: null })], []);
+
+            expect(events.filter(event => !event.tentative).map(event => event.id)).toEqual(['f1']);
+            const tentative = events.filter(event => event.tentative);
+            expect(tentative.map(event => event.slotId)).toEqual(['s1', 's2']);
+            expect(tentative[1].startDate).toEqual(today(15));
+            expect(tentative[1].id).toBe('p1');
+        });
+
+        it('toCalendarEvents_shouldDeduplicateAPollSubscribedAndListedInMyPolls', () => {
+            const events = toCalendarEvents([feedEvent()], [feedEvent(), feedEvent({ id: 'p2' })]);
+
+            expect(events.filter(event => event.id === 'p1')).toHaveLength(2);
+            expect(events.filter(event => event.id === 'p2')).toHaveLength(2);
+        });
+
+        it('toCalendarEvents_shouldShowAClosedPollAsAFirmEvent', () => {
+            const events = toCalendarEvents([feedEvent({ poll: { ...openPoll(), status: 'CLOSED', fixedSlotId: 's2' } })], []);
+
+            expect(events).toHaveLength(1);
+            expect(events[0].tentative).toBeUndefined();
+        });
+
+        it('toCalendarEvents_shouldIgnoreAMyPollsEntryWhoseDateWasFixed', () => {
+            const events = toCalendarEvents([], [feedEvent({ poll: { ...openPoll(), status: 'CLOSED' } })]);
+
+            expect(events).toEqual([]);
+        });
+
+        it('ngOnInit_shouldMergeMyOpenPolls_intoTheEvents', () => {
+            getMyPolls().mockReturnValue(of([feedEvent()]));
+
+            component.ngOnInit();
+
+            expect(component.events().filter(event => event.tentative)).toHaveLength(2);
+            expect(component.events().some(event => event.id === '101')).toBe(true);
+        });
+
+        it('ngOnInit_shouldReadMyPollsAgain_onEachRefresh', () => {
+            const subscribed = new Subject<FeedEvent[]>();
+            setSubscribed(subscribed);
+            getMyPolls().mockClear();
+            component.ngOnInit();
+
+            subscribed.next([]);
+            subscribed.next([feedEvent({ id: 'x', poll: null })]);
+
+            expect(getMyPolls()).toHaveBeenCalledTimes(2);
+        });
+
+        it('ngOnInit_shouldKeepTheSubscribedEvents_whenMyPollsFail', () => {
+            getMyPolls().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+
+            component.ngOnInit();
+
+            expect(component.events().map(event => event.id)).toEqual(['101']);
+        });
+
+        it('template_shouldNameAProposedSlotInItalics_inAMonthCell', () => {
+            getMyPolls().mockReturnValue(of([feedEvent()]));
+            component.ngOnInit();
+            fixture.detectChanges();
+
+            const entries = Array.from(el().querySelectorAll<HTMLElement>('.day-event.tentative'));
+            expect(entries).toHaveLength(2);
+            expect(entries[0].textContent?.trim()).toBe('? Apéro');
+        });
+
+        it('template_shouldDrawDashedTentativeCards_inTheWeek_andOpenTheEvent', () => {
+            vi.spyOn(component as unknown as { scrollToCurrentTime: () => void }, 'scrollToCurrentTime')
+                .mockImplementation(() => undefined);
+            getMyPolls().mockReturnValue(of([feedEvent()]));
+            component.ngOnInit();
+            component.toggleView('week');
+            fixture.detectChanges();
+
+            const cards = Array.from(el().querySelectorAll<HTMLElement>('.inline-event-card.tentative'));
+            expect(cards).toHaveLength(2);
+            expect(cards[0].textContent?.trim()).toBe('? Apéro');
+            expect(cards[0].querySelector('.event-accent')).toBeNull();
+
+            cards[1].click();
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'p1'], expect.any(Object));
+        });
+
+        it('onTimeMouseDown_shouldNotStartASelection_onATentativeCard', () => {
+            vi.spyOn(component as unknown as { scrollToCurrentTime: () => void }, 'scrollToCurrentTime')
+                .mockImplementation(() => undefined);
+            getMyPolls().mockReturnValue(of([feedEvent()]));
+            component.ngOnInit();
+            component.toggleView('week');
+            fixture.detectChanges();
+            const card = el().querySelector('.inline-event-card.tentative .event-title')!;
+            const press = new MouseEvent('mousedown', { button: 0 });
+            Object.defineProperty(press, 'target', { value: card });
+
+            component.onTimeMouseDown(press, today(0), 10);
+
+            expect(component.isSelectingRange()).toBe(false);
+        });
+
+        it('submitEvent_shouldExplainInvalidSlots', () => {
+            (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() =>
+                new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-014' } })));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent({ title: 'Apéro', startDate: new Date(2030, 0, 10, 18), subscribeByDefault: false, location: '' });
+
+            expect(component.createError()).toContain('créneaux proposés');
         });
     });
 });

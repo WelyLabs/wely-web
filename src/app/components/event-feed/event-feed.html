@@ -37,6 +37,9 @@
               [attr.aria-label]="'Voir ' + event.title">
               <div class="grid-card-image" [class.no-image]="!event.image"
                 [style.background-image]="cardBackground(event)">
+                @if (event.poll?.status === 'OPEN') {
+                  <span class="poll-badge"><mat-icon>how_to_vote</mat-icon>Sondage en cours</span>
+                }
                 <div class="date-badge">
                   <span class="month">{{ event.startDate | date:'MMM' }}</span>
                   <span class="day">{{ event.startDate | date:'dd' }}</span>
@@ -96,6 +99,9 @@
             </div>
             <div class="card-image" [class.no-image]="!event.image" [style.background-image]="cardBackground(event)"
               [attr.aria-label]="'Image pour ' + event.title" role="img">
+              @if (event.poll?.status === 'OPEN') {
+                <span class="poll-badge"><mat-icon>how_to_vote</mat-icon>Sondage en cours</span>
+              }
               <div class="date-badge">
                 <span class="month">{{ event.startDate | date:'MMM' }}</span>
                 <span class="day">{{ event.startDate | date:'dd' }}</span>

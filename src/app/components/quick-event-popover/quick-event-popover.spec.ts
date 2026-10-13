@@ -417,6 +417,234 @@ describe('QuickEventPopoverComponent', () => {
         });
     });
 
+    describe('date poll', () => {
+        const DAY = 86_400_000;
+        const shifted = (date: Date, days: number) => new Date(date.getTime() + days * DAY);
+        const el = (): HTMLElement => fixture.nativeElement;
+        const render = () => fixture.detectChanges();
+
+        beforeEach(() => component.update('title', 'Dîner'));
+
+        it('togglePollMode_shouldMakeTheEditedSlotTheFirstCandidate', () => {
+            component.togglePollMode();
+
+            expect(component.pollMode()).toBe(true);
+            expect(component.candidates()).toEqual([{ start: startDate, end: endDate }]);
+            expect(component.selectedSlot()).toBe(0);
+        });
+
+        it('togglePollMode_shouldDropTheCandidates_whenTurnedOff', () => {
+            component.togglePollMode();
+            component.addSlot();
+
+            component.togglePollMode();
+
+            expect(component.pollMode()).toBe(false);
+            expect(component.candidates()).toEqual([]);
+        });
+
+        it('addSlot_shouldProposeTheNextDaySameHours_andSelectIt', () => {
+            component.togglePollMode();
+
+            component.addSlot();
+
+            expect(component.candidates()[1]).toEqual({ start: shifted(startDate, 1), end: shifted(endDate, 1) });
+            expect(component.selectedSlot()).toBe(1);
+            expect(component.draft().startDate).toEqual(shifted(startDate, 1));
+        });
+
+        it('addSlot_shouldStopAtFiveSlots', () => {
+            component.togglePollMode();
+            for (let i = 0; i < 6; i++) {
+                component.addSlot();
+            }
+
+            expect(component.candidates()).toHaveLength(5);
+            expect(component.canAddSlot()).toBe(false);
+        });
+
+        it('addSlot_shouldDoNothing_outsidePollMode', () => {
+            component.addSlot();
+
+            expect(component.candidates()).toEqual([]);
+        });
+
+        it('onStartChange_shouldEditTheSelectedSlot_only', () => {
+            component.togglePollMode();
+            component.addSlot();
+            component.selectSlot(0);
+
+            component.onStartChange('time', '08:00');
+
+            const first = component.candidates()[0];
+            expect(first.start.getHours()).toBe(8);
+            expect(first.end.getTime() - first.start.getTime()).toBe(endDate.getTime() - startDate.getTime());
+            expect(component.candidates()[1]).toEqual({ start: shifted(startDate, 1), end: shifted(endDate, 1) });
+        });
+
+        it('onEndChange_shouldEditTheSelectedSlot', () => {
+            component.togglePollMode();
+            component.addSlot();
+
+            component.onEndChange('time', '23:30');
+
+            expect(component.candidates()[1].end.getHours()).toBe(23);
+            expect(component.candidates()[1].end.getMinutes()).toBe(30);
+        });
+
+        it('selectSlot_shouldLoadTheSlotIntoTheDateFields', () => {
+            component.togglePollMode();
+            component.addSlot();
+
+            component.selectSlot(0);
+
+            expect(component.draft().startDate).toEqual(startDate);
+            expect(component.startDay()).toBe(toDateValue(startDate));
+        });
+
+        it('selectSlot_shouldIgnoreAnUnknownIndex', () => {
+            component.togglePollMode();
+
+            component.selectSlot(4);
+
+            expect(component.selectedSlot()).toBe(0);
+        });
+
+        it('removeSlot_shouldSelectTheNeighbour_whenTheSelectedSlotIsRemoved', () => {
+            component.togglePollMode();
+            component.addSlot();
+            component.addSlot();
+
+            component.removeSlot(2);
+
+            expect(component.candidates()).toHaveLength(2);
+            expect(component.selectedSlot()).toBe(1);
+            expect(component.draft().startDate).toEqual(shifted(startDate, 1));
+        });
+
+        it('removeSlot_shouldKeepTheSelection_whenAnEarlierSlotIsRemoved', () => {
+            component.togglePollMode();
+            component.addSlot();
+            component.addSlot();
+
+            component.removeSlot(0);
+
+            expect(component.selectedSlot()).toBe(1);
+            expect(component.candidates()[1]).toEqual({ start: shifted(startDate, 2), end: shifted(endDate, 2) });
+        });
+
+        it('removeSlot_shouldKeepTheLastSlot', () => {
+            component.togglePollMode();
+
+            component.removeSlot(0);
+
+            expect(component.candidates()).toHaveLength(1);
+        });
+
+        it('onSlotPicked_shouldAppendACandidate_andKeepThePanelOpen', () => {
+            component.togglePollMode();
+            component.toggleFindSlot();
+            const picked = { start: new Date('2025-06-04T18:00:00Z'), end: new Date('2025-06-04T19:00:00Z') };
+
+            component.onSlotPicked(picked);
+
+            expect(component.candidates()).toEqual([{ start: startDate, end: endDate }, picked]);
+            expect(component.findingSlot()).toBe(true);
+        });
+
+        it('onSave_shouldEmitTheSlotsEarliestFirst_andStartOnTheEarliest', () => {
+            const emitted: EventCreateRequest[] = [];
+            component.save.subscribe(request => emitted.push(request));
+            component.togglePollMode();
+            component.onSlotPicked({ start: shifted(startDate, -1), end: shifted(endDate, -1) });
+
+            component.onSave();
+
+            expect(emitted[0].candidateSlots).toEqual([
+                { start: shifted(startDate, -1), end: shifted(endDate, -1) },
+                { start: startDate, end: endDate }
+            ]);
+            expect(emitted[0].startDate).toEqual(shifted(startDate, -1));
+        });
+
+        it('onSave_shouldRefuse_withFewerThanTwoSlots', () => {
+            const emit = vi.spyOn(component.save, 'emit');
+            component.togglePollMode();
+
+            component.onSave();
+
+            expect(component.tooFewSlots()).toBe(true);
+            expect(emit).not.toHaveBeenCalled();
+        });
+
+        it('onSave_shouldRefuse_whenASlotIsProposedTwice', () => {
+            const emit = vi.spyOn(component.save, 'emit');
+            component.togglePollMode();
+            component.onSlotPicked({ start: startDate, end: endDate });
+
+            component.onSave();
+
+            expect(component.invalidSlots()).toBe(true);
+            expect(emit).not.toHaveBeenCalled();
+        });
+
+        it('onSave_shouldNotSendCandidateSlots_outsidePollMode', () => {
+            const emitted: EventCreateRequest[] = [];
+            component.save.subscribe(request => emitted.push(request));
+
+            component.onSave();
+
+            expect(emitted[0].candidateSlots).toBeUndefined();
+        });
+
+        it('pollMode_shouldResetWhenANewSlotIsOpened', () => {
+            component.togglePollMode();
+
+            fixture.componentRef.setInput('data', request());
+
+            expect(component.pollMode()).toBe(false);
+            expect(component.candidates()).toEqual([]);
+        });
+
+        it('template_shouldListTheSlots_andRenameTheButton', () => {
+            component.togglePollMode();
+            render();
+            const submit = () => el().querySelector<HTMLButtonElement>('.submit-btn')!;
+
+            expect(el().querySelector('.poll-toggle')?.getAttribute('aria-checked')).toBe('true');
+            expect(el().querySelectorAll('.slot-item')).toHaveLength(1);
+            expect(submit().textContent).toContain('Lancer le sondage');
+            expect(submit().disabled).toBe(true);
+            expect(el().textContent).toContain('Proposez au moins 2 créneaux.');
+
+            el().querySelector<HTMLButtonElement>('.add-slot')!.click();
+            render();
+
+            expect(el().querySelectorAll('.slot-item')).toHaveLength(2);
+            expect(el().querySelectorAll('.slot-item')[1].classList).toContain('selected');
+            expect(submit().disabled).toBe(false);
+        });
+
+        it('template_shouldRemoveASlot_fromItsCross', () => {
+            component.togglePollMode();
+            component.addSlot();
+            render();
+
+            el().querySelectorAll<HTMLButtonElement>('.slot-remove')[0].click();
+            render();
+
+            expect(el().querySelectorAll('.slot-item')).toHaveLength(1);
+            expect(el().querySelector<HTMLButtonElement>('.slot-remove')!.disabled).toBe(true);
+        });
+
+        it('template_shouldReadCreer_outsidePollMode', () => {
+            render();
+
+            expect(el().querySelector('.submit-btn')?.textContent).toContain('Créer');
+            expect(el().querySelector('.poll-slots')).toBeNull();
+        });
+    });
+
     it('template_shouldBeADialog', () => {
         const card: HTMLElement = fixture.nativeElement.querySelector('.dialog-card');
 

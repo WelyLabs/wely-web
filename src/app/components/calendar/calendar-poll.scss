@@ -1,0 +1,38 @@
+// ── Open date polls: each proposed slot is tentative, dashed and translucent ───────────────
+// Selectors repeat the calendar sheet's chain, plus one class, so they win over it.
+.calendar-section .week-schedule-container .day-columns .day-column .hour-slots .hour-cell .event-container .inline-event-card.tentative {
+    background: color-mix(in srgb, var(--bg-card) 55%, transparent);
+    border: 1.5px dashed var(--text-tertiary);
+    box-shadow: none;
+
+    .event-title {
+        font-style: italic;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    &:hover {
+        border-color: var(--primary-blue);
+    }
+}
+
+.calendar-section .month-grid .day-cell .day-content .day-events .day-event.tentative {
+    background: none;
+    border: 1px dashed var(--text-tertiary);
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.details-section .events-list .event-card.tentative {
+    background: transparent;
+    border: 1.5px dashed var(--text-tertiary);
+
+    .event-accent {
+        display: none;
+    }
+
+    h4 {
+        font-style: italic;
+        color: var(--text-secondary);
+    }
+}

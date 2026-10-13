@@ -54,6 +54,10 @@ export function withTime(date: Date, value: string): Date | null {
 
 const DAY_MS = 86400000;
 
+/** How many slots a date poll may propose. */
+export const MIN_POLL_SLOTS = 2;
+export const MAX_POLL_SLOTS = 5;
+
 /** From this width the form is laid out in two columns. */
 const WIDE_LAYOUT = '(min-width: 1024px)';
 
@@ -67,7 +71,7 @@ const WIDE_LAYOUT = '(min-width: 1024px)';
     standalone: true,
     imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, FindSlotComponent, LocationPickerComponent],
     templateUrl: './quick-event-popover.html',
-    styleUrl: './quick-event-popover.scss',
+    styleUrls: ['./quick-event-popover.scss', './quick-event-poll.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class QuickEventPopoverComponent {
@@ -139,6 +143,22 @@ export class QuickEventPopoverComponent {
         return !!endDate && startDate.toDateString() !== endDate.toDateString();
     });
 
+    /** « Proposer plusieurs dates »: the form then builds a date poll; off again on each new slot. */
+    readonly pollMode = linkedSignal({ source: this.data, computation: () => false });
+    /** The proposed slots; the date fields edit the selected one. */
+    readonly candidates = linkedSignal<EventCreateRequest, TimeWindow[]>({ source: this.data, computation: () => [] });
+    readonly selectedSlot = linkedSignal({ source: this.data, computation: () => 0 });
+    readonly canAddSlot = computed(() => this.candidates().length < MAX_POLL_SLOTS);
+    readonly tooFewSlots = computed(() => this.pollMode() && this.candidates().length < MIN_POLL_SLOTS);
+    /** A proposed slot ending before it starts, or proposed twice. */
+    readonly invalidSlots = computed(() => {
+        const slots = this.candidates();
+        const keys = slots.map(slot => `${slot.start.getTime()}-${slot.end.getTime()}`);
+        return slots.some(slot => slot.end <= slot.start) || new Set(keys).size !== keys.length;
+    });
+    readonly canSave = computed(() => !!this.draft().title.trim() && !this.invalidRange() && !this.saving()
+        && (!this.pollMode() || (!this.tooFewSlots() && !this.invalidSlots())));
+
     /** Whether the map is open under the location field; closed again on each new slot. */
     readonly pickingLocation = linkedSignal({ source: this.data, computation: () => false });
 
@@ -160,10 +180,75 @@ export class QuickEventPopoverComponent {
         this.findingSlot.update(open => !open);
     }
 
-    /** Moves the draft onto the slot picked among the common free ones. */
+    /** Moves the draft onto the slot picked; in a poll, adds it to the proposed slots instead. */
     onSlotPicked(slot: TimeWindow): void {
+        if (this.pollMode()) {
+            this.appendSlot(slot);
+            return;
+        }
         this.draft.update(draft => ({ ...draft, startDate: slot.start, endDate: slot.end }));
         this.findingSlot.set(false);
+    }
+
+    /** Turns the date poll on, the slot being edited becoming its first proposal, or off. */
+    togglePollMode(): void {
+        if (this.pollMode()) {
+            this.pollMode.set(false);
+            this.candidates.set([]);
+            return;
+        }
+        const draft = this.draft();
+        this.candidates.set([{ start: draft.startDate, end: this.endOf(draft) }]);
+        this.selectedSlot.set(0);
+        this.pollMode.set(true);
+    }
+
+    /** « + Ajouter un créneau »: the last slot, a day later. */
+    addSlot(): void {
+        const last = this.candidates().at(-1);
+        if (last) {
+            this.appendSlot({ start: new Date(last.start.getTime() + DAY_MS), end: new Date(last.end.getTime() + DAY_MS) });
+        }
+    }
+
+    /** The date fields now edit this slot. */
+    selectSlot(index: number): void {
+        const slot = this.candidates()[index];
+        if (slot) {
+            this.selectedSlot.set(index);
+            this.draft.update(draft => ({ ...draft, startDate: slot.start, endDate: slot.end }));
+        }
+    }
+
+    removeSlot(index: number): void {
+        const slots = this.candidates();
+        if (slots.length <= 1 || !slots[index]) {
+            return;
+        }
+        this.candidates.set(slots.filter((_, i) => i !== index));
+        const selected = this.selectedSlot();
+        if (index < selected) {
+            this.selectedSlot.set(selected - 1);
+        } else if (index === selected) {
+            this.selectSlot(Math.min(selected, slots.length - 2));
+        }
+    }
+
+    private appendSlot(slot: TimeWindow): void {
+        if (!this.canAddSlot()) {
+            return;
+        }
+        this.candidates.update(slots => [...slots, slot]);
+        this.selectSlot(this.candidates().length - 1);
+    }
+
+    /** Sets the draft's dates and, in a poll, the selected slot's with them. */
+    private setDates(startDate: Date, endDate: Date): void {
+        this.draft.update(draft => ({ ...draft, startDate, endDate }));
+        if (this.pollMode()) {
+            const index = this.selectedSlot();
+            this.candidates.update(slots => slots.map((slot, i) => i === index ? { start: startDate, end: endDate } : slot));
+        }
     }
 
     private endOf(draft: EventCreateRequest): Date {
@@ -178,7 +263,7 @@ export class QuickEventPopoverComponent {
             return;
         }
         const duration = this.endOf(draft).getTime() - draft.startDate.getTime();
-        this.draft.set({ ...draft, startDate: start, endDate: new Date(start.getTime() + duration) });
+        this.setDates(start, new Date(start.getTime() + duration));
     }
 
     /**
@@ -196,7 +281,7 @@ export class QuickEventPopoverComponent {
             const sameDay = withTime(draft.startDate, value) ?? end;
             end = sameDay > draft.startDate ? sameDay : new Date(sameDay.getTime() + DAY_MS);
         }
-        this.draft.set({ ...draft, endDate: end });
+        this.setDates(draft.startDate, end);
     }
 
     toggleMoreOptions(): void {
@@ -209,10 +294,17 @@ export class QuickEventPopoverComponent {
     }
 
     onSave(): void {
-        const draft = this.draft();
-        if (draft.title.trim() && !this.invalidRange() && !this.saving()) {
-            this.save.emit(draft);
+        if (!this.canSave()) {
+            return;
         }
+        const draft = this.draft();
+        if (!this.pollMode()) {
+            this.save.emit(draft);
+            return;
+        }
+        // The event stands on its earliest slot until the date is fixed, as the server does.
+        const candidateSlots = [...this.candidates()].sort((a, b) => a.start.getTime() - b.start.getTime());
+        this.save.emit({ ...draft, startDate: candidateSlots[0].start, endDate: candidateSlots[0].end, candidateSlots });
     }
 
     onCancel(): void {
