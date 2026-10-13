@@ -5,6 +5,7 @@ import { KeycloakService } from 'keycloak-angular';
 import { environment } from '../../environments/environment';
 import { MOCK_USER } from '../models/user.mock';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { firstValueFrom } from 'rxjs';
 
 describe('UserService', () => {
     let service: UserService;
@@ -15,7 +16,8 @@ describe('UserService', () => {
     beforeEach(() => {
         TestBed.resetTestingModule();
         keycloakMock = {
-            getKeycloakInstance: vi.fn().mockReturnValue({ token: 'mock-token' })
+            getKeycloakInstance: vi.fn().mockReturnValue({ token: 'mock-token' }),
+            updateToken: vi.fn().mockResolvedValue(true)
         };
 
         TestBed.configureTestingModule({
@@ -65,14 +67,31 @@ describe('UserService', () => {
         expect(service.getCurrentUserValue()?.userName).toBe(MOCK_USER.userName);
     });
 
-    it('should update profile via API', () => {
-        const updates = { username: 'new', firstName: 'New', lastName: 'User', email: 'new@test.com' };
-        service.updateProfile(updates).subscribe();
+    it('updateProfile_shouldSaveThenFollowTheStoredProfileAndRefreshTheToken', async () => {
+        service['currentUserSubject'].next(MOCK_USER);
+        const update = { userName: 'New_Name', firstName: 'New', lastName: 'User' };
+        const saved = { ...MOCK_USER, userName: 'new_name', firstName: 'New', lastName: 'User' };
 
+        const result = firstValueFrom(service.updateProfile(update));
         const req = httpMock.expectOne(`${apiUrl}/profile`);
         expect(req.request.method).toBe('PUT');
-        expect(req.request.body).toEqual(updates);
-        req.flush({});
+        expect(req.request.body).toEqual(update);
+        req.flush(saved);
+
+        await expect(result).resolves.toEqual(saved);
+        expect(service.getCurrentUserValue()?.userName).toBe('new_name');
+        // -1 forces a refresh: preferred_username is what wely-chat signs messages with.
+        expect(keycloakMock.updateToken).toHaveBeenCalledWith(-1);
+    });
+
+    it('updateProfile_shouldStillSucceed_whenTheTokenRefreshFails', async () => {
+        (keycloakMock.updateToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('offline'));
+        const saved = { ...MOCK_USER, userName: 'new_name' };
+
+        const result = firstValueFrom(service.updateProfile({ userName: 'new_name', firstName: 'A', lastName: 'B' }));
+        httpMock.expectOne(`${apiUrl}/profile`).flush(saved);
+
+        await expect(result).resolves.toEqual(saved);
     });
 
     it('should upload avatar', () => {

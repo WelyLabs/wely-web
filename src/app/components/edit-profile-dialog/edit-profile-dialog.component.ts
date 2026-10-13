@@ -8,8 +8,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { UserService } from '../../services/user.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ProfileUpdate, UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
+
+/** wely-users' code for a username someone else has. */
+const USERNAME_TAKEN = 'USR-BUS-004';
 
 @Component({
     selector: 'app-edit-profile-dialog',
@@ -49,11 +53,11 @@ export class EditProfileDialogComponent {
             userName: [data.userName, [
                 Validators.required,
                 Validators.minLength(3),
+                Validators.maxLength(30),
                 Validators.pattern(/^[a-zA-Z0-9_-]+$/) // Alphanumeric, underscore, hyphen only
             ]],
             firstName: [data.firstName, [Validators.required, Validators.minLength(2)]],
-            lastName: [data.lastName, [Validators.required, Validators.minLength(2)]],
-            email: [data.email, [Validators.required, Validators.email]]
+            lastName: [data.lastName, [Validators.required, Validators.minLength(2)]]
         });
     }
 
@@ -65,19 +69,25 @@ export class EditProfileDialogComponent {
         this.isLoading.set(true);
         this.errorMessage.set('');
 
-        const updates = this.profileForm.value;
+        const update: ProfileUpdate = this.profileForm.getRawValue();
 
-        this.userService.updateProfile(updates)
+        this.userService.updateProfile(update)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: () => {
+                next: saved => {
                     this.isLoading.set(false);
-                    // Returns the updated values rather than just true, so the caller does not
-                    // have to reload the profile to learn what changed.
-                    this.dialogRef.close(updates);
+                    // The profile as stored, which may differ from what was typed: the username
+                    // comes back lowercased.
+                    this.dialogRef.close(saved);
                 },
-                error: (err) => {
+                error: (err: unknown) => {
                     this.isLoading.set(false);
+                    if (err instanceof HttpErrorResponse && err.error?.code === USERNAME_TAKEN) {
+                        // On the field itself, which is what there is to change.
+                        this.profileForm.get('userName')?.setErrors({ taken: true });
+                        this.profileForm.get('userName')?.markAsTouched();
+                        return;
+                    }
                     this.errorMessage.set('Erreur lors de la mise à jour du profil. Veuillez réessayer.');
                     this.logger.error('EditProfileDialogComponent', 'Error updating profile:', err);
                 }

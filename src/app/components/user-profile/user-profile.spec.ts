@@ -80,14 +80,12 @@ describe('UserProfileComponent', () => {
         expect(userServiceMock.loadAndSetCurrentUser).toHaveBeenCalledTimes(2); // Initial + afterClosed
     });
 
-    it('should open edit dialog and update user on confirm', () => {
-        const editResult = { userName: 'new', firstName: 'New', lastName: 'Name', email: 'new@test.com' };
-        dialogMock.open.mockReturnValue({ afterClosed: () => of(editResult) });
-
+    it('openEditDialog_shouldOpenTheDialogWithTheCurrentUser', () => {
         component.openEditDialog();
 
-        expect(dialogMock.open).toHaveBeenCalled();
-        expect(userServiceMock.updateCurrentUser).toHaveBeenCalledWith(editResult);
+        // Saving updates UserService's current user itself: nothing is copied back from the dialog.
+        expect(dialogMock.open).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ data: component.user() }));
+        expect(userServiceMock.updateCurrentUser).not.toHaveBeenCalled();
     });
     it('should stop showing the loader when the profile fails to load', () => {
         // The user has to be absent for this to mean anything: with one already emitted, the
