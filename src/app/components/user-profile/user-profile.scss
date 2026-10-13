@@ -61,13 +61,15 @@ a {
     }
 }
 
+// Only the photo overlaps the banner. The text starts below it, so a longer presentation grows
+// downwards: aligned on their bottoms with a negative margin on the row, the name used to climb
+// into the gradient as soon as a bio and interests made the column taller.
 .hero-body {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 20px;
-    padding: 0 28px 24px;
-    margin-top: -56px;
+    padding: 16px 28px 24px;
 }
 
 .avatar-ring {
@@ -80,6 +82,7 @@ a {
     border-radius: 36px;
     background: var(--accent-gradient);
     cursor: pointer;
+    margin-top: -72px;
 
     &.skeleton {
         background: var(--bg-subtle);
@@ -146,6 +149,10 @@ a {
         font-size: 16px;
         color: var(--text-secondary);
     }
+}
+
+.hero-body > .outline-button {
+    margin-top: 4px;
 }
 
 .outline-button {
@@ -656,8 +663,11 @@ a {
         flex-direction: column;
         align-items: center;
         text-align: center;
-        margin-top: -52px;
         padding: 0 16px 20px;
+    }
+
+    .avatar-ring {
+        margin-top: -56px;
     }
 
     .identity {
