@@ -55,3 +55,37 @@
     font-size: 12px;
     color: var(--danger-ink);
 }
+
+// On a phone the legend is one row that scrolls sideways, instead of wrapping onto two or three
+// lines above the grid.
+@media (max-width: 768px) {
+    .overlay-bar {
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+
+    .overlay-field {
+        flex-basis: 100%;
+        max-width: none;
+    }
+
+    .legend {
+        flex-wrap: nowrap;
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+
+        li {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: var(--bg-subtle);
+        }
+    }
+}
