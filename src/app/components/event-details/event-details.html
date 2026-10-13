@@ -152,7 +152,8 @@
           </section>
 
           @if (joined()) {
-            <button type="button" class="text-button" (click)="toggleParticipation()" [disabled]="busy()">
+            <button type="button" class="text-button" (click)="toggleParticipation()" [disabled]="busy()"
+              [appPendingTrail]="busy()">
               Ne plus participer
             </button>
           }
@@ -168,7 +169,8 @@
             <span>dont {{ friends().length }} ami{{ friends().length > 1 ? 's' : '' }}</span>
           }
         </div>
-        <button type="button" class="gradient-button" (click)="toggleParticipation()" [disabled]="busy()">Rejoindre</button>
+        <button type="button" class="gradient-button" (click)="toggleParticipation()" [disabled]="busy()"
+          [appPendingTrail]="busy()">Rejoindre</button>
       </div>
     }
   </div>
@@ -229,11 +231,12 @@
             }
             @case ('SENT_BY_THEM') {
               <button type="button" class="small-gradient-button" (click)="acceptFriend(person)"
-                [disabled]="sending().has(person.id)">Accepter</button>
+                [disabled]="sending().has(person.id)" [appPendingTrail]="sending().has(person.id)">Accepter</button>
             }
             @case ('NONE') {
               <button type="button" class="small-outline-button" (click)="addFriend(person)"
-                [disabled]="sending().has(person.id)" [attr.aria-label]="'Ajouter ' + person.name + ' en ami'">
+                [disabled]="sending().has(person.id)" [appPendingTrail]="sending().has(person.id)"
+                [attr.aria-label]="'Ajouter ' + person.name + ' en ami'">
                 <mat-icon>person_add</mat-icon>Ajouter
               </button>
             }

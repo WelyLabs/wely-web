@@ -11,12 +11,14 @@ import { FormsModule } from '@angular/forms';
 import { SocialService } from '../../services/social.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
+import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 
 /** Sends a friend request to a user identified by their tag, `name#1234`. */
 @Component({
     selector: 'app-add-friend-dialog',
     standalone: true,
     imports: [
+    PendingTrailDirective,
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,

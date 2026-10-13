@@ -11,6 +11,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { HttpErrorResponse } from '@angular/common/http';
 import { ProfileUpdate, UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
+import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 
 /** wely-users' code for a username someone else has. */
 const USERNAME_TAKEN = 'USR-BUS-004';
@@ -19,6 +20,7 @@ const USERNAME_TAKEN = 'USR-BUS-004';
     selector: 'app-edit-profile-dialog',
     standalone: true,
     imports: [
+    PendingTrailDirective,
     MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
