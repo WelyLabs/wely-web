@@ -31,8 +31,11 @@ const VISIBLE_CARDS = 3;
 
 const RETURN_TRANSITION = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 
+export type FeedView = 'swipe' | 'grid' | 'map';
+
 /**
- * Swipeable event feed: right subscribes to an event, left skips it.
+ * The discovery feed, three ways: cards to swipe (right subscribes, left skips), every event
+ * at once in a grid, or on a map.
  */
 @Component({
   selector: 'app-event-feed',
@@ -48,7 +51,17 @@ export class EventFeedComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** The deck: what is left to swipe. Skipping a card takes it out of here only. */
   private readonly events = signal<FeedEvent[]>([]);
+
+  /**
+   * Everything the feed holds, for the grid. Kept apart from the deck: a card skipped while
+   * swiping is not refused for good, and an overview that hid it would not be one.
+   */
+  private readonly feed = signal<FeedEvent[]>([]);
+
+  /** Events being joined from the grid: a second tap would toggle the subscription back off. */
+  private readonly joining = signal<ReadonlySet<string>>(new Set());
 
   /**
    * Organiser business id to display name.
@@ -60,8 +73,13 @@ export class EventFeedComponent implements OnInit {
    */
   readonly organiserNames = signal<ReadonlyMap<string, string>>(new Map());
 
-  /** Cards to swipe, or every upcoming event on a map. */
-  readonly view = signal<'swipe' | 'map'>('swipe');
+  /** Cards to swipe, the whole feed in a grid, or every upcoming event on a map. */
+  readonly view = signal<FeedView>('swipe');
+
+  /** The grid's cards, soonest first: the feed arrives in no order a reader could use. */
+  readonly gridEvents = computed(() =>
+    [...this.feed()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime()),
+  );
 
   /** The top card plus the two stacked behind it. */
   readonly currentEvents = computed(() => this.events().slice(0, VISIBLE_CARDS));
@@ -93,7 +111,10 @@ export class EventFeedComponent implements OnInit {
 
     this.eventService.feedEvents$
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(events => this.events.set(events));
+      .subscribe(events => {
+        this.events.set(events);
+        this.feed.set(events);
+      });
 
     this.socialService.searchUsers()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -102,8 +123,43 @@ export class EventFeedComponent implements OnInit {
       );
   }
 
-  showView(view: 'swipe' | 'map'): void {
+  showView(view: FeedView): void {
     this.view.set(view);
+  }
+
+  isJoining(event: FeedEvent): boolean {
+    return this.joining().has(event.id);
+  }
+
+  /** Joins an event from the grid. The card leaves at once; it comes back if the request fails. */
+  join(event: FeedEvent): void {
+    if (this.isJoining(event)) {
+      return;
+    }
+    this.setJoining(event.id, true);
+
+    this.eventService.toggleSubscription(event)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.feed.update(events => events.filter(other => other.id !== event.id));
+          this.events.update(events => events.filter(other => other.id !== event.id));
+          this.setJoining(event.id, false);
+        },
+        error: () => this.setJoining(event.id, false),
+      });
+  }
+
+  private setJoining(eventId: string, joining: boolean): void {
+    this.joining.update(ids => {
+      const next = new Set(ids);
+      if (joining) {
+        next.add(eventId);
+      } else {
+        next.delete(eventId);
+      }
+      return next;
+    });
   }
 
   /** The organiser's name, or nothing while the names are still on their way. */

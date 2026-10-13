@@ -3,7 +3,7 @@ import { EventFeedComponent } from './event-feed';
 import { EventService } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { eventTint } from '../../core/ui/event-tint';
@@ -189,7 +189,8 @@ describe('EventFeedComponent', () => {
         });
 
         it('showView_shouldSwapTheCardsForTheMap', async () => {
-            (fixture.nativeElement.querySelectorAll('.view-switch button')[1] as HTMLButtonElement).click();
+            // Swipe, grid, map: the map is the third button.
+            (fixture.nativeElement.querySelectorAll('.view-switch button')[2] as HTMLButtonElement).click();
             fixture.detectChanges();
 
             expect(component.view()).toBe('map');
@@ -211,6 +212,83 @@ describe('EventFeedComponent', () => {
 
         it('organiserNames_shouldBeSharedWithTheMap', () => {
             expect(component.organiserNames().get('Org 1')).toBe('madie');
+        });
+    });
+
+    describe('grid', () => {
+        const event = (id: string, startDate: Date) =>
+            ({ id, title: `Event ${id}`, organizerId: 'Org 1', startDate, endDate: startDate, location: 'Loc', image: null, description: '' });
+
+        const cards = () => fixture.nativeElement.querySelectorAll('.grid-card');
+
+        it('showView_shouldLayTheFeedOutInAGrid', () => {
+            (fixture.nativeElement.querySelectorAll('.view-switch button')[1] as HTMLButtonElement).click();
+            fixture.detectChanges();
+
+            expect(component.view()).toBe('grid');
+            expect(cards().length).toBe(1);
+            expect(fixture.nativeElement.querySelector('.swipe-container')).toBeNull();
+            expect(fixture.nativeElement.querySelector('.grid-card h2').textContent).toContain('Event 1');
+        });
+
+        it('gridEvents_shouldComeSoonestFirst', () => {
+            const later = event('later', new Date('2026-12-02T10:00:00Z'));
+            const sooner = event('sooner', new Date('2026-12-01T10:00:00Z'));
+            (component as any).feed.set([later, sooner]);
+
+            expect(component.gridEvents().map(e => e.id)).toEqual(['sooner', 'later']);
+        });
+
+        it('gridEvents_shouldKeepACardSkippedWhileSwiping', () => {
+            vi.useFakeTimers();
+            component.swipeLeft();
+            vi.advanceTimersByTime(300);
+            vi.useRealTimers();
+
+            expect(component.currentEvents().length).toBe(0);
+            expect(component.gridEvents().length).toBe(1);
+        });
+
+        it('card_shouldOpenTheEvent', () => {
+            component.showView('grid');
+            fixture.detectChanges();
+
+            fixture.nativeElement.querySelector('.grid-card-open').click();
+
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', '1']);
+        });
+
+        it('join_shouldSubscribe_andTakeTheCardOutOfTheGridAndTheDeck', () => {
+            component.showView('grid');
+            fixture.detectChanges();
+
+            fixture.nativeElement.querySelector('.grid-card-join').click();
+            fixture.detectChanges();
+
+            expect(eventServiceMock.toggleSubscription).toHaveBeenCalledWith(currentMockEvents[0]);
+            expect(cards().length).toBe(0);
+            expect(component.currentEvents().length).toBe(0);
+            expect(fixture.nativeElement.querySelector('.empty-state')).not.toBeNull();
+        });
+
+        it('join_shouldIgnoreASecondTapWhileTheFirstIsOnItsWay', () => {
+            const pending = new Subject<unknown>();
+            eventServiceMock.toggleSubscription.mockReturnValue(pending);
+
+            component.join(currentMockEvents[0]);
+            component.join(currentMockEvents[0]);
+
+            expect(eventServiceMock.toggleSubscription).toHaveBeenCalledTimes(1);
+            expect(component.isJoining(currentMockEvents[0])).toBe(true);
+        });
+
+        it('join_shouldKeepTheCard_whenTheRequestFails', () => {
+            eventServiceMock.toggleSubscription.mockReturnValue(throwError(() => new Error('503')));
+
+            component.join(currentMockEvents[0]);
+
+            expect(component.gridEvents().length).toBe(1);
+            expect(component.isJoining(currentMockEvents[0])).toBe(false);
         });
     });
 

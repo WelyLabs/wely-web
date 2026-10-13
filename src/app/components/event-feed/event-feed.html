@@ -1,9 +1,11 @@
-<div class="feed-container" [class.map-view]="view() === 'map'">
+<div class="feed-container" [class.map-view]="view() === 'map'" [class.grid-view]="view() === 'grid'">
   <div class="feed-header">
     <h1>Découvrir</h1>
     <p>
       @if (view() === 'map') {
         Les événements à venir autour de vous. Touchez une épingle pour le rejoindre.
+      } @else if (view() === 'grid') {
+        Toutes les sorties à venir d'un coup d'œil. Touchez une carte pour voir le détail.
       } @else {
         Glissez à droite pour l'ajouter à votre calendrier, à gauche pour passer.
       }
@@ -11,6 +13,8 @@
     <div class="view-switch" role="radiogroup" aria-label="Affichage">
       <button type="button" role="radio" [class.active]="view() === 'swipe'" [attr.aria-checked]="view() === 'swipe'"
         (click)="showView('swipe')"><mat-icon>style</mat-icon>Swipe</button>
+      <button type="button" role="radio" [class.active]="view() === 'grid'" [attr.aria-checked]="view() === 'grid'"
+        (click)="showView('grid')"><mat-icon>grid_view</mat-icon>Grille</button>
       <button type="button" role="radio" [class.active]="view() === 'map'" [attr.aria-checked]="view() === 'map'"
         (click)="showView('map')"><mat-icon>map</mat-icon>Carte</button>
     </div>
@@ -22,6 +26,50 @@
       <app-explore-map [organiserNames]="organiserNames()" />
     } @placeholder {
       <div class="map-placeholder"></div>
+    }
+  } @else if (view() === 'grid') {
+    @if (gridEvents().length > 0) {
+      <ul class="event-grid">
+        @for (event of gridEvents(); track event.id) {
+          <li class="grid-card">
+            <!-- The whole card opens the event; joining is a button of its own beside it, not inside it. -->
+            <button type="button" class="grid-card-open" (click)="viewEventDetails(event)"
+              [attr.aria-label]="'Voir ' + event.title">
+              <div class="grid-card-image" [class.no-image]="!event.image"
+                [style.background-image]="cardBackground(event)">
+                <div class="date-badge">
+                  <span class="month">{{ event.startDate | date:'MMM' }}</span>
+                  <span class="day">{{ event.startDate | date:'dd' }}</span>
+                </div>
+              </div>
+              <div class="grid-card-content">
+                @if (organiserName(event.organizerId); as organiser) {
+                  <div class="organizer">{{ organiser }}</div>
+                }
+                <h2>{{ event.title }}</h2>
+                <div class="meta">
+                  <mat-icon>schedule</mat-icon>
+                  <span>{{ event.startDate | date:'EEE d MMM · HH:mm' }}</span>
+                </div>
+                <div class="meta">
+                  <mat-icon>location_on</mat-icon>
+                  <span>{{ event.location }}</span>
+                </div>
+              </div>
+            </button>
+            <button type="button" class="grid-card-join" [disabled]="isJoining(event)" (click)="join(event)"
+              [attr.aria-label]="'Ajouter ' + event.title + ' à mon calendrier'">
+              <mat-icon>favorite</mat-icon>Rejoindre
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="empty-state">
+        <mat-icon>event_available</mat-icon>
+        <h2>Aucun événement à découvrir</h2>
+        <p>Rien de nouveau pour l'instant. Revenez plus tard pour en découvrir d'autres.</p>
+      </div>
     }
   } @else {
     @if (currentEvents().length > 0) {
