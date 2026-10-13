@@ -70,6 +70,45 @@ interface FriendCalendarEntryPayload extends Omit<FriendCalendarEntry, 'start' |
  * `[year, month, day, hour, minute, second]` array. Naming that shape here is what
  * lets {@link EventService} convert it without `any`.
  */
+/** Someone the member went out with, and how often. */
+export interface Companion {
+  userId: string;
+  outingsTogether: number;
+}
+
+/** A place the member went to; no coordinates when it was typed rather than picked on the map. */
+export interface VisitedPlace {
+  label: string;
+  coordinates: Coordinates | null;
+  visits: number;
+}
+
+/** The member's balance on one event: positive when owed, negative when owing. */
+export interface EventBalance {
+  eventId: string;
+  title: string;
+  netCents: number;
+}
+
+/** What the profile page shows of the member's life in Wely; computed by wely-events. */
+export interface ProfileSummary {
+  outingsThisYear: number;
+  outingsThisMonth: number;
+  organizedThisYear: number;
+  placesThisYear: number;
+  upcoming: FeedEvent[];
+  memories: FeedEvent[];
+  pastCount: number;
+  circle: Companion[];
+  places: VisitedPlace[];
+  balances: EventBalance[];
+}
+
+interface ProfileSummaryPayload extends Omit<ProfileSummary, 'upcoming' | 'memories'> {
+  upcoming: EventPayload[];
+  memories: EventPayload[];
+}
+
 interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate'> {
   startDate: string | number[] | null;
   endDate: string | number[] | null;
@@ -185,6 +224,15 @@ export class EventService {
         const end = this.toDate(entry.end);
         return start && end ? [{ ...entry, start, end }] : [];
       })));
+  }
+
+  /** The caller's own profile summary: their outings, circle, places and accounts. */
+  getMySummary(): Observable<ProfileSummary> {
+    return this.http.get<ProfileSummaryPayload>(`${this.apiUrl}/me/summary`).pipe(map(summary => ({
+      ...summary,
+      upcoming: summary.upcoming.map(event => this.toFeedEvent(event)),
+      memories: summary.memories.map(event => this.toFeedEvent(event))
+    })));
   }
 
   private toFeedEvent(payload: EventPayload): FeedEvent {

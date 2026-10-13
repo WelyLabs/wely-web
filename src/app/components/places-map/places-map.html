@@ -1,0 +1,11 @@
+@if (dots().length > 0) {
+  <div class="map" #map role="img" [attr.aria-label]="'Carte de ' + dots().length + ' lieux'">
+    @if (failed()) {
+      <span class="map-status">La carte n'a pas pu se charger.</span>
+    }
+  </div>
+} @else {
+  <div class="map empty" #map>
+    <span class="map-status">Les lieux choisis sur la carte apparaîtront ici.</span>
+  </div>
+}
