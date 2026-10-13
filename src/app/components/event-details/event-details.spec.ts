@@ -9,6 +9,7 @@ import {
 } from './event-details';
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
+import { ExpenseService } from '../../services/expense.service';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
@@ -154,6 +155,11 @@ describe('EventDetailsComponent', () => {
             providers: [
                 { provide: EventService, useValue: eventService },
                 { provide: SocialService, useValue: socialService },
+                // The expenses card loads its own data: an empty account, so it renders without a backend.
+                { provide: ExpenseService, useValue: {
+                    list: vi.fn().mockReturnValue(of([])),
+                    ledger: vi.fn().mockReturnValue(of({ currency: 'EUR', totalCents: 0, balances: [], transfers: [] }))
+                } },
                 { provide: ChatService, useValue: chatService },
                 { provide: UserService, useValue: { currentUser$: me } },
                 { provide: Router, useValue: router },
@@ -371,6 +377,21 @@ describe('EventDetailsComponent', () => {
         create();
 
         expect(fixture.nativeElement.querySelector('.people')).toBeNull();
+    });
+
+    it('template_shouldNotShowTheExpensesToAGuest', () => {
+        create();
+
+        expect(fixture.nativeElement.querySelector('app-event-expenses')).toBeNull();
+    });
+
+    it('expenseMembers_shouldListTheOrganizerAndEveryoneTakingPart', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u2'] })));
+        create();
+
+        expect(component.expenseMembers().map(member => member.id)).toEqual(['org', 'me', 'u2']);
+        expect(component.expenseMembers()[1].name).toBe('Toi');
+        expect(fixture.nativeElement.querySelector('app-event-expenses')).not.toBeNull();
     });
 
     it('addFriend_shouldSendTheTagWithTheEventThenRefreshTheStatuses', () => {

@@ -1,0 +1,160 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { of, throwError } from 'rxjs';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { EventExpensesComponent, EXPENSES_PREVIEW_SIZE } from './event-expenses';
+import { ExpenseService } from '../../services/expense.service';
+import { Expense, Ledger } from '../../models/expense.model';
+
+describe('EventExpensesComponent', () => {
+  let fixture: ComponentFixture<EventExpensesComponent>;
+  let component: EventExpensesComponent;
+  let expenseService: Record<'list' | 'ledger' | 'settle' | 'delete', ReturnType<typeof vi.fn>>;
+  let dialog: { open: ReturnType<typeof vi.fn> };
+
+  const members = [
+    { id: 'me', name: 'Toi', initials: 'TO' },
+    { id: 'lea', name: 'lea', initials: 'LE' },
+    { id: 'bob', name: 'bob', initials: 'BO' }
+  ];
+  const expense = (overrides: Partial<Expense> = {}): Expense => ({
+    id: 'x1', title: 'Courses', amountCents: 3000, currency: 'EUR', paidBy: 'lea', createdBy: 'lea', kind: 'EXPENSE',
+    split: 'EQUAL', shares: [{ userId: 'me', value: 0 }, { userId: 'lea', value: 0 }, { userId: 'bob', value: 0 }],
+    owedCents: {}, spentAt: new Date('2026-10-13T10:00:00Z'), version: 0, ...overrides
+  });
+  const ledger: Ledger = {
+    currency: 'EUR', totalCents: 3000,
+    balances: [{ userId: 'bob', netCents: -1000 }, { userId: 'lea', netCents: 2000 }, { userId: 'me', netCents: -1000 }],
+    transfers: [{ fromUserId: 'bob', toUserId: 'lea', amountCents: 1000 }, { fromUserId: 'me', toUserId: 'lea', amountCents: 1000 }]
+  };
+
+  const create = (isOrganizer = false) => {
+    TestBed.configureTestingModule({
+      imports: [EventExpensesComponent],
+      providers: [
+        { provide: ExpenseService, useValue: expenseService },
+        { provide: MatDialog, useValue: dialog }
+      ]
+    });
+    fixture = TestBed.createComponent(EventExpensesComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('eventId', 'ev-1');
+    fixture.componentRef.setInput('members', members);
+    fixture.componentRef.setInput('meId', 'me');
+    fixture.componentRef.setInput('isOrganizer', isOrganizer);
+    fixture.detectChanges();
+  };
+
+  beforeEach(() => {
+    expenseService = {
+      list: vi.fn().mockReturnValue(of([expense()])),
+      ledger: vi.fn().mockReturnValue(of(ledger)),
+      settle: vi.fn().mockReturnValue(of(expense({ kind: 'SETTLEMENT' }))),
+      delete: vi.fn().mockReturnValue(of(undefined))
+    };
+    dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of('saved') }) };
+  });
+
+  it('load_shouldShowTheTotalAndWhereTheViewerStands', () => {
+    create();
+
+    const text = (fixture.nativeElement.textContent as string).replace(/\s/g, ' ');
+    expect(text).toContain('30,00 € au total');
+    expect(component.balanceLabel().replace(/\s/g, ' ')).toBe('Tu dois 10,00 €');
+  });
+
+  it('balanceLabel_shouldSayWhatTheViewerIsOwed_orThatTheyAreEven', () => {
+    expenseService.ledger.mockReturnValue(of({ ...ledger, balances: [{ userId: 'me', netCents: 2340 }] }));
+    create();
+    expect(component.balanceLabel().replace(/\s/g, ' ')).toBe('On te doit 23,40 €');
+
+    component.ledger.set({ ...ledger, balances: [] });
+    expect(component.balanceLabel()).toBe('Tu es à jour');
+  });
+
+  it('transfers_shouldPutTheViewersOwnPaymentFirst', () => {
+    create();
+
+    expect(component.transfers()[0]).toEqual({ fromUserId: 'me', toUserId: 'lea', amountCents: 1000 });
+    expect(component.transferLabel(component.transfers()[0])).toBe('Toi → lea');
+    expect(component.canSettle(component.transfers()[1])).toBe(false);
+  });
+
+  it('settle_shouldRecordTheRepayment_thenReload', () => {
+    create();
+
+    component.settle({ fromUserId: 'me', toUserId: 'lea', amountCents: 1000 });
+
+    expect(expenseService.settle).toHaveBeenCalledWith('ev-1', 'me', 'lea', 1000);
+    expect(expenseService.list).toHaveBeenCalledTimes(2);
+    expect(component.settling().size).toBe(0);
+  });
+
+  it('canEdit_shouldBeTheAuthorOrTheOrganizer_andNeverASettlement', () => {
+    create();
+    expect(component.canEdit(expense({ createdBy: 'me' }))).toBe(true);
+    expect(component.canEdit(expense({ createdBy: 'lea' }))).toBe(false);
+    expect(component.canEdit(expense({ createdBy: 'me', kind: 'SETTLEMENT' }))).toBe(false);
+    expect(component.canUndo(expense({ createdBy: 'me', kind: 'SETTLEMENT' }))).toBe(true);
+
+    fixture.componentRef.setInput('isOrganizer', true);
+    expect(component.canEdit(expense({ createdBy: 'lea' }))).toBe(true);
+  });
+
+  it('edit_shouldNotOpenSomeoneElsesExpense', () => {
+    create();
+
+    component.edit(expense({ createdBy: 'lea' }));
+
+    expect(dialog.open).not.toHaveBeenCalled();
+  });
+
+  it('add_shouldOpenTheDialog_andReloadOnceSaved', () => {
+    create();
+
+    component.add();
+
+    expect(dialog.open.mock.calls[0][1].data).toEqual({ eventId: 'ev-1', members, meId: 'me' });
+    expect(expenseService.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('undo_shouldDeleteTheRepayment_thenReload', () => {
+    create();
+
+    component.undo(expense({ id: 's1', kind: 'SETTLEMENT', createdBy: 'me' }));
+
+    expect(expenseService.delete).toHaveBeenCalledWith('ev-1', 's1');
+    expect(expenseService.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('name_shouldNameSomeoneWhoLeft_asAFormerMember', () => {
+    create();
+
+    expect(component.name('gone')).toBe('Ancien participant');
+  });
+
+  it('visibleExpenses_shouldShowAFewUntilAskedForAll', () => {
+    expenseService.list.mockReturnValue(of(Array.from({ length: EXPENSES_PREVIEW_SIZE + 2 }, (_, i) => expense({ id: `x${i}` }))));
+    create();
+
+    expect(component.visibleExpenses()).toHaveLength(EXPENSES_PREVIEW_SIZE);
+    component.showAll.set(true);
+    expect(component.visibleExpenses()).toHaveLength(EXPENSES_PREVIEW_SIZE + 2);
+  });
+
+  it('load_shouldSayTheAccountsAreUnavailable_whenTheyCannotBeRead', () => {
+    expenseService.ledger.mockReturnValue(throwError(() => new Error('down')));
+    create();
+
+    expect(component.state()).toBe('unavailable');
+    expect(fixture.nativeElement.textContent).toContain('Les comptes ne sont pas disponibles');
+  });
+
+  it('template_shouldInviteTheFirstExpense_whenThereIsNone', () => {
+    expenseService.list.mockReturnValue(of([]));
+    create();
+
+    expect(fixture.nativeElement.textContent).toContain('Aucune dépense pour l’instant');
+  });
+});

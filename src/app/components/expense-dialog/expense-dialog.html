@@ -1,0 +1,106 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>{{ editing ? 'Modifier la dépense' : 'Nouvelle dépense' }}</h2>
+    <button mat-icon-button type="button" (click)="close()" class="close-button" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="fields">
+      <mat-form-field appearance="outline" class="title-field">
+        <mat-label>Titre</mat-label>
+        <input matInput [value]="title()" (input)="title.set($any($event.target).value)"
+          [attr.maxlength]="maxTitleLength" placeholder="Courses, essence, location…" cdkFocusInitial>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="amount-field">
+        <mat-label>Montant</mat-label>
+        <input matInput inputmode="decimal" [value]="amountText()" (input)="amountText.set($any($event.target).value)"
+          placeholder="0,00">
+        <span matTextSuffix>€</span>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Payé par</mat-label>
+      <mat-select [value]="paidBy()" (valueChange)="paidBy.set($event)">
+        @for (member of data.members; track member.id) {
+          <mat-option [value]="member.id">{{ member.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="split-header">
+      <span>Pour qui</span>
+      <div class="segmented" role="radiogroup" aria-label="Répartition">
+        @for (mode of modes; track mode.value) {
+          <button type="button" role="radio" [attr.aria-checked]="split() === mode.value"
+            [class.active]="split() === mode.value" (click)="split.set(mode.value)">{{ mode.label }}</button>
+        }
+      </div>
+    </div>
+
+    <ul class="people">
+      @for (member of data.members; track member.id) {
+        @let included = this.included().has(member.id);
+        <li [class.excluded]="!included">
+          <label class="person">
+            <input type="checkbox" [checked]="included" (change)="toggle(member.id)">
+            <span class="avatar" [style.background]="avatarColor(member.id)" aria-hidden="true">
+              @if (member.picture) {
+                <img [src]="member.picture" alt="">
+              } @else {
+                {{ member.initials }}
+              }
+            </span>
+            <span class="name">{{ member.name }}</span>
+          </label>
+          @if (included) {
+            @switch (split()) {
+              @case ('SHARES') {
+                <input class="small-input" type="number" min="1" max="100" [value]="weights()[member.id] ?? 1"
+                  (input)="setWeight(member.id, $any($event.target).value)" [attr.aria-label]="'Parts de ' + member.name">
+                <span class="owed">{{ formatCents(owed().get(member.id) ?? 0) }}</span>
+              }
+              @case ('EXACT') {
+                <input class="small-input amount" inputmode="decimal" placeholder="0,00"
+                  [value]="exactTexts()[member.id] ?? ''" (input)="setExact(member.id, $any($event.target).value)"
+                  [attr.aria-label]="'Montant pour ' + member.name">
+              }
+              @default {
+                <span class="owed">{{ formatCents(owed().get(member.id) ?? 0) }}</span>
+              }
+            }
+          }
+        </li>
+      }
+    </ul>
+
+    @if (split() === 'EXACT') {
+      <p class="remaining" [class.done]="remaining() === 0">{{ remainingLabel() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <div class="error-message" role="alert">
+        <mat-icon>error</mat-icon>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions>
+    @if (editing && data.canDelete) {
+      <button mat-button type="button" class="delete-button" (click)="remove()" [disabled]="deleting() || saving()"
+        [appPendingTrail]="deleting()">
+        <mat-icon>delete</mat-icon>Supprimer
+      </button>
+    }
+    <span class="spacer"></span>
+    <button mat-stroked-button type="button" (click)="close()" [disabled]="saving()">Annuler</button>
+    <button mat-flat-button type="button" class="save-button" (click)="save()"
+      [disabled]="saving() || invalidReason() !== null" [attr.title]="invalidReason()" [appPendingTrail]="saving()">
+      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </mat-dialog-actions>
+</div>
