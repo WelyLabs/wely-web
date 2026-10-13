@@ -1,39 +1,43 @@
-<div class="row" [class.mine]="message().isMe" [class.pending]="message().pending" [class.failed]="message().failed">
-  @if (!message().isMe) {
-    @if (picture(); as src) {
-      <img class="avatar" [src]="src" alt="" aria-hidden="true">
-    } @else {
-      <span class="avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
-    }
-  }
-  <div class="bubble">
-    @if (!message().isMe && author()) {
-      <strong class="author">{{ author() }}</strong>
-    }
-    @if (message().photo; as photo) {
-      @if (photo.removed) {
-        <p class="photo-removed"><em>Photo retirée</em></p>
-      } @else if (photo.url) {
-        <button type="button" class="photo" (click)="photoOpened.emit()" aria-label="Voir la photo"
-          [style.aspect-ratio]="photo.width + ' / ' + photo.height">
-          <img [src]="photo.url" alt="" loading="lazy">
-        </button>
+@if (message().system) {
+  <p class="system-notice" role="note">{{ message().text }}</p>
+} @else {
+  <div class="row" [class.mine]="message().isMe" [class.pending]="message().pending" [class.failed]="message().failed">
+    @if (!message().isMe) {
+      @if (picture(); as src) {
+        <img class="avatar" [src]="src" alt="" aria-hidden="true">
       } @else {
-        <div class="photo unavailable" role="img" aria-label="Photo indisponible">
-          <mat-icon>image_not_supported</mat-icon>
-          <span>Photo indisponible</span>
-        </div>
+        <span class="avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
       }
     }
-    @if (message().text) {
-      <p>{{ message().text }}</p>
-    }
-    <span class="time">
-      @if (message().failed) {
-        Non envoyé
-      } @else {
-        {{ message().time | date:'HH:mm' }}
+    <div class="bubble">
+      @if (!message().isMe && author()) {
+        <strong class="author">{{ author() }}</strong>
       }
-    </span>
+      @if (message().photo; as photo) {
+        @if (photo.removed) {
+          <p class="photo-removed"><em>Photo retirée</em></p>
+        } @else if (photo.url) {
+          <button type="button" class="photo" (click)="photoOpened.emit()" aria-label="Voir la photo"
+            [style.aspect-ratio]="photo.width + ' / ' + photo.height">
+            <img [src]="photo.url" alt="" loading="lazy">
+          </button>
+        } @else {
+          <div class="photo unavailable" role="img" aria-label="Photo indisponible">
+            <mat-icon>image_not_supported</mat-icon>
+            <span>Photo indisponible</span>
+          </div>
+        }
+      }
+      @if (message().text) {
+        <p>{{ message().text }}</p>
+      }
+      <span class="time">
+        @if (message().failed) {
+          Non envoyé
+        } @else {
+          {{ message().time | date:'HH:mm' }}
+        }
+      </span>
+    </div>
   </div>
-</div>
+}

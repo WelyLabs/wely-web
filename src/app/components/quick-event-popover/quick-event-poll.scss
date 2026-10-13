@@ -1,0 +1,154 @@
+// ── Date poll: « Proposer plusieurs dates » and the proposed slots ─────────────────────────
+.dialog-card {
+    .poll-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 4px 0;
+        border: none;
+        background: transparent;
+        font-size: 14px;
+        color: var(--text-primary);
+        cursor: pointer;
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            color: var(--text-secondary);
+        }
+
+        .switch {
+            position: relative;
+            margin-left: auto;
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--bg-subtle);
+            transition: background 0.2s;
+
+            &::after {
+                content: '';
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                transition: transform 0.2s;
+            }
+        }
+
+        &[aria-checked='true'] .switch {
+            background: var(--accent-gradient);
+
+            &::after {
+                transform: translateX(16px);
+            }
+        }
+    }
+
+    .poll-slots {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-left: 30px;
+
+        small {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .field-error {
+            color: var(--danger-ink);
+        }
+    }
+
+    .slot-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .slot-item {
+        display: flex;
+        align-items: center;
+        border: 1px dashed var(--text-tertiary);
+        border-radius: 10px;
+        background: var(--bg-card);
+
+        &.selected {
+            border-style: solid;
+            border-color: var(--primary-blue);
+            background: var(--brand-wash);
+        }
+    }
+
+    .slot-select {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        gap: 8px;
+        padding: 8px 10px;
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        color: var(--text-primary);
+        text-align: left;
+        cursor: pointer;
+
+        .slot-day {
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+    }
+
+    .slot-remove {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+
+        &:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+    }
+
+    .add-slot {
+        align-self: flex-start;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 0;
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary-blue);
+        cursor: pointer;
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+    }
+}

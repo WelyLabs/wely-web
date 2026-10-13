@@ -18,6 +18,38 @@ export interface EventCreateRequest {
   subscribeByDefault: boolean;
   /** FRIENDS when left out. */
   visibility?: Visibility;
+  /** 2 to 5 proposed slots: the event then opens as a date poll. */
+  candidateSlots?: { start: Date; end: Date }[];
+}
+
+/** One voter's answer for one proposed slot. */
+export type PollAnswer = 'YES' | 'MAYBE' | 'NO';
+
+/** A proposed slot and who answered what, by user id. */
+export interface PollSlot {
+  id: string;
+  start: Date;
+  end: Date;
+  yes: string[];
+  maybe: string[];
+  no: string[];
+}
+
+/** A date poll: open while people vote, closed once the organizer fixed a slot. */
+export interface Poll {
+  status: 'OPEN' | 'CLOSED';
+  fixedSlotId: string | null;
+  slots: PollSlot[];
+}
+
+interface PollSlotPayload extends Omit<PollSlot, 'start' | 'end'> {
+  start: string | number[];
+  end: string | number[];
+}
+
+/** A poll as it arrives on the wire, dates not converted yet. */
+export interface PollPayload extends Omit<Poll, 'slots'> {
+  slots: PollSlotPayload[];
 }
 
 export interface FeedEvent {
@@ -33,6 +65,8 @@ export interface FeedEvent {
   image: string | null;
   description: string;
   visibility?: Visibility;
+  /** The date poll, when the event was created with several candidate slots. */
+  poll?: Poll | null;
 }
 
 /**
@@ -109,9 +143,10 @@ interface ProfileSummaryPayload extends Omit<ProfileSummary, 'upcoming' | 'memor
   memories: EventPayload[];
 }
 
-interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate'> {
+interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate' | 'poll'> {
   startDate: string | number[] | null;
   endDate: string | number[] | null;
+  poll?: PollPayload | null;
 }
 
 /** A search for a slot where the user and some friends are all free. */
@@ -207,6 +242,28 @@ export class EventService {
     );
   }
 
+  /** Replaces the caller's whole ballot: every answer they gave, not only the last one. */
+  vote(eventId: string, answers: Record<string, PollAnswer>): Observable<Poll> {
+    return this.http.put<PollPayload>(`${this.apiUrl}/${eventId}/poll/ballot`, { answers }).pipe(
+      map((poll) => toPoll(poll)),
+    );
+  }
+
+  /** Fixes the event on one slot and closes the poll; the organizer only. */
+  fixDate(eventId: string, slotId: string): Observable<FeedEvent> {
+    return this.http.post<EventPayload>(`${this.apiUrl}/${eventId}/poll/fix`, { slotId }).pipe(
+      map((event) => this.toFeedEvent(event)),
+      tap(() => this.refreshEvents()),
+    );
+  }
+
+  /** Open polls the user organizes, voted on or takes part in. */
+  getMyPolls(): Observable<FeedEvent[]> {
+    return this.http.get<EventPayload[]>(`${this.apiUrl}/me/polls`).pipe(
+      map((events) => events.map((event) => this.toFeedEvent(event))),
+    );
+  }
+
   /** Upcoming events the user may see, inside the area on the map. */
   getMapEvents(area: MapArea): Observable<FeedEvent[]> {
     const params = new HttpParams()
@@ -254,21 +311,41 @@ export class EventService {
     const endDate =
       this.toDate(payload.endDate) ?? new Date(startDate.getTime() + DEFAULT_DURATION_MS);
 
-    return { ...payload, startDate, endDate };
+    return { ...payload, startDate, endDate, poll: payload.poll ? toPoll(payload.poll) : null };
   }
 
   private toDate(value: string | number[] | null): Date | null {
-    if (!value) {
-      return null;
-    }
-
-    if (Array.isArray(value)) {
-      const [year, month, day, hour = 0, minute = 0, second = 0] = value;
-      // Month is 1-based on the wire, 0-based in Date.
-      return new Date(year, month - 1, day, hour, minute, second);
-    }
-
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    return toDate(value);
   }
+}
+
+/** A wire date (ISO string or `[y, M, d, h, m, s]` array) as a Date, or null when unreadable. */
+export function toDate(value: string | number[] | null): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    const [year, month, day, hour = 0, minute = 0, second = 0] = value;
+    // Month is 1-based on the wire, 0-based in Date.
+    return new Date(year, month - 1, day, hour, minute, second);
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** A poll from the wire, slots with unreadable dates dropped. */
+export function toPoll(payload: PollPayload): Poll {
+  return {
+    status: payload.status,
+    fixedSlotId: payload.fixedSlotId ?? null,
+    slots: (payload.slots ?? []).flatMap((slot) => {
+      const start = toDate(slot.start);
+      const end = toDate(slot.end);
+      return start && end
+        ? [{ id: slot.id, start, end, yes: slot.yes ?? [], maybe: slot.maybe ?? [], no: slot.no ?? [] }]
+        : [];
+    }),
+  };
 }

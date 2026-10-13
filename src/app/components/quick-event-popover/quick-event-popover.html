@@ -43,6 +43,45 @@
                 </div>
             </div>
 
+            <!-- A date poll: the fields above edit the selected slot, « Ajouter » proposes one more. -->
+            <button type="button" class="poll-toggle" role="switch" [attr.aria-checked]="pollMode()"
+                (click)="togglePollMode()">
+                <mat-icon>how_to_vote</mat-icon>
+                <span>Proposer plusieurs dates</span>
+                <span class="switch" aria-hidden="true"></span>
+            </button>
+            @if (pollMode()) {
+                <div class="poll-slots">
+                    <ul class="slot-list" aria-label="Créneaux proposés">
+                        @for (slot of candidates(); track $index) {
+                            <li class="slot-item" [class.selected]="$index === selectedSlot()">
+                                <button type="button" class="slot-select" [attr.aria-pressed]="$index === selectedSlot()"
+                                    (click)="selectSlot($index)">
+                                    <span class="slot-day">{{ slot.start | date:'EEE d MMM' }}</span>
+                                    <span>{{ slot.start | date:'HH:mm' }} → {{ slot.end | date:'HH:mm' }}</span>
+                                </button>
+                                <button type="button" class="slot-remove" [disabled]="candidates().length <= 1"
+                                    (click)="removeSlot($index)" [attr.aria-label]="'Retirer le créneau ' + ($index + 1)">
+                                    <mat-icon>close</mat-icon>
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                    @if (canAddSlot()) {
+                        <button type="button" class="add-slot" (click)="addSlot()">
+                            <mat-icon>add</mat-icon>Ajouter un créneau
+                        </button>
+                    }
+                    <small class="poll-hint">Les champs de date modifient le créneau sélectionné.</small>
+                    @if (tooFewSlots()) {
+                        <small class="field-error">Proposez au moins 2 créneaux.</small>
+                    }
+                    @if (invalidSlots()) {
+                        <small class="field-error">Un créneau est en double ou finit avant de commencer.</small>
+                    }
+                </div>
+            }
+
             @if (searchWindow(); as window) {
                 <button type="button" class="find-slot-toggle" [class.open]="findingSlot()" (click)="toggleFindSlot()">
                     <mat-icon>group</mat-icon>
@@ -123,7 +162,7 @@
 
     <div class="form-actions">
         <button type="button" class="cancel-btn" (click)="onCancel()">Annuler</button>
-        <button type="button" class="submit-btn" [disabled]="!draft().title.trim() || invalidRange() || saving()"
-            (click)="onSave()">{{ saving() ? 'Création…' : 'Créer' }}</button>
+        <button type="button" class="submit-btn" [disabled]="!canSave()"
+            (click)="onSave()">{{ saving() ? 'Création…' : pollMode() ? 'Lancer le sondage' : 'Créer' }}</button>
     </div>
 </div>

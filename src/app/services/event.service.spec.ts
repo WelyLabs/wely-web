@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { EventService, FeedEvent, ProfileSummary } from './event.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { EventService, FeedEvent, Poll, ProfileSummary } from './event.service';
 import { environment } from '../../environments/environment';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -320,5 +321,108 @@ describe('EventService', () => {
 
         expect(failed).toBe(true);
         expect(httpMock.match(`${apiUrl}/me/feed`)).toHaveLength(0);
+    });
+
+    describe('date poll', () => {
+        const pollPayload = (status = 'OPEN') => ({
+            status,
+            fixedSlotId: null,
+            slots: [
+                { id: 's1', start: '2026-11-02T18:00:00Z', end: '2026-11-02T20:00:00Z', yes: ['u1'], maybe: [], no: ['u2'] },
+                { id: 's2', start: [2026, 11, 3, 18, 0, 0], end: [2026, 11, 3, 20, 0, 0], yes: [], maybe: ['u1'], no: [] },
+            ],
+        });
+
+        it('toFeedEvent_shouldConvertThePollSlotDates_whenTheEventHasAPoll', () => {
+            let event: FeedEvent | undefined;
+            service.getEvent('p').subscribe((loaded) => (event = loaded));
+
+            httpMock.expectOne(`${apiUrl}/p`).flush(payload({ id: 'p', poll: pollPayload() }));
+
+            expect(event?.poll?.status).toBe('OPEN');
+            expect(event?.poll?.slots[0].start).toEqual(new Date('2026-11-02T18:00:00Z'));
+            expect(event?.poll?.slots[1].start).toEqual(new Date(2026, 10, 3, 18, 0, 0));
+            expect(event?.poll?.slots[0].no).toEqual(['u2']);
+        });
+
+        it('toFeedEvent_shouldSetANullPoll_whenTheWireHasNone', () => {
+            let event: FeedEvent | undefined;
+            service.getEvent('p').subscribe((loaded) => (event = loaded));
+
+            httpMock.expectOne(`${apiUrl}/p`).flush(payload({ id: 'p' }));
+
+            expect(event?.poll).toBeNull();
+        });
+
+        it('createEvent_shouldSendTheCandidateSlots', () => {
+            const slots = [
+                { start: new Date('2026-11-02T18:00:00Z'), end: new Date('2026-11-02T20:00:00Z') },
+                { start: new Date('2026-11-03T18:00:00Z'), end: new Date('2026-11-03T20:00:00Z') },
+            ];
+            service.createEvent({ title: 'Poll', startDate: slots[0].start, location: '', subscribeByDefault: false, candidateSlots: slots }).subscribe();
+
+            const request = httpMock.expectOne(apiUrl);
+            expect(request.request.body.candidateSlots).toEqual(slots);
+            request.flush(payload({ poll: pollPayload() }));
+            httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        });
+
+        it('vote_shouldPutTheWholeBallot_andReturnThePoll', () => {
+            let poll: Poll | undefined;
+            service.vote('p', { s1: 'YES', s2: 'MAYBE' }).subscribe((result) => (poll = result));
+
+            const request = httpMock.expectOne(`${apiUrl}/p/poll/ballot`);
+            expect(request.request.method).toBe('PUT');
+            expect(request.request.body).toEqual({ answers: { s1: 'YES', s2: 'MAYBE' } });
+            request.flush(pollPayload());
+
+            expect(poll?.slots[0].start).toBeInstanceOf(Date);
+            expect(poll?.slots[0].yes).toEqual(['u1']);
+        });
+
+        it('vote_shouldFail_whenThePollIsClosed', () => {
+            let status: number | undefined;
+            service.vote('p', { s1: 'YES' }).subscribe({ error: (error: HttpErrorResponse) => (status = error.status) });
+
+            httpMock.expectOne(`${apiUrl}/p/poll/ballot`).flush({ code: 'EVT-BUS-015' }, { status: 409, statusText: 'Conflict' });
+
+            expect(status).toBe(409);
+        });
+
+        it('fixDate_shouldPostTheSlot_thenRefreshTheLists', () => {
+            let event: FeedEvent | undefined;
+            service.fixDate('p', 's2').subscribe((fixed) => (event = fixed));
+
+            const request = httpMock.expectOne(`${apiUrl}/p/poll/fix`);
+            expect(request.request.method).toBe('POST');
+            expect(request.request.body).toEqual({ slotId: 's2' });
+            request.flush(payload({ id: 'p', poll: { ...pollPayload('CLOSED'), fixedSlotId: 's2' } }));
+
+            expect(event?.poll?.fixedSlotId).toBe('s2');
+            httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        });
+
+        it('fixDate_shouldNotRefresh_whenRefused', () => {
+            let failed = false;
+            service.fixDate('p', 's2').subscribe({ error: () => (failed = true) });
+
+            httpMock.expectOne(`${apiUrl}/p/poll/fix`).flush({}, { status: 403, statusText: 'Forbidden' });
+
+            expect(failed).toBe(true);
+            expect(httpMock.match(`${apiUrl}/me/subscribed`)).toHaveLength(0);
+        });
+
+        it('getMyPolls_shouldReadTheOpenPolls', () => {
+            let events: FeedEvent[] | undefined;
+            service.getMyPolls().subscribe((loaded) => (events = loaded));
+
+            const request = httpMock.expectOne(`${apiUrl}/me/polls`);
+            expect(request.request.method).toBe('GET');
+            request.flush([payload({ id: 'p', poll: pollPayload() })]);
+
+            expect(events?.[0].poll?.slots).toHaveLength(2);
+        });
     });
 });

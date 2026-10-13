@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, Subject, defer, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
     EventDetailsComponent, THREAD_PREVIEW_SIZE, countdownOf, isSameDay, phaseOf
 } from './event-details';
-import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
+import { EventParticipants, EventService, FeedEvent, Poll } from '../../services/event.service';
+import { PollStreamService } from '../../services/poll-stream.service';
 import { SocialService } from '../../services/social.service';
 import { ExpenseService } from '../../services/expense.service';
 import { UserService } from '../../services/user.service';
@@ -84,6 +85,7 @@ describe('EventDetailsComponent', () => {
         removeCover: ReturnType<typeof vi.fn>;
     };
     let dialog: { open: ReturnType<typeof vi.fn> };
+    let pollStream: { follow: ReturnType<typeof vi.fn> };
     let router: { navigate: ReturnType<typeof vi.fn> };
     let navigation: { back: ReturnType<typeof vi.fn> };
     let socialService: {
@@ -142,6 +144,7 @@ describe('EventDetailsComponent', () => {
             removeCover: vi.fn().mockReturnValue(of(undefined))
         };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
+        pollStream = { follow: vi.fn().mockReturnValue(NEVER) };
         router = { navigate: vi.fn() };
         navigation = { back: vi.fn() };
         chatService = {
@@ -171,6 +174,7 @@ describe('EventDetailsComponent', () => {
                 { provide: Router, useValue: router },
                 { provide: NavigationService, useValue: navigation },
                 { provide: MatDialog, useValue: dialog },
+                { provide: PollStreamService, useValue: pollStream },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
             ]
         });
@@ -282,6 +286,20 @@ describe('EventDetailsComponent', () => {
         expect(component.threadPreview().map(message => message.text)).toEqual(['trois', 'quatre', 'cinq']);
         expect(fixture.nativeElement.querySelectorAll('app-chat-bubble').length).toBe(THREAD_PREVIEW_SIZE);
         expect(fixture.nativeElement.textContent).toContain('2 messages plus tôt');
+    });
+
+    it('threadPreview_shouldShowADateFixedNotice_asASystemLine', () => {
+        const notice = chatMessage({ id: 'sys', senderId: 'system', senderName: 'Wely', type: MessageType.SYSTEM,
+            content: '📅 Date fixée : jeudi 15 octobre, 19:00 – 21:00' });
+        chatService.getEventConversation.mockReturnValue(of(group([chatMessage(), notice])));
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+
+        create();
+
+        const shown = component.threadPreview().at(-1);
+        expect(shown?.system).toBe(true);
+        expect(shown?.senderName).toBe('Wely');
+        expect(fixture.nativeElement.querySelector('.system-notice')?.textContent).toContain('Date fixée');
     });
 
     it('openDiscussion_shouldOpenTheGroupInTheChat', () => {
@@ -535,6 +553,124 @@ describe('EventDetailsComponent', () => {
             expect(component.coverError()).toContain('indisponibles');
             expect(component.coverRemoving()).toBe(false);
             expect(component.event()?.image).toBe('https://media/cover.jpg');
+        });
+    });
+
+    describe('date poll', () => {
+        const openPoll = (yes: string[] = []): Poll => ({
+            status: 'OPEN',
+            fixedSlotId: null,
+            slots: [
+                { id: 's1', start: at('2026-10-20T19:00:00'), end: at('2026-10-20T22:00:00'), yes, maybe: [], no: [] },
+                { id: 's2', start: at('2026-10-21T19:00:00'), end: at('2026-10-21T22:00:00'), yes: [], maybe: [], no: [] }
+            ]
+        });
+        const el = (): HTMLElement => fixture.nativeElement;
+
+        it('template_shouldShowThePollToAGuest_andSayTheDateIsNotFixed', () => {
+            eventService.getEvent.mockReturnValue(of(event({ poll: openPoll() })));
+            create();
+
+            expect(component.phase()).toBe('guest');
+            expect(el().querySelector('app-event-poll')).not.toBeNull();
+            expect(el().querySelector('.hero-meta')?.textContent).toContain('Sondage en cours');
+            expect(el().querySelector('.info-card')?.textContent).toContain('Sondage en cours');
+            expect(component.countdown()).toBe('Date à fixer');
+        });
+
+        it('template_shouldShowThePollToAMember', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', poll: openPoll() })));
+            create();
+
+            expect(component.phase()).toBe('member');
+            expect(el().querySelector('app-event-poll')).not.toBeNull();
+        });
+
+        it('phase_shouldNotBeLive_whileThePollIsOpen_evenOnTheProvisionalDay', () => {
+            vi.setSystemTime(at('2026-10-18T20:00:00'));
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', poll: openPoll() })));
+            create();
+
+            expect(component.phase()).toBe('member');
+        });
+
+        it('template_shouldHideThePoll_whenThereIsNone', () => {
+            create();
+
+            expect(el().querySelector('app-event-poll')).toBeNull();
+            expect(el().querySelector('.hero-meta')?.textContent).not.toContain('Sondage en cours');
+            expect(pollStream.follow).not.toHaveBeenCalled();
+        });
+
+        it('stream_shouldApplyEachLivePoll_toTheEvent', () => {
+            const live = new Subject<Poll>();
+            pollStream.follow.mockReturnValue(live);
+            eventService.getEvent.mockReturnValue(of(event({ poll: openPoll() })));
+            create();
+            fixture.detectChanges();
+
+            expect(pollStream.follow).toHaveBeenCalledWith('e1');
+            live.next(openPoll(['f1']));
+
+            expect(component.event()?.poll?.slots[0].yes).toEqual(['f1']);
+            expect(pollStream.follow).toHaveBeenCalledTimes(1);
+        });
+
+        it('stream_shouldReloadTheEvent_whenThePollArrivesClosed', () => {
+            const live = new Subject<Poll>();
+            pollStream.follow.mockReturnValue(live);
+            eventService.getEvent.mockReturnValue(of(event({ poll: openPoll() })));
+            create();
+            fixture.detectChanges();
+            eventService.getEvent.mockReturnValue(of(event({ poll: { ...openPoll(), status: 'CLOSED', fixedSlotId: 's1' } })));
+
+            live.next({ ...openPoll(), status: 'CLOSED', fixedSlotId: 's1' });
+            fixture.detectChanges();
+
+            expect(eventService.getEvent).toHaveBeenCalledTimes(2);
+            expect(eventService.getParticipants).toHaveBeenCalledTimes(2);
+            expect(component.polling()).toBe(false);
+            expect(el().querySelector('app-event-poll')).toBeNull();
+        });
+
+        it('stream_shouldKeepThePage_whenTheStreamFails', () => {
+            pollStream.follow.mockReturnValue(throwError(() => new Error('404')));
+            eventService.getEvent.mockReturnValue(of(event({ poll: openPoll() })));
+            create();
+            fixture.detectChanges();
+
+            expect(component.event()?.poll?.status).toBe('OPEN');
+            expect(component.notFound()).toBe(false);
+        });
+
+        it('applyPoll_shouldReplaceThePoll_whenItIsStillOpen', () => {
+            eventService.getEvent.mockReturnValue(of(event({ poll: openPoll() })));
+            create();
+
+            component.applyPoll(openPoll(['me']));
+
+            expect(component.event()?.poll?.slots[0].yes).toEqual(['me']);
+            expect(eventService.getEvent).toHaveBeenCalledTimes(1);
+        });
+
+        it('onDateFixed_shouldReloadTheEventAndItsParticipants', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', poll: openPoll() })));
+            create();
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', poll: null })));
+
+            component.onDateFixed();
+            fixture.detectChanges();
+
+            expect(eventService.getEvent).toHaveBeenCalledTimes(2);
+            expect(eventService.getParticipants).toHaveBeenCalledTimes(2);
+            expect(el().querySelector('.hero-meta')?.textContent).not.toContain('Sondage en cours');
+        });
+
+        it('voterOf_shouldNameTheVoterFromTheDirectory', () => {
+            create();
+
+            expect(component.voterOf('f1').name).toBe('Léo Martin');
+            expect(component.voterOf('me').name).toBe('Toi');
         });
     });
 });

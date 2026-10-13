@@ -1,0 +1,58 @@
+<section class="poll-card" aria-labelledby="poll-heading">
+  <div class="poll-head">
+    <h2 id="poll-heading">Quand ?</h2>
+    <span class="muted">Dis quels créneaux te vont : les votes s'affichent en direct.</span>
+  </div>
+
+  @for (row of rows(); track row.slot.id) {
+    <div class="poll-row" [class.leading]="row.leading">
+      <div class="slot-when">
+        <strong>{{ dayLabel(row.slot.start) }}</strong>
+        <span class="muted">{{ hours(row.slot) }}</span>
+        @if (row.leading) {
+          <span class="lead-tag"><mat-icon>star</mat-icon>En tête</span>
+        }
+      </div>
+
+      <div class="slot-tally">
+        @if (row.voters.length > 0) {
+          <div class="voters">
+            @for (voter of row.voters; track voter.id) {
+              <span class="voter" [class.maybe]="voter.maybe" [style.background]="avatarColor(voter.id)"
+                [title]="voter.name + (voter.maybe ? ' (peut-être)' : '')">
+                @if (voter.picture) {
+                  <img [src]="voter.picture" alt="">
+                } @else {
+                  {{ voter.initials }}
+                }
+              </span>
+            }
+            @if (row.hiddenVoters > 0) {
+              <span class="voter more">+{{ row.hiddenVoters }}</span>
+            }
+          </div>
+        }
+        <span class="counts">{{ row.slot.yes.length }} oui · {{ row.slot.maybe.length }} peut-être · {{ row.slot.no.length }} non</span>
+      </div>
+
+      <div class="answer-chips" role="radiogroup" [attr.aria-label]="'Ta réponse pour ' + dayLabel(row.slot.start)">
+        @for (choice of choices; track choice.value) {
+          <button type="button" role="radio" class="answer-chip" [attr.data-answer]="choice.value"
+            [class.active]="row.mine === choice.value" [attr.aria-checked]="row.mine === choice.value"
+            [disabled]="!meId()" (click)="vote(row.slot.id, choice.value)">{{ choice.label }}</button>
+        }
+      </div>
+
+      @if (isOrganizer()) {
+        <button type="button" class="fix-button" [disabled]="fixing() !== null" [appPendingTrail]="fixing() === row.slot.id"
+          (click)="fix(row.slot)">
+          <mat-icon>event_available</mat-icon>Fixer cette date
+        </button>
+      }
+    </div>
+  }
+
+  @if (error(); as message) {
+    <p class="poll-error" role="alert">{{ message }}</p>
+  }
+</section>

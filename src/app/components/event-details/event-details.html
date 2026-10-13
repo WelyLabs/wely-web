@@ -7,7 +7,7 @@
       </button>
       <div class="compact-text">
         <span class="compact-title">{{ event.title }}</span>
-        <span class="compact-meta">{{ dayLabel(event.startDate) }} · {{ timeRange(event) }}</span>
+        <span class="compact-meta">{{ whenLabel(event) }}</span>
       </div>
       @if (joined()) {
         <span class="status-chip">Inscrit</span>
@@ -64,7 +64,7 @@
         <div class="hero-text">
           <span class="overline">{{ phase() === 'past' ? 'Terminé · ' + dayLabel(event.startDate) : countdown() }}</span>
           <h1>{{ event.title }}</h1>
-          <p class="hero-meta">{{ dayLabel(event.startDate) }} · {{ timeRange(event) }} · {{ event.location }}</p>
+          <p class="hero-meta" [class.polling]="polling()">{{ whenLabel(event) }} · {{ event.location }}</p>
           @if (organizerName()) {
             <p class="organizer">Organisé par {{ isOrganizer() ? 'toi' : organizerName() }}</p>
           }
@@ -76,10 +76,16 @@
     <main class="content">
       @switch (phase()) {
         @case ('guest') {
+          <ng-container *ngTemplateOutlet="poll" />
+
           <section class="card info-card" aria-label="Quand et où">
             <div class="info-row">
               <span class="info-icon"><mat-icon>event</mat-icon></span>
-              <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+              @if (polling()) {
+                <div><strong>Sondage en cours</strong><span class="muted">La date n'est pas encore fixée</span></div>
+              } @else {
+                <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+              }
             </div>
             <div class="info-row">
               <span class="info-icon"><mat-icon>location_on</mat-icon></span>
@@ -136,6 +142,8 @@
             }
           </div>
 
+          <ng-container *ngTemplateOutlet="poll" />
+
           @if (event.description) {
             <section class="pinned" aria-label="Mot de l'organisateur">
               <mat-icon>push_pin</mat-icon>
@@ -156,7 +164,11 @@
           <section class="card info-card" aria-label="Quand et où">
             <div class="info-row">
               <span class="info-icon"><mat-icon>event</mat-icon></span>
-              <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+              @if (polling()) {
+                <div><strong>Sondage en cours</strong><span class="muted">La date n'est pas encore fixée</span></div>
+              } @else {
+                <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+              }
             </div>
             <div class="info-row">
               <span class="info-icon"><mat-icon>location_on</mat-icon></span>
@@ -194,6 +206,14 @@
       </div>
     }
   </div>
+
+  <!-- Guests and members alike vote while the date is open. -->
+  <ng-template #poll>
+    @if (polling()) {
+      <app-event-poll [event]="event" [meId]="meId()" [isOrganizer]="isOrganizer()" [voterOf]="voterOf"
+        (pollChange)="applyPoll($event)" (fixed)="onDateFixed()" />
+    }
+  </ng-template>
 
   <ng-template #whoComes>
     <section class="who" aria-label="Participants">

@@ -93,8 +93,10 @@
                      than an empty one, because the reader cannot tell whether a day is worth
                      opening. Three fit a cell; the rest are counted. -->
                 <ul class="day-events">
-                  @for (event of monthCellEvents(day.date); track event.id) {
-                    <li class="day-event" [title]="event.title">{{ event.title }}</li>
+                  @for (event of monthCellEvents(day.date); track event.slotId ?? event.id) {
+                    <!-- A proposed slot of an open poll: « ? », in italics, not a firm event. -->
+                    <li class="day-event" [class.tentative]="event.tentative"
+                      [title]="(event.tentative ? 'Date proposée : ' : '') + event.title">{{ event.tentative ? '? ' : '' }}{{ event.title }}</li>
                   }
                   @if (hiddenEventCount(day.date); as hidden) {
                     <li class="day-event more">+{{ hidden }}</li>
@@ -171,14 +173,18 @@
                       (mouseenter)="onTimeMouseEnter(hour, day.date)">
                       <div class="event-container" [style.width.%]="ownLaneWidth()">
                         @for (event of getEventsForHour(day.date, hour); track event) {
+                          <!-- A tentative card keeps the class: a press on it opens the event, never a new one. -->
                           <div
-                            class="inline-event-card" role="button" tabindex="0"
+                            class="inline-event-card" role="button" tabindex="0" [class.tentative]="event.tentative"
+                            [attr.aria-label]="event.tentative ? 'Date proposée : ' + event.title : null"
                             [style.top.%]="getEventMinuteOffset(event)"
                             [style.height.%]="getEventHeight(event)" (click)="viewEventDetails(event)"
                             (keydown.enter)="viewEventDetails(event)"
                             (keydown.space)="viewEventDetails(event)">
-                            <div class="event-accent"></div>
-                            <span class="event-title">{{ event.title }}</span>
+                            @if (!event.tentative) {
+                              <div class="event-accent"></div>
+                            }
+                            <span class="event-title">{{ event.tentative ? '? ' : '' }}{{ event.title }}</span>
                           </div>
                         }
                       </div>
@@ -217,13 +223,13 @@
         </button>
       }
 
-      @for (event of selectedEvents(); track event.id) {
-        <div class="event-card" role="button" tabindex="0" (click)="viewEventDetails(event)"
+      @for (event of selectedEvents(); track event.slotId ?? event.id) {
+        <div class="event-card" role="button" tabindex="0" [class.tentative]="event.tentative" (click)="viewEventDetails(event)"
                   (keydown.enter)="viewEventDetails(event)" (keydown.space)="viewEventDetails(event)">
           <div class="event-accent"></div>
           <div class="event-time">{{ event.time }}</div>
           <div class="event-info">
-            <h4>{{ event.title }}</h4>
+            <h4>{{ event.tentative ? '? ' : '' }}{{ event.title }}</h4>
             <p>{{ event.description }}</p>
           </div>
           <mat-icon class="arrow-icon">chevron_right</mat-icon>

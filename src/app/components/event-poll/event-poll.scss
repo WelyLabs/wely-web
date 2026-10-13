@@ -1,0 +1,192 @@
+:host {
+    display: block;
+}
+
+.poll-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.poll-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+    }
+}
+
+.muted {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.poll-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px dashed var(--text-tertiary);
+    border-radius: 14px;
+
+    // The slot ahead: a gradient border, as the app marks what stands out.
+    &.leading {
+        border: 2px solid transparent;
+        background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box, var(--accent-gradient) border-box;
+    }
+}
+
+.slot-when {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+
+    strong {
+        font-size: 15px;
+        text-transform: capitalize;
+    }
+}
+
+.lead-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-blue);
+
+    mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+    }
+}
+
+.slot-tally {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .counts {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+}
+
+.voters {
+    display: flex;
+
+    .voter + .voter {
+        margin-left: -8px;
+    }
+}
+
+.voter {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-card);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &.maybe {
+        opacity: 0.55;
+    }
+
+    &.more {
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+    }
+}
+
+.answer-chips {
+    display: flex;
+    gap: 6px;
+}
+
+.answer-chip {
+    flex: 1;
+    min-height: 40px;
+    border: 1px solid var(--bg-subtle);
+    border-radius: 12px;
+    background: var(--bg-canvas);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+
+    &.active {
+        border-color: transparent;
+        color: white;
+    }
+
+    &.active[data-answer='YES'] {
+        background: var(--accent-gradient);
+    }
+
+    &.active[data-answer='MAYBE'] {
+        background: var(--warning);
+    }
+
+    &.active[data-answer='NO'] {
+        background: var(--text-secondary);
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.6;
+    }
+}
+
+.fix-button {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--primary-blue);
+    border-radius: 12px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    cursor: pointer;
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+}
+
+.poll-error {
+    margin: 0;
+    font-size: 13px;
+    color: var(--danger-ink);
+}
