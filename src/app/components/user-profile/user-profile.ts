@@ -81,8 +81,8 @@ export class UserProfileComponent implements OnInit {
             exitAnimationDuration: '150ms'
         });
 
-        // The dialog returns the cropped image, but the avatar URL is the server's to decide:
-        // reloading the profile is what makes the displayed picture match what was stored.
+        // The dialog closes with true once the picture is stored: reloading the profile is what
+        // makes the displayed picture match what the server kept.
         dialogRef.afterClosed()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(result => {
