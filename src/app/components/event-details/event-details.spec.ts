@@ -15,6 +15,8 @@ import { ChatService } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
 import { Conversation, ConversationType, Message, MessageType } from '../../models/chat.model';
 import { User } from '../../models/user.model';
+import { MatDialog } from '@angular/material/dialog';
+import { EventCoverDialogComponent } from '../event-cover-dialog/event-cover-dialog';
 
 // ChatService is only provided as a token here, but importing it loads rsocket-js: replaced by the
 // shared stub, as in every spec that pulls the service in, so no file gets the real module first.
@@ -79,7 +81,9 @@ describe('EventDetailsComponent', () => {
         getEvent: ReturnType<typeof vi.fn>;
         getParticipants: ReturnType<typeof vi.fn>;
         toggleSubscription: ReturnType<typeof vi.fn>;
+        removeCover: ReturnType<typeof vi.fn>;
     };
+    let dialog: { open: ReturnType<typeof vi.fn> };
     let router: { navigate: ReturnType<typeof vi.fn> };
     let navigation: { back: ReturnType<typeof vi.fn> };
     let socialService: {
@@ -134,8 +138,10 @@ describe('EventDetailsComponent', () => {
         eventService = {
             getEvent: vi.fn().mockReturnValue(of(event())),
             getParticipants: vi.fn().mockReturnValue(of(participants())),
-            toggleSubscription: vi.fn().mockReturnValue(of(event()))
+            toggleSubscription: vi.fn().mockReturnValue(of(event())),
+            removeCover: vi.fn().mockReturnValue(of(undefined))
         };
+        dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
         router = { navigate: vi.fn() };
         navigation = { back: vi.fn() };
         chatService = {
@@ -164,6 +170,7 @@ describe('EventDetailsComponent', () => {
                 { provide: UserService, useValue: { currentUser$: me } },
                 { provide: Router, useValue: router },
                 { provide: NavigationService, useValue: navigation },
+                { provide: MatDialog, useValue: dialog },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
             ]
         });
@@ -441,5 +448,93 @@ describe('EventDetailsComponent', () => {
         component.goBack();
 
         expect(navigation.back).toHaveBeenCalledWith('/calendar');
+    });
+
+    it('followThread_shouldReplaceAnUpdatedMessage_andIgnoreAnUpdateToOneNotShown', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+        create();
+
+        chatService.messages$.next(chatMessage({ id: 'm1', content: '', kind: 'UPDATED',
+            photo: { width: 0, height: 0, url: null, removed: true } }));
+        chatService.messages$.next(chatMessage({ id: 'old', content: 'ancien', kind: 'UPDATED' }));
+
+        expect(component.thread()).toHaveLength(1);
+        expect(component.thread()[0].photo?.removed).toBe(true);
+    });
+
+    describe('cover', () => {
+        const coverActions = () => fixture.nativeElement.querySelector('.cover-actions') as HTMLElement | null;
+        const pick = (file: File) => ({ target: { files: [file], value: 'C:/cover.jpg' } }) as unknown as Event;
+
+        it('template_shouldNotOfferCoverActionsToSomeoneElse', () => {
+            eventService.getEvent.mockReturnValue(of(event({ image: 'https://media/cover.jpg' })));
+            create();
+
+            expect(coverActions()).toBeNull();
+        });
+
+        it('template_shouldOfferToAddACover_toTheOrganizerOfAnEventWithout', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', image: null })));
+            create();
+
+            expect(coverActions()?.textContent).toContain('Ajouter une couverture');
+            expect(coverActions()?.querySelector('.remove-cover')).toBeNull();
+        });
+
+        it('template_shouldOfferToChangeOrRemoveTheCover_toTheOrganizer', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', image: 'https://media/cover.jpg' })));
+            create();
+
+            expect(coverActions()?.textContent).toContain('Changer la couverture');
+            expect(coverActions()?.querySelector('.remove-cover')?.textContent).toContain('Retirer la couverture');
+        });
+
+        it('onCoverPicked_shouldOpenTheCropDialog_andShowTheNewCover', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', image: null })));
+            dialog.open.mockReturnValue({ afterClosed: () => of(event({ organizerId: 'me', image: 'https://media/new.jpg' })) });
+            create();
+            const file = new File(['x'], 'cover.jpg', { type: 'image/jpeg' });
+
+            component.onCoverPicked(pick(file));
+            fixture.detectChanges();
+
+            expect(dialog.open).toHaveBeenCalledWith(EventCoverDialogComponent, expect.objectContaining({ data: { eventId: 'e1', file } }));
+            expect(component.event()?.image).toBe('https://media/new.jpg');
+            expect(fixture.nativeElement.querySelector('.cover img')?.getAttribute('src')).toBe('https://media/new.jpg');
+        });
+
+        it('onCoverPicked_shouldKeepTheCover_whenTheDialogIsCancelled', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', image: 'https://media/cover.jpg' })));
+            create();
+
+            component.onCoverPicked(pick(new File(['x'], 'cover.jpg')));
+
+            expect(component.event()?.image).toBe('https://media/cover.jpg');
+        });
+
+        it('removeCover_shouldTakeTheCoverOff', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', image: 'https://media/cover.jpg' })));
+            create();
+
+            component.removeCover();
+            fixture.detectChanges();
+
+            expect(eventService.removeCover).toHaveBeenCalledWith('e1');
+            expect(component.event()?.image).toBeNull();
+            expect(fixture.nativeElement.querySelector('.cover')?.classList).toContain('no-image');
+        });
+
+        it('removeCover_shouldExplainAFailure_andKeepTheCover', () => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', image: 'https://media/cover.jpg' })));
+            eventService.removeCover.mockReturnValue(throwError(() =>
+                new HttpErrorResponse({ status: 502, error: { code: 'EVT-TEC-003' } })));
+            create();
+
+            component.removeCover();
+
+            expect(component.coverError()).toContain('indisponibles');
+            expect(component.coverRemoving()).toBe(false);
+            expect(component.event()?.image).toBe('https://media/cover.jpg');
+        });
     });
 });

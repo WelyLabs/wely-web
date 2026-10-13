@@ -1,26 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PhotoViewerComponent, PhotoViewerData } from './photo-viewer';
-import { ChatPhotoService } from '../../services/chat-photo.service';
 
 describe('PhotoViewerComponent', () => {
   let fixture: ComponentFixture<PhotoViewerComponent>;
   let component: PhotoViewerComponent;
-  let photos: { remove: ReturnType<typeof vi.fn> };
+  let remove: ReturnType<typeof vi.fn<() => Observable<void>>>;
   let dialogRef: { close: ReturnType<typeof vi.fn> };
 
-  const create = (canRemove: boolean) => {
+  const create = (overrides: Partial<PhotoViewerData> = {}) => {
     const data: PhotoViewerData = {
-      conversationId: 'c1', messageId: 'm1', url: 'https://media/p.jpg', senderName: 'lea',
-      sentAt: '2026-10-13T20:00:00Z', canRemove
+      url: 'https://media/p.jpg', title: 'lea', subtitle: '13 oct. 2026, 20:00', canRemove: true, remove, ...overrides
     };
     TestBed.configureTestingModule({
       imports: [PhotoViewerComponent],
       providers: [
-        { provide: ChatPhotoService, useValue: photos },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: MAT_DIALOG_DATA, useValue: data }
       ]
@@ -31,39 +27,85 @@ describe('PhotoViewerComponent', () => {
   };
 
   beforeEach(() => {
-    photos = { remove: vi.fn().mockReturnValue(of(undefined)) };
+    remove = vi.fn<() => Observable<void>>().mockReturnValue(of(undefined));
     dialogRef = { close: vi.fn() };
   });
 
-  it('template_shouldShowThePhotoAndItsAuthor', () => {
-    create(false);
+  it('template_shouldShowThePhotoItsTitleAndSubtitle', () => {
+    create({ canRemove: false });
 
     expect(fixture.nativeElement.querySelector('img').getAttribute('src')).toBe('https://media/p.jpg');
     expect(fixture.nativeElement.textContent).toContain('lea');
+    expect(fixture.nativeElement.textContent).toContain('13 oct. 2026, 20:00');
     expect(fixture.nativeElement.querySelector('.remove')).toBeNull();
   });
 
-  it('remove_shouldAskForConfirmation_thenRemoveForEveryone', () => {
-    create(true);
+  it('template_shouldHideRemove_withoutARemoveAction', () => {
+    create({ remove: undefined });
+
+    expect(fixture.nativeElement.querySelector('.remove')).toBeNull();
+  });
+
+  it('template_shouldUseTheGivenLabels', () => {
+    create({ removeLabel: 'Retirer le ticket', confirmLabel: 'Retirer le ticket ?' });
+    const button = () => fixture.nativeElement.querySelector('.remove') as HTMLButtonElement;
+
+    expect(button().textContent).toContain('Retirer le ticket');
+    button().click();
+    fixture.detectChanges();
+    expect(button().textContent).toContain('Retirer le ticket ?');
+  });
+
+  it('remove_shouldAskForConfirmation_thenCallTheRemoveAction', () => {
+    create();
 
     component.remove();
-    expect(photos.remove).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
     expect(component.confirming()).toBe(true);
 
     component.remove();
-    expect(photos.remove).toHaveBeenCalledWith('c1', 'm1');
+    expect(remove).toHaveBeenCalledTimes(1);
     expect(dialogRef.close).toHaveBeenCalledWith('removed');
   });
 
-  it('remove_shouldExplainARefusal_andStayOpen', () => {
-    photos.remove.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403, error: { code: 'CHT-BUS-007' } })));
-    create(true);
+  it('remove_shouldDoNothing_withoutARemoveAction', () => {
+    create({ remove: undefined });
 
     component.remove();
     component.remove();
 
-    expect(component.errorMessage()).toContain('Seul l’auteur de la photo');
-    expect(component.removing()).toBe(false);
+    expect(component.confirming()).toBe(false);
     expect(dialogRef.close).not.toHaveBeenCalled();
+  });
+
+  it('remove_shouldExplainARefusal_andStayOpen', () => {
+    remove.mockReturnValue(throwError(() => new Error('403')));
+    create({ removeError: () => 'Seul l’auteur peut la retirer.' });
+
+    component.remove();
+    component.remove();
+
+    expect(component.errorMessage()).toBe('Seul l’auteur peut la retirer.');
+    expect(component.removing()).toBe(false);
+    expect(component.confirming()).toBe(false);
+    expect(dialogRef.close).not.toHaveBeenCalled();
+  });
+
+  it('remove_shouldFallBackOnAGenericMessage', () => {
+    remove.mockReturnValue(throwError(() => new Error('502')));
+    create();
+
+    component.remove();
+    component.remove();
+
+    expect(component.errorMessage()).toContain('n’a pas pu être retirée');
+  });
+
+  it('close_shouldCloseWithoutAResult', () => {
+    create();
+
+    component.close();
+
+    expect(dialogRef.close).toHaveBeenCalledWith(undefined);
   });
 });

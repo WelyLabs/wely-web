@@ -6,11 +6,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventExpensesComponent, EXPENSES_PREVIEW_SIZE } from './event-expenses';
 import { ExpenseService } from '../../services/expense.service';
 import { Expense, Ledger } from '../../models/expense.model';
+import { PhotoViewerComponent, PhotoViewerData } from '../photo-viewer/photo-viewer';
 
 describe('EventExpensesComponent', () => {
   let fixture: ComponentFixture<EventExpensesComponent>;
   let component: EventExpensesComponent;
-  let expenseService: Record<'list' | 'ledger' | 'settle' | 'delete', ReturnType<typeof vi.fn>>;
+  let expenseService: Record<'list' | 'ledger' | 'settle' | 'delete' | 'removeReceipt', ReturnType<typeof vi.fn>>;
   let dialog: { open: ReturnType<typeof vi.fn> };
 
   const members = [
@@ -21,7 +22,7 @@ describe('EventExpensesComponent', () => {
   const expense = (overrides: Partial<Expense> = {}): Expense => ({
     id: 'x1', title: 'Courses', amountCents: 3000, currency: 'EUR', paidBy: 'lea', createdBy: 'lea', kind: 'EXPENSE',
     split: 'EQUAL', shares: [{ userId: 'me', value: 0 }, { userId: 'lea', value: 0 }, { userId: 'bob', value: 0 }],
-    owedCents: {}, spentAt: new Date('2026-10-13T10:00:00Z'), version: 0, ...overrides
+    owedCents: {}, spentAt: new Date('2026-10-13T10:00:00Z'), version: 0, receiptUrl: null, ...overrides
   });
   const ledger: Ledger = {
     currency: 'EUR', totalCents: 3000,
@@ -51,7 +52,8 @@ describe('EventExpensesComponent', () => {
       list: vi.fn().mockReturnValue(of([expense()])),
       ledger: vi.fn().mockReturnValue(of(ledger)),
       settle: vi.fn().mockReturnValue(of(expense({ kind: 'SETTLEMENT' }))),
-      delete: vi.fn().mockReturnValue(of(undefined))
+      delete: vi.fn().mockReturnValue(of(undefined)),
+      removeReceipt: vi.fn().mockReturnValue(of(undefined))
     };
     dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of('saved') }) };
   });
@@ -156,5 +158,51 @@ describe('EventExpensesComponent', () => {
     create();
 
     expect(fixture.nativeElement.textContent).toContain('Aucune dépense pour l’instant');
+  });
+
+  describe('receipt', () => {
+    const withReceipt = (overrides: Partial<Expense> = {}) => expense({ receiptUrl: 'https://media/r.jpg', ...overrides });
+
+    it('template_shouldOfferTheReceipt_onlyForAnExpenseThatHasOne', () => {
+      expenseService.list.mockReturnValue(of([withReceipt({ id: 'x1' }), expense({ id: 'x2' })]));
+      create();
+
+      const buttons = fixture.nativeElement.querySelectorAll('.receipt-button') as NodeListOf<HTMLButtonElement>;
+      expect(buttons).toHaveLength(1);
+      buttons[0].click();
+      expect(dialog.open).toHaveBeenCalledWith(PhotoViewerComponent, expect.anything());
+    });
+
+    it('openReceipt_shouldShowTheReceipt_removableByItsAuthor', () => {
+      dialog.open.mockReturnValue({ afterClosed: () => of('removed') });
+      create();
+
+      component.openReceipt(withReceipt({ createdBy: 'me' }));
+
+      const data = dialog.open.mock.calls[0][1].data as PhotoViewerData;
+      expect(data).toMatchObject({ url: 'https://media/r.jpg', title: 'Courses', canRemove: true, removeLabel: 'Retirer le ticket' });
+      expect(data.subtitle).toContain('lea');
+      data.remove?.().subscribe();
+      expect(expenseService.removeReceipt).toHaveBeenCalledWith('ev-1', 'x1');
+      expect(expenseService.list).toHaveBeenCalledTimes(2);
+    });
+
+    it('openReceipt_shouldNotLetSomeoneElseRemoveIt', () => {
+      dialog.open.mockReturnValue({ afterClosed: () => of(undefined) });
+      create();
+
+      component.openReceipt(withReceipt({ createdBy: 'lea' }));
+
+      expect((dialog.open.mock.calls[0][1].data as PhotoViewerData).canRemove).toBe(false);
+      expect(expenseService.list).toHaveBeenCalledTimes(1);
+    });
+
+    it('openReceipt_shouldDoNothing_withoutAReceipt', () => {
+      create();
+
+      component.openReceipt(expense());
+
+      expect(dialog.open).not.toHaveBeenCalled();
+    });
   });
 });

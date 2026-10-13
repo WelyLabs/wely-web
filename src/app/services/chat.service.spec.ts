@@ -5,10 +5,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { firstValueFrom } from 'rxjs';
 import { toArray } from 'rxjs/operators';
 import { rsocketStub } from '../../testing/rsocket-core.stub';
-import { ChatService, PendingMessage } from './chat.service';
+import { ChatService, PendingMessage, upsertById } from './chat.service';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
-import { MessageType } from '../models/chat.model';
+import { Message, MessageType } from '../models/chat.model';
 
 // The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
 // the module rather than redefining an object, so the service and the test work on the same
@@ -200,7 +200,17 @@ describe('ChatService', () => {
     service.initializeStream();
     rsocketStub.emit({ id: 'm-1', content: 'hi' });
 
-    expect(received).toEqual([{ id: 'm-1', content: 'hi' }]);
+    expect(received).toEqual([{ id: 'm-1', content: 'hi', kind: 'NEW' }]);
+  });
+
+  it('initializeStream_shouldKeepAnUpdatesKind', () => {
+    const received: Message[] = [];
+    service.messages$.subscribe((message) => received.push(message));
+
+    service.initializeStream();
+    rsocketStub.emit({ id: 'm-1', kind: 'UPDATED', photo: { width: 0, height: 0, url: null, removed: true } });
+
+    expect(received[0].kind).toBe('UPDATED');
   });
 
   it('demande une quantité bornée plutôt que tout le flux', () => {
@@ -228,5 +238,38 @@ describe('ChatService', () => {
     service.ngOnDestroy();
 
     expect(rsocketStub.closeCalls).toBeGreaterThan(0);
+  });
+});
+
+describe('upsertById', () => {
+  interface Item { id?: string; text: string }
+  const a: Item = { id: 'a', text: 'a' };
+  const b: Item = { id: 'b', text: 'b' };
+
+  it('upsertById_shouldAppendANewItem', () => {
+    expect(upsertById([a], b)).toEqual([a, b]);
+  });
+
+  it('upsertById_shouldReplaceAnItemAlreadyThere_whateverTheKind', () => {
+    const changed: Item = { id: 'a', text: 'changed' };
+
+    expect(upsertById([a, b], changed, 'NEW')).toEqual([changed, b]);
+    expect(upsertById([a, b], changed, 'UPDATED')).toEqual([changed, b]);
+  });
+
+  it('upsertById_shouldIgnoreAnUpdateToAnItemNotThere', () => {
+    expect(upsertById([a], b, 'UPDATED')).toEqual([a]);
+  });
+
+  it('upsertById_shouldAppendAnItemWithoutId', () => {
+    expect(upsertById([a], { id: undefined, text: 'local' })).toHaveLength(2);
+  });
+
+  it('upsertById_shouldNotMutateTheList', () => {
+    const list = [a];
+
+    upsertById(list, b);
+
+    expect(list).toEqual([a]);
   });
 });

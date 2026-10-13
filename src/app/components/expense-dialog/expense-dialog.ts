@@ -15,6 +15,8 @@ import { LoggerService } from '../../core/logging/logger.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { centsToInput, formatCents, parseEuros } from '../../core/ui/money';
 import { avatarColor } from '../../core/ui/avatar';
+import { PhotoResizer } from '../../core/ui/photo-resize';
+import { eventMediaError } from '../../core/ui/event-media-errors';
 
 export interface ExpenseDialogData {
   eventId: string;
@@ -30,6 +32,9 @@ export interface ExpenseDialogData {
 export type ExpenseDialogResult = 'saved' | 'deleted' | undefined;
 
 const MAX_TITLE_LENGTH = 80;
+
+/** A receipt's longest side once scaled down: enough to read the small print. */
+export const RECEIPT_MAX_SIDE = 2000;
 
 /** wely-events' codes, in the words the dialog shows. */
 const ERRORS: Record<string, string> = {
@@ -85,6 +90,7 @@ export class ExpenseDialogComponent {
   private readonly logger = inject(LoggerService);
   private readonly dialogRef = inject<MatDialogRef<ExpenseDialogComponent, ExpenseDialogResult>>(MatDialogRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly photoResizer = inject(PhotoResizer);
 
   readonly data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
   readonly editing = this.data.expense !== undefined;
@@ -110,6 +116,20 @@ export class ExpenseDialogComponent {
   readonly saving = signal(false);
   readonly deleting = signal(false);
   readonly errorMessage = signal('');
+
+  /** The author or the organizer, or anyone adding their own expense. */
+  readonly canEditReceipt = !this.editing || this.data.canDelete === true;
+  /** A receipt picked, already scaled down, and its local preview. */
+  readonly receiptBlob = signal<Blob | null>(null);
+  private readonly receiptPreview = signal<string | null>(null);
+  /** The stored receipt is to be removed on save. */
+  readonly receiptRemoved = signal(false);
+  readonly preparingReceipt = signal(false);
+  /** The expense once stored: a failed receipt upload is retried without saving it twice. */
+  readonly saved = signal<Expense | null>(null);
+
+  readonly receiptShown = computed(() => this.receiptPreview()
+    ?? (this.receiptRemoved() ? null : this.data.expense?.receiptUrl ?? null));
 
   readonly amountCents = computed(() => parseEuros(this.amountText()));
 
@@ -176,9 +196,56 @@ export class ExpenseDialogComponent {
     this.exactTexts.update(current => ({ ...current, [memberId]: value }));
   }
 
+  constructor() {
+    this.destroyRef.onDestroy(() => this.revokePreview());
+  }
+
+  /** Scales the picked receipt down at once, so an unreadable file is refused before saving. */
+  async onReceiptPicked(pick: Event): Promise<void> {
+    const input = pick.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (input) {
+      input.value = '';
+    }
+    if (!file) {
+      return;
+    }
+    this.preparingReceipt.set(true);
+    this.errorMessage.set('');
+    try {
+      const blob = await this.photoResizer.downscale(file, RECEIPT_MAX_SIDE);
+      this.revokePreview();
+      this.receiptBlob.set(blob);
+      this.receiptPreview.set(URL.createObjectURL(blob));
+    } catch (error) {
+      this.errorMessage.set('Cette image ne peut pas être lue. Essaie un JPEG ou un PNG.');
+      this.logger.error('ExpenseDialogComponent', 'Could not read the receipt', error);
+    } finally {
+      this.preparingReceipt.set(false);
+    }
+  }
+
+  /** Drops the receipt just picked, or marks the stored one for removal. */
+  clearReceipt(): void {
+    if (this.receiptBlob()) {
+      this.revokePreview();
+      this.receiptBlob.set(null);
+      return;
+    }
+    this.receiptRemoved.set(true);
+  }
+
   save(): void {
+    if (this.saving()) {
+      return;
+    }
+    const saved = this.saved();
+    if (saved) {
+      this.sendReceipt(saved);
+      return;
+    }
     const amountCents = this.amountCents();
-    if (this.invalidReason() || amountCents === null || this.saving()) {
+    if (this.invalidReason() || amountCents === null) {
       return;
     }
     const request: ExpenseRequest = {
@@ -192,7 +259,15 @@ export class ExpenseDialogComponent {
     const call: Observable<Expense> = this.data.expense
       ? this.expenseService.update(this.data.eventId, this.data.expense.id, request)
       : this.expenseService.add(this.data.eventId, request);
-    this.run(call, this.saving, 'saved');
+    this.saving.set(true);
+    this.errorMessage.set('');
+    call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: expense => {
+        this.saved.set(expense);
+        this.sendReceipt(expense);
+      },
+      error: (error: unknown) => this.fail(this.saving, error)
+    });
   }
 
   remove(): void {
@@ -203,8 +278,38 @@ export class ExpenseDialogComponent {
     this.run(this.expenseService.delete(this.data.eventId, expense.id), this.deleting, 'deleted');
   }
 
+  /** Still 'saved' once the expense is stored, even if its receipt was not: the list must reload. */
   close(): void {
-    this.dialogRef.close(undefined);
+    this.dialogRef.close(this.saved() ? 'saved' : undefined);
+  }
+
+  /** After the expense: the receipt picked, or the removal asked for, then closes. */
+  private sendReceipt(expense: Expense): void {
+    const blob = this.receiptBlob();
+    const step: Observable<unknown> | null = blob
+      ? this.expenseService.attachReceipt(this.data.eventId, expense.id, blob)
+      : this.receiptRemoved() && this.data.expense?.receiptUrl
+        ? this.expenseService.removeReceipt(this.data.eventId, expense.id)
+        : null;
+    if (!step) {
+      this.saving.set(false);
+      this.dialogRef.close('saved');
+      return;
+    }
+    this.saving.set(true);
+    this.errorMessage.set('');
+    step.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.dialogRef.close('saved');
+      },
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.errorMessage.set('La dépense est enregistrée, mais pas le ticket. '
+          + eventMediaError(error, 'Réessaie dans un instant.'));
+        this.logger.error('ExpenseDialogComponent', 'Could not update the receipt', error);
+      }
+    });
   }
 
   private run(call: Observable<unknown>, pending: WritableSignal<boolean>, result: ExpenseDialogResult): void {
@@ -215,13 +320,23 @@ export class ExpenseDialogComponent {
         pending.set(false);
         this.dialogRef.close(result);
       },
-      error: (error: unknown) => {
-        pending.set(false);
-        const code = error instanceof HttpErrorResponse ? error.error?.code : undefined;
-        this.errorMessage.set(ERRORS[code] ?? 'L’enregistrement a échoué. Réessaie dans un instant.');
-        this.logger.error('ExpenseDialogComponent', 'Could not save the expense', error);
-      }
+      error: (error: unknown) => this.fail(pending, error)
     });
+  }
+
+  private fail(pending: WritableSignal<boolean>, error: unknown): void {
+    pending.set(false);
+    const code = error instanceof HttpErrorResponse ? error.error?.code : undefined;
+    this.errorMessage.set(ERRORS[code] ?? 'L’enregistrement a échoué. Réessaie dans un instant.');
+    this.logger.error('ExpenseDialogComponent', 'Could not save the expense', error);
+  }
+
+  private revokePreview(): void {
+    const preview = this.receiptPreview();
+    if (preview) {
+      URL.revokeObjectURL(preview);
+      this.receiptPreview.set(null);
+    }
   }
 
   private initialValues(mode: SplitMode, fallback: number): Record<string, number> {

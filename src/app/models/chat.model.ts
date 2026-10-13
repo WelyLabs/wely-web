@@ -26,12 +26,18 @@ export interface Message {
     reactions: Record<string, number>;
     /** A photo the message carries; its URL is signed by wely-chat and works for an hour. */
     photo?: MessagePhoto | null;
+    /** On the live stream only: a new message, or a change to one already sent. */
+    kind?: MessageKind;
 }
+
+/** NEW is appended, UPDATED replaces the message with the same id; a frame without one is NEW. */
+export type MessageKind = 'NEW' | 'UPDATED';
 
 /** A photo in a conversation. A removed one keeps its place in the thread, without a URL. */
 export interface MessagePhoto {
     width: number;
     height: number;
+    /** Null for a removed photo, or when wely-chat could not sign it: the tile says it is unavailable. */
     url?: string | null;
     removed: boolean;
 }

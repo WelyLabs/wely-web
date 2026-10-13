@@ -46,7 +46,7 @@
               <mat-icon>favorite</mat-icon>
               <span>Ajouter</span>
             </div>
-            <div class="card-image" [style.background-image]="'url(' + event.image + ')'"
+            <div class="card-image" [class.no-image]="!event.image" [style.background-image]="cardBackground(event)"
               [attr.aria-label]="'Image pour ' + event.title" role="img">
               <div class="date-badge">
                 <span class="month">{{ event.startDate | date:'MMM' }}</span>

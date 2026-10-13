@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { ExploreMapComponent } from '../explore-map/explore-map';
+import { eventTint } from '../../core/ui/event-tint';
 
 /** Horizontal travel, in pixels, past which a drag counts as a swipe rather than a nudge. */
 const SWIPE_THRESHOLD_PX = 100;
@@ -108,6 +109,11 @@ export class EventFeedComponent implements OnInit {
   /** The organiser's name, or nothing while the names are still on their way. */
   organiserName(organizerId: string): string {
     return this.organiserNames().get(organizerId) ?? '';
+  }
+
+  /** The cover, or the event's own gradient when it has none. */
+  cardBackground(event: FeedEvent): string {
+    return event.image ? `url("${event.image}")` : eventTint(event.id);
   }
 
   /** Stacked effect for the cards behind the top one. */

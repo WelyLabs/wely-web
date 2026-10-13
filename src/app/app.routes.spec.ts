@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Type } from '@angular/core';
 import { Route } from '@angular/router';
 import { routes } from './app.routes';
@@ -12,6 +12,11 @@ import { EventDetailsComponent } from './components/event-details/event-details'
 import { UserProfileComponent } from './components/user-profile/user-profile';
 import { ConversationsListComponent } from './components/conversations-list/conversations-list';
 import { ChatComponent } from './components/chat/chat';
+
+// Reaches ChatService through the components it loads: rsocket-js is replaced by the shared stub, so this
+// file never loads the real module first for the specs that share its chunk.
+vi.mock('rsocket-core', () => import('../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../testing/rsocket-websocket-client.stub'));
 
 /** Resolves a lazy route the way the router does, to check it lands on the right component. */
 async function load(route: Route): Promise<Type<unknown>> {

@@ -358,3 +358,15 @@
         transform: scale(1.04);
     }
 }
+
+/* A photo wely-chat could not sign: a neutral tile instead of a broken image. */
+.media-tile.unavailable {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: default;
+}

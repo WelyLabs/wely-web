@@ -66,6 +66,12 @@
                 </span>
                 <span class="amount">{{ formatCents(expense.amountCents) }}</span>
               </button>
+              @if (expense.receiptUrl) {
+                <button type="button" class="icon-button receipt-button" (click)="openReceipt(expense)"
+                  [attr.aria-label]="'Voir le ticket de ' + expense.title">
+                  <mat-icon>receipt_long</mat-icon>
+                </button>
+              }
               @if (canUndo(expense)) {
                 <button type="button" class="icon-button" (click)="undo(expense)" [disabled]="undoing().has(expense.id)"
                   [appPendingTrail]="undoing().has(expense.id)" aria-label="Annuler ce remboursement">

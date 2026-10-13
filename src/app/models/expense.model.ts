@@ -23,6 +23,8 @@ export interface Expense {
   owedCents: Record<string, number>;
   spentAt: Date;
   version: number | null;
+  /** The receipt's signed URL; null when there is none. */
+  receiptUrl: string | null;
 }
 
 export interface ExpenseRequest {

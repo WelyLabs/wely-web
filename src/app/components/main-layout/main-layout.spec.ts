@@ -143,6 +143,18 @@ describe('MainLayoutComponent', () => {
         expect(notificationServiceMock.showChatNotification).not.toHaveBeenCalled();
     });
 
+    it('should NOT show notification for an update to a message, such as a photo removed', () => {
+        fixture.detectChanges();
+        chatMessagesSubject.next({
+            senderId: 'friend',
+            conversationId: 'conv1',
+            content: '',
+            kind: 'UPDATED',
+            photo: { width: 0, height: 0, url: null, removed: true }
+        });
+        expect(notificationServiceMock.showChatNotification).not.toHaveBeenCalled();
+    });
+
     it('should toggle sidenav', () => {
         fixture.detectChanges();
         const toggleSpy = vi.spyOn(component.sidenav()!, 'toggle');

@@ -42,7 +42,25 @@
           <button type="button" class="icon-button floating" (click)="goBack()" aria-label="Retour">
             <mat-icon>arrow_back</mat-icon>
           </button>
+          @if (isOrganizer()) {
+            <div class="cover-actions">
+              <button type="button" class="cover-button change-cover" (click)="coverInput.click()" [disabled]="coverRemoving()">
+                <mat-icon>add_photo_alternate</mat-icon>{{ event.image ? 'Changer la couverture' : 'Ajouter une couverture' }}
+              </button>
+              @if (event.image) {
+                <button type="button" class="cover-button remove-cover" (click)="removeCover()" [disabled]="coverRemoving()"
+                  [appPendingTrail]="coverRemoving()">
+                  <mat-icon>delete</mat-icon>Retirer la couverture
+                </button>
+              }
+              <input #coverInput type="file" accept="image/*" class="visually-hidden" tabindex="-1" aria-hidden="true"
+                (change)="onCoverPicked($event)">
+            </div>
+          }
         </div>
+        @if (coverError()) {
+          <p class="cover-error" role="alert">{{ coverError() }}</p>
+        }
         <div class="hero-text">
           <span class="overline">{{ phase() === 'past' ? 'Terminé · ' + dayLabel(event.startDate) : countdown() }}</span>
           <h1>{{ event.title }}</h1>

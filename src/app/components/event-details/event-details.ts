@@ -7,11 +7,12 @@ import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import { Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
 
 import { EventParticipants, EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
-import { ChatService } from '../../services/chat.service';
+import { ChatService, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
 import { Conversation, Message, MessagePhoto } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
@@ -24,6 +25,8 @@ import { AvatarService } from '../../services/avatar.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { EventExpensesComponent } from '../event-expenses/event-expenses';
 import { ExpenseMember } from '../../models/expense.model';
+import { EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult } from '../event-cover-dialog/event-cover-dialog';
+import { eventMediaError } from '../../core/ui/event-media-errors';
 
 /**
  * What the page is for, given who looks and when.
@@ -125,6 +128,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly navigationService = inject(NavigationService);
   private readonly userService = inject(UserService);
   private readonly logger = inject(LoggerService);
+  private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly heroEnd = viewChild<ElementRef<HTMLElement>>('heroEnd');
@@ -135,6 +139,9 @@ export class EventDetailsComponent implements OnInit {
   readonly busy = signal(false);
   /** The full header has scrolled out of view: the compact bar takes over. */
   readonly collapsed = signal(false);
+  /** The cover being taken off, and what went wrong with it. */
+  readonly coverRemoving = signal(false);
+  readonly coverError = signal('');
   /** Ticks every minute, so the countdown and the phase move on their own. */
   readonly now = signal(new Date());
 
@@ -293,6 +300,51 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  /** The organizer picked a picture: it is cropped in a dialog, which uploads it. */
+  onCoverPicked(pick: Event): void {
+    const input = pick.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    const event = this.event();
+    if (input) {
+      input.value = '';
+    }
+    if (!file || !event) {
+      return;
+    }
+    this.coverError.set('');
+    this.dialog.open<EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult>(EventCoverDialogComponent, {
+      data: { eventId: event.id, file },
+      width: '640px',
+      maxWidth: '95vw'
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(updated => {
+        if (updated) {
+          this.event.set(updated);
+        }
+      });
+  }
+
+  removeCover(): void {
+    const event = this.event();
+    if (!event || this.coverRemoving()) {
+      return;
+    }
+    this.coverRemoving.set(true);
+    this.coverError.set('');
+    this.eventService.removeCover(event.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.coverRemoving.set(false);
+        this.event.update(current => current ? { ...current, image: null } : current);
+      },
+      error: (error: unknown) => {
+        this.coverRemoving.set(false);
+        this.coverError.set(eventMediaError(error, 'La couverture n’a pas pu être retirée. Réessaie dans un instant.'));
+        this.logger.error('EventDetailsComponent', 'Could not remove the cover', error);
+      }
+    });
+  }
+
   /** Back where the page was opened from: calendar, feed, map or a conversation. */
   goBack(): void {
     this.navigationService.back('/calendar');
@@ -410,7 +462,7 @@ export class EventDetailsComponent implements OnInit {
     this.chatService.messages$.pipe(
       filter(message => message.conversationId === this.conversationId()),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(message => this.upsert(toThreadMessage(message)));
+    ).subscribe(message => this.thread.update(messages => upsertById(messages, toThreadMessage(message), message.kind)));
   }
 
   private showConversation(conversation: Conversation | null): void {
@@ -422,14 +474,6 @@ export class EventDetailsComponent implements OnInit {
     this.thread.set((conversation.messages ?? []).map(toThreadMessage));
     this.threadState.set('ready');
     this.chatService.initializeStream();
-  }
-
-  /** Appends a message, or replaces it if it is already shown. */
-  private upsert(message: ThreadMessage): void {
-    this.thread.update(messages => {
-      const index = messages.findIndex(shown => shown.id === message.id);
-      return index < 0 ? [...messages, message] : messages.map((shown, i) => i === index ? message : shown);
-    });
   }
 
   private loadParticipants(id: string): void {

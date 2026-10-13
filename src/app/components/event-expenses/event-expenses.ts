@@ -11,6 +11,8 @@ import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { formatCents } from '../../core/ui/money';
 import { ExpenseDialogComponent, ExpenseDialogData, ExpenseDialogResult } from '../expense-dialog/expense-dialog';
+import { PhotoViewerComponent, PhotoViewerData, PhotoViewerResult } from '../photo-viewer/photo-viewer';
+import { eventMediaError } from '../../core/ui/event-media-errors';
 
 /** How many expenses show before « Tout voir ». */
 export const EXPENSES_PREVIEW_SIZE = 4;
@@ -188,6 +190,35 @@ export class EventExpensesComponent implements OnInit {
       return;
     }
     this.open({ eventId: this.eventId(), members: this.members(), meId: this.meId(), expense, canDelete: true });
+  }
+
+  /** The receipt full size; its author or the organizer may take it off. */
+  openReceipt(expense: Expense): void {
+    const url = expense.receiptUrl;
+    if (!url) {
+      return;
+    }
+    const data: PhotoViewerData = {
+      url,
+      title: expense.title,
+      subtitle: `Ticket · payé par ${this.name(expense.paidBy)}`,
+      canRemove: this.canEdit(expense),
+      remove: () => this.expenseService.removeReceipt(this.eventId(), expense.id),
+      removeLabel: 'Retirer le ticket',
+      confirmLabel: 'Retirer le ticket ?',
+      removeError: error => eventMediaError(error, 'Le ticket n’a pas pu être retiré. Réessaie dans un instant.')
+    };
+    this.dialog.open<PhotoViewerComponent, PhotoViewerData, PhotoViewerResult>(PhotoViewerComponent, {
+      data,
+      maxWidth: '96vw',
+      panelClass: 'photo-viewer-panel'
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(result => {
+        if (result === 'removed') {
+          this.load();
+        }
+      });
   }
 
   private open(data: ExpenseDialogData): void {

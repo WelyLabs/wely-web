@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { eventTint } from '../../core/ui/event-tint';
 
 describe('EventFeedComponent', () => {
     let component: EventFeedComponent;
@@ -263,5 +264,18 @@ describe('EventFeedComponent', () => {
             expect(component.rightOverlayOpacity()).toBe(0);
         });
     });
-});
 
+    it('cardBackground_shouldUseTheCover_orTheEventsGradientWithout', () => {
+        expect(component.cardBackground({ ...currentMockEvents[0], image: 'https://media/cover.jpg' }))
+            .toBe('url("https://media/cover.jpg")');
+        expect(component.cardBackground({ ...currentMockEvents[0], image: null })).toBe(eventTint('1'));
+    });
+
+    it('template_shouldShowAGradientTile_forAnEventWithoutCover', () => {
+        const card = fixture.nativeElement.querySelector('.card-image') as HTMLElement;
+
+        expect(card.classList).toContain('no-image');
+        expect(card.style.backgroundImage).toContain('linear-gradient');
+        expect(card.style.backgroundImage).not.toContain('url(');
+    });
+});

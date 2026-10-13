@@ -7,14 +7,15 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
-import { ChatService, PendingMessage } from '../../services/chat.service';
+import { ChatService, PendingMessage, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
 import { Conversation, ConversationPhoto, ConversationType, Message, MessagePhoto, Presence } from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 import { SocialService } from '../../services/social.service';
 import { AvatarService } from '../../services/avatar.service';
 import { FriendSummary } from '../../models/friendship.model';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChatPhotoService } from '../../services/chat-photo.service';
 import { PhotoResizer } from '../../core/ui/photo-resize';
 import { PhotoViewerComponent, PhotoViewerData, PhotoViewerResult } from '../photo-viewer/photo-viewer';
@@ -200,19 +201,30 @@ export class ChatComponent implements OnInit {
         // view to update.
         this.chatService.messages$
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(message => {
-                const conversation = this.conversation();
-                const isForThisConversation = conversation !== null
-                    && message.conversationId === conversation.id
-                    && message.senderId !== this.currentUserId;
+            .subscribe(message => this.onIncoming(message));
+    }
 
-                if (!isForThisConversation) {
-                    return;
-                }
-
-                this.messages.update(messages => [...messages, message]);
-                this.chatMessages.update(entries => [...entries, this.toChatMessage(message)]);
-            });
+    /** Upserts by id: a NEW message is appended once, an UPDATED one replaces the one shown. */
+    private onIncoming(message: Message): void {
+        const conversation = this.conversation();
+        if (!conversation || message.conversationId !== conversation.id) {
+            return;
+        }
+        const kind = message.kind ?? 'NEW';
+        // The user's own new messages are already shown by the send path; an update to one is not.
+        if (kind === 'NEW' && message.senderId === this.currentUserId) {
+            return;
+        }
+        const entry = this.toChatMessage(message);
+        if (kind === 'UPDATED') {
+            // The thread rendered the sender's side; an update keeps it.
+            entry.isMe = message.senderId === this.currentUserId;
+        }
+        this.messages.update(messages => upsertById(messages, message, kind));
+        this.chatMessages.update(entries => upsertById(entries, entry, kind));
+        if (message.photo?.removed) {
+            this.dropFromMedia(message.id);
+        }
     }
 
     loadConversationById(convId: string): void {
@@ -371,25 +383,35 @@ export class ChatComponent implements OnInit {
             return;
         }
         const data: PhotoViewerData = {
-            conversationId: conversation.id,
-            messageId,
             url,
-            senderName: this.nameOf(senderId),
-            sentAt: typeof sentAt === 'string' ? sentAt : sentAt.toISOString(),
-            canRemove: this.canRemovePhotoOf(senderId)
+            title: this.nameOf(senderId),
+            subtitle: photoDate(sentAt),
+            canRemove: this.canRemovePhotoOf(senderId),
+            remove: () => this.chatPhotos.remove(conversation.id, messageId),
+            removeError: error => error instanceof HttpErrorResponse && error.error?.code === 'CHT-BUS-007'
+                ? 'Seul l’auteur de la photo, ou l’organisateur de l’événement, peut la retirer.'
+                : null
         };
-        this.dialog.open<PhotoViewerComponent, PhotoViewerData, PhotoViewerResult>(PhotoViewerComponent, {
+        const ref = this.dialog.open<PhotoViewerComponent, PhotoViewerData, PhotoViewerResult>(PhotoViewerComponent, {
             data,
             maxWidth: '96vw',
             panelClass: 'photo-viewer-panel'
-        }).afterClosed()
+        });
+        this.shownPhoto = { messageId, ref };
+        ref.afterClosed()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(result => {
+                if (this.shownPhoto?.ref === ref) {
+                    this.shownPhoto = null;
+                }
                 if (result === 'removed') {
                     this.markRemoved(messageId);
                 }
             });
     }
+
+    /** The viewer open right now, so a removal by someone else can close it. */
+    private shownPhoto: { messageId: string; ref: MatDialogRef<PhotoViewerComponent, PhotoViewerResult> } | null = null;
 
     /** Removed for everyone: the thread keeps the message, the media tab drops it. */
     private markRemoved(messageId: string): void {
@@ -397,7 +419,16 @@ export class ChatComponent implements OnInit {
         this.chatMessages.update(entries => entries.map(entry => entry.id === messageId ? { ...entry, photo: removed } : entry));
         this.messages.update(messages => messages.map(message => message.id === messageId
             ? { ...message, photo: { width: 0, height: 0, removed: true } } : message));
+        this.dropFromMedia(messageId);
+    }
+
+    /** Off the media tab, and out of the viewer if it shows it. */
+    private dropFromMedia(messageId: string): void {
         this.mediaPhotos.update(photos => photos.filter(photo => photo.messageId !== messageId));
+        if (this.shownPhoto?.messageId === messageId) {
+            this.shownPhoto.ref.close(undefined);
+            this.shownPhoto = null;
+        }
     }
 
     /** A new photo makes the media tab stale: it is read again when next opened. */
@@ -522,6 +553,12 @@ export class ChatComponent implements OnInit {
 /** What a bubble shows of a message's photo. */
 function bubblePhoto(photo: MessagePhoto): NonNullable<ChatMessage['photo']> {
     return { url: photo.url ?? null, width: photo.width, height: photo.height, removed: photo.removed };
+}
+
+/** « 13 oct. 2026, 20:00 », under the author in the photo viewer. */
+function photoDate(sentAt: string | Date): string {
+    return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        .format(typeof sentAt === 'string' ? new Date(sentAt) : sentAt);
 }
 
 /** Oldest first, which is the order the panel renders. */
