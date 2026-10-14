@@ -8,16 +8,12 @@ Frontend de la plateforme [Wely Calendar](https://github.com/WelyLabs/wely-platf
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/find-slot.jpg" alt="Recherche d'un créneau commun depuis le formulaire d'événement"></td>
     <td width="50%"><img src="docs/screenshots/friends.jpg" alt="Page Amis avec les niveaux de proximité"></td>
+    <td width="50%"><img src="docs/screenshots/conversations.jpg" alt="Liste des conversations, nommées d'après l'autre participant"></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/explore-map.jpg" alt="Carte des événements à venir, avec la fiche d'un événement à rejoindre"></td>
     <td width="50%"><img src="docs/screenshots/location-picker.jpg" alt="Choix du lieu d'un événement sur une carte"></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/conversations.jpg" alt="Liste des conversations, nommées d'après l'autre participant"></td>
-    <td width="50%"></td>
   </tr>
 </table>
 
@@ -36,7 +32,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 | | |
 |---|---|
 | **Calendrier** | Vue mensuelle des événements auxquels l'utilisateur est inscrit |
-| **Trouver un créneau** | Sur une plage glissée dans le calendrier (un ou plusieurs jours), liste les moments où l'utilisateur et les amis choisis sont tous libres, et place l'événement sur celui qu'il retient |
+| **Sondage de date** | L'organisateur propose de 2 à 5 créneaux ; ceux qui voient l'événement votent Oui / Peut-être / Non, en direct (Server-Sent Events) ; les créneaux proposés s'affichent en pointillés dans le calendrier, et fixer la date inscrit ceux qui ont voté Oui |
 | **Feed** | Découverte des événements auxquels il n'est pas inscrit, en cartes à faire glisser ou sur une carte de la zone affichée, d'où on les rejoint |
 | **Lieux** | Lieu d'un événement choisi sur une carte (MapLibre, tuiles OpenFreeMap) avec recherche d'adresse (Photon) ; mini-carte sur la page de l'événement |
 | **Social** | Recherche d'utilisateurs, ajout par tag `Pseudo#1234`, demandes d'amis |

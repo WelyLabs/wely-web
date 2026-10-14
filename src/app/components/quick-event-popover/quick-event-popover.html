@@ -81,16 +81,6 @@
                     }
                 </div>
             }
-
-            @if (searchWindow(); as window) {
-                <button type="button" class="find-slot-toggle" [class.open]="findingSlot()" (click)="toggleFindSlot()">
-                    <mat-icon>group</mat-icon>
-                    <span>Trouver un moment avec des amis</span>
-                </button>
-                @if (findingSlot()) {
-                    <app-find-slot [window]="window" (picked)="onSlotPicked($event)" />
-                }
-            }
         </section>
 
         <!-- Where, and who sees it. -->

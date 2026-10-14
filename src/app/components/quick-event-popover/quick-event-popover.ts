@@ -7,9 +7,14 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { EventCreateRequest, Visibility } from '../../services/event.service';
-import { FindSlotComponent, TimeWindow } from '../find-slot/find-slot';
 import { LocationPickerComponent } from '../location-picker/location-picker';
 import { Place } from '../../models/place.model';
+
+/** A proposed date of a poll. */
+export interface ProposedSlot {
+    start: Date;
+    end: Date;
+}
 
 /** The visibility choices, in the order shown. */
 export const VISIBILITY_OPTIONS: readonly { value: Visibility; label: string; icon: string; hint: string }[] = [
@@ -69,7 +74,7 @@ const WIDE_LAYOUT = '(min-width: 1024px)';
 @Component({
     selector: 'app-quick-event-popover',
     standalone: true,
-    imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, FindSlotComponent, LocationPickerComponent],
+    imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, LocationPickerComponent],
     templateUrl: './quick-event-popover.html',
     styleUrls: ['./quick-event-popover.scss', './quick-event-poll.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -129,15 +134,6 @@ export class QuickEventPopoverComponent {
         });
     }
 
-    /** Whether the "find a slot with friends" panel is open; closed again on each new slot. */
-    readonly findingSlot = linkedSignal({ source: this.data, computation: () => false });
-
-    /** The slot the popover was opened on: the window searched for a common free slot. */
-    readonly searchWindow = computed<TimeWindow | null>(() => {
-        const { startDate, endDate } = this.data();
-        return endDate ? { start: startDate, end: endDate } : null;
-    });
-
     readonly spansSeveralDays = computed(() => {
         const { startDate, endDate } = this.draft();
         return !!endDate && startDate.toDateString() !== endDate.toDateString();
@@ -146,7 +142,7 @@ export class QuickEventPopoverComponent {
     /** « Proposer plusieurs dates »: the form then builds a date poll; off again on each new slot. */
     readonly pollMode = linkedSignal({ source: this.data, computation: () => false });
     /** The proposed slots; the date fields edit the selected one. */
-    readonly candidates = linkedSignal<EventCreateRequest, TimeWindow[]>({ source: this.data, computation: () => [] });
+    readonly candidates = linkedSignal<EventCreateRequest, ProposedSlot[]>({ source: this.data, computation: () => [] });
     readonly selectedSlot = linkedSignal({ source: this.data, computation: () => 0 });
     readonly canAddSlot = computed(() => this.candidates().length < MAX_POLL_SLOTS);
     readonly tooFewSlots = computed(() => this.pollMode() && this.candidates().length < MIN_POLL_SLOTS);
@@ -174,20 +170,6 @@ export class QuickEventPopoverComponent {
 
     onPlacePicked(place: Place): void {
         this.draft.update(draft => ({ ...draft, location: place.label, coordinates: place.coordinates }));
-    }
-
-    toggleFindSlot(): void {
-        this.findingSlot.update(open => !open);
-    }
-
-    /** Moves the draft onto the slot picked; in a poll, adds it to the proposed slots instead. */
-    onSlotPicked(slot: TimeWindow): void {
-        if (this.pollMode()) {
-            this.appendSlot(slot);
-            return;
-        }
-        this.draft.update(draft => ({ ...draft, startDate: slot.start, endDate: slot.end }));
-        this.findingSlot.set(false);
     }
 
     /** Turns the date poll on, the slot being edited becoming its first proposal, or off. */
@@ -234,7 +216,7 @@ export class QuickEventPopoverComponent {
         }
     }
 
-    private appendSlot(slot: TimeWindow): void {
+    private appendSlot(slot: ProposedSlot): void {
         if (!this.canAddSlot()) {
             return;
         }

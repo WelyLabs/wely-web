@@ -108,53 +108,6 @@ describe('QuickEventPopoverComponent', () => {
         expect(emit).toHaveBeenCalled();
     });
 
-    describe('finding a slot with friends', () => {
-        it('searchWindow_shouldBeTheSlotThePopoverWasOpenedOn', () => {
-            expect(component.searchWindow()).toEqual({ start: startDate, end: endDate });
-        });
-
-        it('searchWindow_shouldBeNull_whenTheSlotHasNoEnd', () => {
-            fixture.componentRef.setInput('data', { ...request(), endDate: undefined });
-
-            expect(component.searchWindow()).toBeNull();
-        });
-
-        it('toggleFindSlot_shouldShowThenHideThePanel', () => {
-            component.toggleFindSlot();
-            fixture.detectChanges();
-            expect(fixture.nativeElement.querySelector('app-find-slot')).not.toBeNull();
-
-            component.toggleFindSlot();
-            fixture.detectChanges();
-            expect(fixture.nativeElement.querySelector('app-find-slot')).toBeNull();
-        });
-
-        it('findingSlot_shouldCloseWhenANewSlotIsOpened', () => {
-            component.toggleFindSlot();
-
-            fixture.componentRef.setInput('data', request());
-
-            expect(component.findingSlot()).toBe(false);
-        });
-
-        it('onSlotPicked_shouldMoveTheDraftAndCloseThePanel', () => {
-            const slot = { start: new Date('2025-06-01T14:00:00Z'), end: new Date('2025-06-01T15:30:00Z') };
-            component.update('title', 'Board games');
-            component.toggleFindSlot();
-
-            component.onSlotPicked(slot);
-
-            expect(component.draft()).toMatchObject({ title: 'Board games', startDate: slot.start, endDate: slot.end });
-            expect(component.findingSlot()).toBe(false);
-        });
-
-        it('onSlotPicked_shouldKeepTheSearchWindow', () => {
-            component.onSlotPicked({ start: new Date('2025-06-01T10:15:00Z'), end: new Date('2025-06-01T10:45:00Z') });
-
-            expect(component.searchWindow()).toEqual({ start: startDate, end: endDate });
-        });
-    });
-
     describe('picking the location on a map', () => {
         const place = { label: 'Le Transbordeur, Villeurbanne', coordinates: { latitude: 45.784, longitude: 4.8608 } };
 
@@ -541,22 +494,11 @@ describe('QuickEventPopoverComponent', () => {
             expect(component.candidates()).toHaveLength(1);
         });
 
-        it('onSlotPicked_shouldAppendACandidate_andKeepThePanelOpen', () => {
-            component.togglePollMode();
-            component.toggleFindSlot();
-            const picked = { start: new Date('2025-06-04T18:00:00Z'), end: new Date('2025-06-04T19:00:00Z') };
-
-            component.onSlotPicked(picked);
-
-            expect(component.candidates()).toEqual([{ start: startDate, end: endDate }, picked]);
-            expect(component.findingSlot()).toBe(true);
-        });
-
         it('onSave_shouldEmitTheSlotsEarliestFirst_andStartOnTheEarliest', () => {
             const emitted: EventCreateRequest[] = [];
             component.save.subscribe(request => emitted.push(request));
             component.togglePollMode();
-            component.onSlotPicked({ start: shifted(startDate, -1), end: shifted(endDate, -1) });
+            component.candidates.update(slots => [...slots, { start: shifted(startDate, -1), end: shifted(endDate, -1) }]);
 
             component.onSave();
 
@@ -580,7 +522,7 @@ describe('QuickEventPopoverComponent', () => {
         it('onSave_shouldRefuse_whenASlotIsProposedTwice', () => {
             const emit = vi.spyOn(component.save, 'emit');
             component.togglePollMode();
-            component.onSlotPicked({ start: startDate, end: endDate });
+            component.candidates.update(slots => [...slots, { start: startDate, end: endDate }]);
 
             component.onSave();
 
