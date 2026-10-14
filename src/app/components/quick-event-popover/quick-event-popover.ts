@@ -259,7 +259,11 @@ export class QuickEventPopoverComponent {
         if (!end) {
             return;
         }
-        if (part === 'time' && end <= draft.startDate) {
+        // An event shorter than a day ends within the day after its start, read from the start's
+        // day each time: a time typed digit by digit passes through earlier values (10:00 AM on
+        // the way to 10:00 PM), and anchoring on the end's day kept the one-day jump they caused.
+        const shortEvent = current.getTime() - draft.startDate.getTime() < DAY_MS;
+        if (part === 'time' && (shortEvent || end <= draft.startDate)) {
             const sameDay = withTime(draft.startDate, value) ?? end;
             end = sameDay > draft.startDate ? sameDay : new Date(sameDay.getTime() + DAY_MS);
         }

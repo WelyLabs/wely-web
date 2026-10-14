@@ -147,6 +147,11 @@ body {
   overscroll-behavior: none;
 }
 
+/* Controls take the app's font: a browser gives buttons its system font, not the page's. */
+button {
+  font-family: inherit;
+}
+
 /*
  * Behaving like an app on a touch screen: no grey flash on a tapped control, and no word
  * selected nor callout opened by a long press on one. Text people read and fields keep both.

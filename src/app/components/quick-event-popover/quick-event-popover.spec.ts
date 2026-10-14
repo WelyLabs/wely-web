@@ -193,6 +193,29 @@ describe('QuickEventPopoverComponent', () => {
     });
 
     describe('date and time fields', () => {
+        it('onEndChange_shouldComeBackToTheStartDay_whenTheTypedTimeEndsLater', () => {
+            const day = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m);
+            fixture.componentRef.setInput('data', { ...request(), startDate: day(22, 19, 30), endDate: day(22, 21, 30) });
+            fixture.detectChanges();
+
+            // Typing 10:00 PM goes through 10:00 AM, which is before the start.
+            component.onEndChange('time', '10:00');
+            expect(component.draft().endDate).toEqual(day(23, 10));
+            component.onEndChange('time', '22:00');
+
+            expect(component.draft().endDate).toEqual(day(22, 22));
+        });
+
+        it('onEndChange_shouldKeepTheEndDay_ofAnEventLastingSeveralDays', () => {
+            const day = (d: number, h: number) => new Date(2026, 9, d, h);
+            fixture.componentRef.setInput('data', { ...request(), startDate: day(22, 19), endDate: day(25, 12) });
+            fixture.detectChanges();
+
+            component.onEndChange('time', '18:00');
+
+            expect(component.draft().endDate).toEqual(day(25, 18));
+        });
+
         const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute);
         const open = (start: Date, end: Date) => {
             fixture.componentRef.setInput('data', { ...request(), startDate: start, endDate: end });
