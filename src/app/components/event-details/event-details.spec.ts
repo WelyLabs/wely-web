@@ -11,6 +11,7 @@ import { EventParticipants, EventService, FeedEvent, Poll } from '../../services
 import { PollStreamService } from '../../services/poll-stream.service';
 import { SocialService } from '../../services/social.service';
 import { ExpenseService } from '../../services/expense.service';
+import { ScheduleService } from '../../services/schedule.service';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
@@ -101,6 +102,7 @@ describe('EventDetailsComponent', () => {
         { userId: 'u4', userName: 'Zoé Petit', hashtag: 5555, relationStatus: 'SENT_BY_ME' }
     ];
     const me = new BehaviorSubject<User | null>({ id: 'me' } as User);
+    let schedule: { getConflicts: ReturnType<typeof vi.fn> };
     let chatService: {
         getEventConversation: ReturnType<typeof vi.fn>;
         sendMessage: ReturnType<typeof vi.fn>;
@@ -144,6 +146,7 @@ describe('EventDetailsComponent', () => {
             removeCover: vi.fn().mockReturnValue(of(undefined))
         };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
+        schedule = { getConflicts: vi.fn().mockReturnValue(of([])) };
         pollStream = { follow: vi.fn().mockReturnValue(NEVER) };
         router = { navigate: vi.fn() };
         navigation = { back: vi.fn() };
@@ -170,6 +173,8 @@ describe('EventDetailsComponent', () => {
                     ledger: vi.fn().mockReturnValue(of({ currency: 'EUR', totalCents: 0, balances: [], transfers: [] }))
                 } },
                 { provide: ChatService, useValue: chatService },
+                // The conflicts card asks on its own: no conflict, so it stays hidden.
+                { provide: ScheduleService, useValue: schedule },
                 { provide: UserService, useValue: { currentUser$: me } },
                 { provide: Router, useValue: router },
                 { provide: NavigationService, useValue: navigation },
@@ -706,6 +711,31 @@ describe('EventDetailsComponent', () => {
 
             expect(component.voterOf('f1').name).toBe('Léo Martin');
             expect(component.voterOf('me').name).toBe('Toi');
+        });
+    });
+    describe('schedule conflicts', () => {
+        it('should ask whether the event clashes with the viewer\'s agenda', () => {
+            create();
+
+            expect(schedule.getConflicts).toHaveBeenCalledWith('e1');
+            expect(fixture.nativeElement.querySelector('app-event-conflicts')).not.toBeNull();
+        });
+
+        it('should not ask for a past event', () => {
+            vi.setSystemTime(at('2026-10-20T10:00:00'));
+            create();
+
+            expect(fixture.nativeElement.querySelector('app-event-conflicts')).toBeNull();
+            expect(schedule.getConflicts).not.toHaveBeenCalled();
+        });
+
+        it('should show the new dates once the organizer moved the event', () => {
+            create();
+            const moved = { ...component.event()!, startDate: at('2026-10-15T20:00:00'), endDate: at('2026-10-15T22:00:00') };
+
+            component.onRescheduled(moved);
+
+            expect(component.event()).toBe(moved);
         });
     });
 });

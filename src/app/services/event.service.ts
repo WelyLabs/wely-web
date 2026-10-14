@@ -157,7 +157,7 @@ interface FriendOverviewPayload extends Omit<FriendOverview, 'upcomingTogether' 
   friendUpcoming: EventPayload[];
 }
 
-interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate' | 'poll'> {
+export interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate' | 'poll'> {
   startDate: string | number[] | null;
   endDate: string | number[] | null;
   poll?: PollPayload | null;
@@ -177,7 +177,7 @@ export interface FreeRange {
   end: Date;
 }
 
-interface FreeRangePayload {
+export interface FreeRangePayload {
   start: string | number[];
   end: string | number[];
 }
@@ -331,11 +331,7 @@ export class EventService {
   }
 
   private toFeedEvent(payload: EventPayload): FeedEvent {
-    const startDate = this.toDate(payload.startDate) ?? new Date();
-    const endDate =
-      this.toDate(payload.endDate) ?? new Date(startDate.getTime() + DEFAULT_DURATION_MS);
-
-    return { ...payload, startDate, endDate, poll: payload.poll ? toPoll(payload.poll) : null };
+    return toFeedEvent(payload);
   }
 
   private toDate(value: string | number[] | null): Date | null {
@@ -357,6 +353,14 @@ export function toDate(value: string | number[] | null): Date | null {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** An event from the wire; without an end, it lasts an hour, as the server counts it. */
+export function toFeedEvent(payload: EventPayload): FeedEvent {
+  const startDate = toDate(payload.startDate) ?? new Date();
+  const endDate = toDate(payload.endDate) ?? new Date(startDate.getTime() + DEFAULT_DURATION_MS);
+
+  return { ...payload, startDate, endDate, poll: payload.poll ? toPoll(payload.poll) : null };
 }
 
 /** A poll from the wire, slots with unreadable dates dropped. */

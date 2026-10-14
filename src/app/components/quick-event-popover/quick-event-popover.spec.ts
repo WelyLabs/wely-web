@@ -1,12 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { QuickEventPopoverComponent, toDateValue, toTimeValue, withDate, withTime } from './quick-event-popover';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { EventCreateRequest } from '../../services/event.service';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { EventCreateRequest, FeedEvent } from '../../services/event.service';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { EventService } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
+import { ScheduleService } from '../../services/schedule.service';
+import { CONFLICT_CHECK_DELAY_MS } from './quick-event-popover';
 
 describe('QuickEventPopoverComponent', () => {
     let component: QuickEventPopoverComponent;
@@ -29,7 +31,8 @@ describe('QuickEventPopoverComponent', () => {
             imports: [QuickEventPopoverComponent, NoopAnimationsModule],
             providers: [
                 { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
-                { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } }
+                { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
+                { provide: ScheduleService, useValue: { checkConflicts: vi.fn().mockReturnValue(of([])) } }
             ]
         }).compileComponents();
 
@@ -682,6 +685,7 @@ describe('QuickEventPopoverComponent on a wide screen', () => {
             providers: [
                 { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
                 { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
+                { provide: ScheduleService, useValue: { checkConflicts: vi.fn().mockReturnValue(of([])) } },
                 { provide: BreakpointObserver, useValue: { observe: () => of({ matches: true, breakpoints: {} }) } }
             ]
         }).compileComponents();
@@ -698,3 +702,129 @@ describe('QuickEventPopoverComponent on a wide screen', () => {
         expect(el.querySelector('.more-options-toggle')).toBeNull();
     });
 });
+
+describe('QuickEventPopoverComponent schedule conflicts', () => {
+    let fixture: ComponentFixture<QuickEventPopoverComponent>;
+    let component: QuickEventPopoverComponent;
+    let checkConflicts: ReturnType<typeof vi.fn>;
+
+    const start = new Date(2026, 9, 16, 14);
+    const end = new Date(2026, 9, 16, 15);
+    const bowling: FeedEvent = {
+        id: 'bowling', title: 'Bowling', organizerId: 'me', startDate: new Date(2026, 9, 16, 14),
+        endDate: new Date(2026, 9, 16, 16), location: 'Lyon', image: null, description: ''
+    };
+    const el = (): HTMLElement => fixture.nativeElement;
+
+    /** Lets the dates settle, then shows what the check answered. */
+    function settle(): void {
+        fixture.detectChanges();
+        vi.advanceTimersByTime(CONFLICT_CHECK_DELAY_MS);
+        fixture.detectChanges();
+    }
+
+    beforeEach(async () => {
+        vi.useFakeTimers();
+        checkConflicts = vi.fn().mockReturnValue(of([bowling]));
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+            imports: [QuickEventPopoverComponent, NoopAnimationsModule],
+            providers: [
+                { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
+                { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
+                { provide: ScheduleService, useValue: { checkConflicts } }
+            ]
+        }).compileComponents();
+        fixture = TestBed.createComponent(QuickEventPopoverComponent);
+        component = fixture.componentInstance;
+        fixture.componentRef.setInput('data', {
+            title: 'Médecin', location: '', startDate: start, endDate: end, description: '', subscribeByDefault: false
+        });
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('should check the dates once they settle, and warn about each overlapping event', () => {
+        settle();
+
+        expect(checkConflicts).toHaveBeenCalledTimes(1);
+        expect(checkConflicts).toHaveBeenCalledWith(start, end);
+        const alert = el().querySelector('.conflict-alert');
+        expect(alert?.textContent).toContain('Ce créneau chevauche un de vos événements');
+        expect(alert?.textContent).toContain('Bowling');
+    });
+
+    it('should check only the last dates typed', () => {
+        fixture.detectChanges();
+        component.onStartChange('time', '14:15');
+        fixture.detectChanges();
+        component.onStartChange('time', '14:30');
+        settle();
+
+        expect(checkConflicts).toHaveBeenCalledTimes(1);
+        expect(checkConflicts.mock.calls[0][0]).toEqual(new Date(2026, 9, 16, 14, 30));
+    });
+
+    it('should count several overlapping events', () => {
+        checkConflicts.mockReturnValue(of([bowling, { ...bowling, id: 'run', title: 'Course' }]));
+        settle();
+
+        expect(el().querySelector('.conflict-alert')?.textContent).toContain('2 de vos événements');
+    });
+
+    it('should show nothing when nothing overlaps, or the check fails', () => {
+        checkConflicts.mockReturnValue(of([]));
+        settle();
+        expect(el().querySelector('.conflict-alert')).toBeNull();
+
+        checkConflicts.mockReturnValue(throwError(() => new Error('down')));
+        component.onStartChange('time', '18:00');
+        settle();
+        expect(el().querySelector('.conflict-alert')).toBeNull();
+    });
+
+    it('should not check a poll, whose dates keep nobody busy', () => {
+        settle();
+        component.togglePollMode();
+        settle();
+
+        expect(component.shownConflicts()).toEqual([]);
+        expect(el().querySelector('.conflict-alert')).toBeNull();
+        expect(checkConflicts).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not check dates that end before they start', () => {
+        component.onEndChange('date', '2026-10-15');
+        settle();
+
+        expect(component.invalidRange()).toBe(true);
+        expect(checkConflicts).not.toHaveBeenCalled();
+    });
+
+    it('should move the event right after what it overlaps, keeping its duration', () => {
+        settle();
+
+        expect(component.afterConflicts()).toEqual({ start: new Date(2026, 9, 16, 16), end: new Date(2026, 9, 16, 17) });
+        (el().querySelector('.conflict-shift') as HTMLButtonElement).click();
+
+        expect(component.draft().startDate).toEqual(new Date(2026, 9, 16, 16));
+        expect(component.draft().endDate).toEqual(new Date(2026, 9, 16, 17));
+    });
+
+    it('should offer no move when nothing overlaps', () => {
+        checkConflicts.mockReturnValue(of([]));
+        settle();
+
+        expect(component.afterConflicts()).toBeNull();
+        component.shiftAfterConflicts();
+        expect(component.draft().startDate).toEqual(start);
+    });
+
+    it('should word a conflicting event and a proposed slot beside the new event\'s day', () => {
+        fixture.detectChanges();
+
+        expect(component.conflictWhen(bowling)).not.toContain('·');
+        expect(component.slotLabel({ start: new Date(2026, 9, 17, 14), end: new Date(2026, 9, 17, 15) })).toContain('·');
+    });
+});
+

@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, linkedSignal, output, viewChild } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { map } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { EventCreateRequest, Visibility } from '../../services/event.service';
+import { EventCreateRequest, FeedEvent, Visibility } from '../../services/event.service';
+import { ScheduleService } from '../../services/schedule.service';
+import { rangeLabel } from '../../core/ui/schedule-labels';
 import { LocationPickerComponent } from '../location-picker/location-picker';
 import { Place } from '../../models/place.model';
 
@@ -63,6 +65,14 @@ const DAY_MS = 86400000;
 export const MIN_POLL_SLOTS = 2;
 export const MAX_POLL_SLOTS = 5;
 
+/** How long the dates must stay still before they are checked against the agenda. */
+export const CONFLICT_CHECK_DELAY_MS = 400;
+
+/** The same range, or both absent. */
+function sameRange(a: ProposedSlot | null, b: ProposedSlot | null): boolean {
+    return a === b || (!!a && !!b && a.start.getTime() === b.start.getTime() && a.end.getTime() === b.end.getTime());
+}
+
 /** From this width the form is laid out in two columns. */
 const WIDE_LAYOUT = '(min-width: 1024px)';
 
@@ -76,7 +86,7 @@ const WIDE_LAYOUT = '(min-width: 1024px)';
     standalone: true,
     imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, LocationPickerComponent],
     templateUrl: './quick-event-popover.html',
-    styleUrls: ['./quick-event-popover.scss', './quick-event-poll.scss'],
+    styleUrls: ['./quick-event-popover.scss', './quick-event-poll.scss', './quick-event-conflicts.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class QuickEventPopoverComponent {
@@ -158,6 +168,55 @@ export class QuickEventPopoverComponent {
     });
     readonly canSave = computed(() => !!this.draft().title.trim() && !this.invalidRange() && !this.saving()
         && (!this.pollMode() || (!this.tooFewSlots() && !this.invalidSlots())));
+
+    private readonly schedule = inject(ScheduleService);
+
+    /** The time the event would take; none in a poll, which keeps nobody busy until its date is fixed. */
+    private readonly checkedRange = computed<ProposedSlot | null>(() => {
+        if (this.pollMode() || this.invalidRange()) {
+            return null;
+        }
+        const draft = this.draft();
+        return { start: draft.startDate, end: this.endOf(draft) };
+    }, { equal: sameRange });
+
+    /** The user's events this time would overlap, checked once the dates stop moving; none if the check fails. */
+    readonly conflicts = toSignal(toObservable(this.checkedRange).pipe(
+        debounceTime(CONFLICT_CHECK_DELAY_MS),
+        distinctUntilChanged(sameRange),
+        switchMap(range => range
+            ? this.schedule.checkConflicts(range.start, range.end).pipe(catchError(() => of<FeedEvent[]>([])))
+            : of<FeedEvent[]>([]))
+    ), { initialValue: [] as FeedEvent[] });
+    readonly shownConflicts = computed(() => this.checkedRange() ? this.conflicts() : []);
+
+    /** The same duration, right after the last conflicting event ends. */
+    readonly afterConflicts = computed<ProposedSlot | null>(() => {
+        const conflicts = this.shownConflicts();
+        const range = this.checkedRange();
+        if (conflicts.length === 0 || !range) {
+            return null;
+        }
+        const start = new Date(Math.max(...conflicts.map(event => event.endDate.getTime())));
+        return { start, end: new Date(start.getTime() + range.end.getTime() - range.start.getTime()) };
+    });
+
+    /** When a conflicting event takes place, beside the new event's day. */
+    conflictWhen(event: FeedEvent): string {
+        return rangeLabel(event.startDate, event.endDate, this.draft().startDate);
+    }
+
+    slotLabel(slot: ProposedSlot): string {
+        return rangeLabel(slot.start, slot.end, this.draft().startDate);
+    }
+
+    /** « Décaler après » : the event moves past what it overlapped, and is checked again. */
+    shiftAfterConflicts(): void {
+        const next = this.afterConflicts();
+        if (next) {
+            this.setDates(next.start, next.end);
+        }
+    }
 
     /** Whether the map is open under the location field; closed again on each new slot. */
     readonly pickingLocation = linkedSignal({ source: this.data, computation: () => false });
