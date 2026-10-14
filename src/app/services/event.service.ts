@@ -143,6 +143,20 @@ interface ProfileSummaryPayload extends Omit<ProfileSummary, 'upcoming' | 'memor
   memories: EventPayload[];
 }
 
+/** What the viewer and a friend share in Wely, and what the friend has planned that the viewer may join. */
+export interface FriendOverview {
+  outingsTogether: number;
+  upcomingTogether: FeedEvent[];
+  memoriesTogether: FeedEvent[];
+  friendUpcoming: FeedEvent[];
+}
+
+interface FriendOverviewPayload extends Omit<FriendOverview, 'upcomingTogether' | 'memoriesTogether' | 'friendUpcoming'> {
+  upcomingTogether: EventPayload[];
+  memoriesTogether: EventPayload[];
+  friendUpcoming: EventPayload[];
+}
+
 interface EventPayload extends Omit<FeedEvent, 'startDate' | 'endDate' | 'poll'> {
   startDate: string | number[] | null;
   endDate: string | number[] | null;
@@ -303,6 +317,16 @@ export class EventService {
       ...summary,
       upcoming: summary.upcoming.map(event => this.toFeedEvent(event)),
       memories: summary.memories.map(event => this.toFeedEvent(event))
+    })));
+  }
+
+  /** Outings shared with a friend and the friend's upcoming ones; 403 when not friends. */
+  getFriendOverview(friendId: string): Observable<FriendOverview> {
+    return this.http.get<FriendOverviewPayload>(`${this.apiUrl}/users/${friendId}/overview`).pipe(map(overview => ({
+      outingsTogether: overview.outingsTogether,
+      upcomingTogether: (overview.upcomingTogether ?? []).map(event => this.toFeedEvent(event)),
+      memoriesTogether: (overview.memoriesTogether ?? []).map(event => this.toFeedEvent(event)),
+      friendUpcoming: (overview.friendUpcoming ?? []).map(event => this.toFeedEvent(event))
     })));
   }
 

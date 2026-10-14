@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { EventService, FeedEvent, Poll, ProfileSummary } from './event.service';
+import { EventService, FeedEvent, FriendOverview, Poll, ProfileSummary } from './event.service';
 import { environment } from '../../environments/environment';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -424,5 +424,29 @@ describe('EventService', () => {
 
             expect(events?.[0].poll?.slots).toHaveLength(2);
         });
+    });
+
+    it('getFriendOverview_shouldReadTheOverview_withEventDates', () => {
+        let overview: FriendOverview | null = null;
+        service.getFriendOverview('lea').subscribe(value => overview = value);
+
+        httpMock.expectOne(`${apiUrl}/users/lea/overview`).flush({
+            outingsTogether: 4, upcomingTogether: [payload()], memoriesTogether: [payload({ id: 'past' })],
+            friendUpcoming: [payload({ id: 'poll' })]
+        });
+
+        expect(overview!.outingsTogether).toBe(4);
+        expect(overview!.upcomingTogether[0].startDate).toBeInstanceOf(Date);
+        expect(overview!.memoriesTogether[0].id).toBe('past');
+        expect(overview!.friendUpcoming[0].endDate).toBeInstanceOf(Date);
+    });
+
+    it('getFriendOverview_shouldReportA403_whenNotFriends', () => {
+        let status = 0;
+        service.getFriendOverview('bob').subscribe({ error: error => status = error.status });
+
+        httpMock.expectOne(`${apiUrl}/users/bob/overview`).flush({}, { status: 403, statusText: 'Forbidden' });
+
+        expect(status).toBe(403);
     });
 });

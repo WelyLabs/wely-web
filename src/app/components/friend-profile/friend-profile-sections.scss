@@ -1,0 +1,376 @@
+// The sections under the identity card: the week, what you share, their outings, mutual friends.
+.columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.main-column {
+    flex: 999 1 540px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.side-column {
+    flex: 1 1 320px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.section {
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.section-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.unavailable {
+    padding: 18px 22px;
+}
+
+/* Cette semaine ------------------------------------------------------------------------------ */
+
+.week {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.week-day {
+    display: flex;
+    gap: 14px;
+    padding: 10px 0;
+    border-top: 1px solid var(--bg-subtle);
+
+    &:first-child {
+        border-top: none;
+    }
+}
+
+.day-label {
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    color: var(--text-secondary);
+
+    strong {
+        font-size: 15px;
+        color: var(--text-primary);
+        text-transform: capitalize;
+    }
+}
+
+.day-items {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.busy,
+.free {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.busy {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+
+    .time {
+        font-variant-numeric: tabular-nums;
+    }
+
+    &.disclosed .entry-title {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .entry-detail {
+        flex-basis: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.free {
+    align-items: center;
+    background: var(--success-tint);
+    color: var(--success-ink);
+    font-weight: 600;
+
+    mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Ensemble ----------------------------------------------------------------------------------- */
+
+.together-count {
+    font-size: 15px;
+    font-weight: 800;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.upcoming {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.upcoming-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-weight: 400;
+
+    &:hover {
+        text-decoration: none;
+        background: var(--bg-subtle);
+    }
+}
+
+.date-tile {
+    width: 56px;
+    height: 60px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .month {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #c2410c;
+    }
+
+    .day {
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1;
+    }
+}
+
+.upcoming-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    strong,
+    .muted {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.when {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--brand-tint);
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.memories {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.memory {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    border-radius: 18px;
+    overflow: hidden;
+
+    img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    &:hover img {
+        transform: scale(1.04);
+    }
+}
+
+.memory-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 26px 12px 10px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0));
+    display: flex;
+    flex-direction: column;
+    color: white;
+    font-weight: 400;
+
+    strong {
+        font-size: 15px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    span {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.88);
+    }
+}
+
+/* Ses prochaines sorties --------------------------------------------------------------------- */
+
+.outings {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.outing {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--bg-canvas);
+}
+
+.outing-link {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--text-primary);
+
+    strong,
+    .muted {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Amis en commun ----------------------------------------------------------------------------- */
+
+.mutual {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.mutual-link {
+    width: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.mutual-name {
+    max-width: 100%;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.avatar.small {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+@media (max-width: 768px) {
+    .columns,
+    .main-column,
+    .side-column {
+        gap: 16px;
+    }
+
+    .section {
+        padding: 16px;
+    }
+
+    .section-header .gradient-button {
+        width: 100%;
+    }
+
+    .memories {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

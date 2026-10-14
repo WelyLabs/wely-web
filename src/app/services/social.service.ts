@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { RelationStatus, UserNodeDTO, UserWithStatusDTO } from '../models/user.model';
-import { Closeness, FriendSummary, Friendship } from '../models/friendship.model';
+import { Closeness, FriendSummary, Friendship, SocialPerson } from '../models/friendship.model';
 
 /** Filters the social service accepts on its user listing. */
 export type FriendshipFilter = 'FRIENDS' | 'PENDING_INCOMING' | 'PENDING_OUTGOING';
@@ -32,6 +32,16 @@ export class SocialService {
     listFriends(): Observable<UserNodeDTO[]> {
         const params = new HttpParams().set('friendshipStatus', 'FRIENDS');
         return this.http.get<UserNodeDTO[]>(`${this.apiUrl}/users`, { params });
+    }
+
+    /** Another user and where the caller stands with them; 404 for an unknown user. */
+    getPerson(userId: string): Observable<SocialPerson> {
+        return this.http.get<SocialPerson>(`${this.apiUrl}/users/${userId}`);
+    }
+
+    /** The friends the caller and this user have in common. */
+    getMutualFriends(userId: string): Observable<UserNodeDTO[]> {
+        return this.http.get<UserNodeDTO[]>(`${this.apiUrl}/users/${userId}/mutual`);
     }
 
     /** My friends, each with the closeness of the friendship and any proposal pending. */

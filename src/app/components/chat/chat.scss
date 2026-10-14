@@ -85,6 +85,12 @@
     }
 
     .user-info {
+        padding: 0;
+        border: none;
+        background: none;
+        font: inherit;
+        color: inherit;
+        text-align: left;
         flex: 1;
         // min-width 0 so a long name shrinks and ellipsises instead of widening the header.
         min-width: 0;
@@ -114,9 +120,11 @@
         }
 
         .text-info {
+            display: block;
             min-width: 0;
 
             .chat-title {
+                display: block;
                 margin: 0;
                 font-size: 18px;
                 font-weight: 700;
@@ -369,4 +377,13 @@
     color: var(--text-secondary);
     font-size: 12px;
     cursor: default;
+}
+
+// The header of a direct conversation opens the partner's page.
+.chat-header .user-info.opens-profile {
+    cursor: pointer;
+
+    &:hover .chat-title {
+        text-decoration: underline;
+    }
 }

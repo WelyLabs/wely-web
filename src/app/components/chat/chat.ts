@@ -153,7 +153,7 @@ export class ChatComponent implements OnInit {
     readonly memberCount = computed(() => this.conversation()?.participantIds?.length ?? 0);
 
     /** The other participant, once the conversation is loaded. */
-    private readonly partnerId = signal<string | null>(null);
+    readonly partnerId = signal<string | null>(null);
 
     /**
      * Their presence, re-read every {@link PRESENCE_POLL_MS} while the conversation is open. It
@@ -543,6 +543,14 @@ export class ChatComponent implements OnInit {
         const eventId = this.conversation()?.eventId;
         if (eventId) {
             this.router.navigate(['/event', eventId]);
+        }
+    }
+
+    /** A direct conversation's header opens the partner's page. */
+    openPartner(): void {
+        const partnerId = this.partnerId();
+        if (partnerId && !this.isEventGroup()) {
+            this.router.navigate(['/friends', partnerId]);
         }
     }
 

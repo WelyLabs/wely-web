@@ -137,4 +137,24 @@ describe('UserService', () => {
         expect(call.request.body).toEqual({ bio: null, interests: ['Ciné'] });
         call.flush({ bio: null, interests: ['Ciné'] });
     });
+
+    it('getFriendProfile_shouldReadTheFriendsProfile', () => {
+        let profile: unknown = null;
+        service.getFriendProfile('lea').subscribe(value => profile = value);
+
+        const body = { id: 'lea', userName: 'lea', hashtag: 6000, firstName: 'Léa', lastName: 'Martin',
+            joinedDate: '2026-01-15T10:30:00', bio: null, interests: [] };
+        httpMock.expectOne(`${apiUrl}/users/lea/profile`).flush(body);
+
+        expect(profile).toEqual(body);
+    });
+
+    it('getFriendProfile_shouldReportA403_whenNotFriends', () => {
+        let status = 0;
+        service.getFriendProfile('bob').subscribe({ error: error => status = error.status });
+
+        httpMock.expectOne(`${apiUrl}/users/bob/profile`).flush({ code: 'USR-BUS-009' }, { status: 403, statusText: 'Forbidden' });
+
+        expect(status).toBe(403);
+    });
 });

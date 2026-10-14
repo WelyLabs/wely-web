@@ -1299,4 +1299,51 @@ describe('CalendarComponent', () => {
             expect(component.createError()).toContain('créneaux proposés');
         });
     });
+
+    describe('proposed outing', () => {
+        const slots = [
+            { start: new Date(2099, 9, 15, 18), end: new Date(2099, 9, 15, 20) },
+            { start: new Date(2099, 9, 16, 19), end: new Date(2099, 9, 16, 21) }
+        ];
+
+        const openWith = (state: unknown) => {
+            history.replaceState(state, '');
+            fixture = TestBed.createComponent(CalendarComponent);
+            component = fixture.componentInstance;
+            fixture.detectChanges();
+        };
+
+        afterEach(() => history.replaceState(null, ''));
+
+        it('ngOnInit_shouldOpenThePollFormPrefilled_whenTheFriendPageProposedSlots', () => {
+            openWith({ navigationId: 3, proposeSlots: slots, proposeWith: 'lea' });
+
+            expect(component.isPopoverVisible()).toBe(true);
+            expect(component.popoverData()).toEqual(expect.objectContaining({
+                title: 'Sortie avec lea', startDate: slots[0].start, endDate: slots[0].end, candidateSlots: slots
+            }));
+            expect(fixture.nativeElement.querySelectorAll('.slot-item').length).toBe(2);
+        });
+
+        it('ngOnInit_shouldReadTheProposalOnlyOnce', () => {
+            openWith({ navigationId: 3, proposeSlots: slots, proposeWith: 'lea' });
+
+            expect(history.state.navigationId).toBe(3);
+            expect(history.state.proposeSlots).toBeUndefined();
+        });
+
+        it('ngOnInit_shouldOpenAnEmptyForm_whenNoSlotWasFound', () => {
+            openWith({ proposeSlots: [], proposeWith: 'lea' });
+
+            expect(component.isPopoverVisible()).toBe(true);
+            expect(component.popoverData().title).toBe('Sortie avec lea');
+            expect(component.popoverData().candidateSlots).toBeUndefined();
+        });
+
+        it('ngOnInit_shouldNotOpenTheForm_withoutAProposal', () => {
+            openWith({ navigationId: 1 });
+
+            expect(component.isPopoverVisible()).toBe(false);
+        });
+    });
 });

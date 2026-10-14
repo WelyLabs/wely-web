@@ -16,6 +16,19 @@ export interface ProfileAbout {
 /** wely-users' limits, mirrored so the form says so before sending. */
 export const ABOUT_LIMITS = { bio: 160, interests: 5, interest: 24 } as const;
 
+/** A friend's profile, as wely-users shows it to their friends only. */
+export interface FriendProfile {
+    id: string;
+    userName: string;
+    hashtag: number;
+    firstName: string;
+    lastName: string;
+    /** ISO local date-time, without a zone. */
+    joinedDate: string | null;
+    bio: string | null;
+    interests: string[];
+}
+
 export interface ProfileUpdate {
     userName: string;
     firstName: string;
@@ -89,6 +102,11 @@ export class UserService {
      * refreshed at once: its preferred_username is the name wely-chat signs messages with.
      * A failed refresh is not the save failing: the scheduled one will catch up.
      */
+    /** A friend's profile; 403 when the two are not friends. */
+    getFriendProfile(userId: string): Observable<FriendProfile> {
+        return this.http.get<FriendProfile>(`${this.apiUrl}/users/${userId}/profile`);
+    }
+
     /** The signed-in user's bio and interests. */
     getAbout(): Observable<ProfileAbout> {
         return this.http.get<ProfileAbout>(`${this.apiUrl}/profile/about`);

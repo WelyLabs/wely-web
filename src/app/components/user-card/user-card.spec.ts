@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { provideRouter } from '@angular/router';
 
 describe('UserCardComponent', () => {
     let component: UserCardComponent;
@@ -19,7 +20,8 @@ describe('UserCardComponent', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            imports: [UserCardComponent, MatIconModule, MatButtonModule, MatMenuModule]
+            imports: [UserCardComponent, MatIconModule, MatButtonModule, MatMenuModule],
+            providers: [provideRouter([])]
         }).compileComponents();
 
         fixture = TestBed.createComponent(UserCardComponent);
@@ -30,6 +32,13 @@ describe('UserCardComponent', () => {
 
     it('should create', () => {
         expect(component).toBeTruthy();
+    });
+
+    it('template_shouldLinkTheAvatarAndTheNameToTheFriendPage', () => {
+        const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+
+        expect(links.map(link => link.getAttribute('href'))).toEqual(['/friends/user-1', '/friends/user-1']);
+        expect(fixture.nativeElement.querySelector('.profile-link').textContent).toContain('testuser');
     });
 
     it('metAt_shouldShowWhereTheTwoMet', () => {

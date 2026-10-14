@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Type } from '@angular/core';
 import { Route } from '@angular/router';
+import { FriendProfileComponent } from './components/friend-profile/friend-profile';
 import { routes } from './app.routes';
 import { authGuard } from './core/guards/auth.guard';
 import { LandingPageComponent } from './components/landing-page/landing-page';
@@ -42,6 +43,7 @@ describe('routes', () => {
         ['calendar', CalendarComponent],
         ['feed', EventFeedComponent],
         ['friends', UserSearchComponent],
+        ['friends/:userId', FriendProfileComponent],
         ['event/:id', EventDetailsComponent],
         ['profile', UserProfileComponent],
         ['conversations', ConversationsListComponent],

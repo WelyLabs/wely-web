@@ -3,8 +3,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { RouterLink } from '@angular/router';
 import { UserWithStatusDTO } from '../../models/user.model';
-import { CLOSENESS_HINTS, CLOSENESS_LABELS, CLOSENESS_LEVELS, Closeness, FriendSummary, isAbove } from '../../models/friendship.model';
+import { CLOSENESS_LABELS, Closeness, ClosenessOption, FriendSummary, closenessOptions } from '../../models/friendship.model';
 import { AvatarService } from '../../services/avatar.service';
 
 /** A closeness the user asked for on a friend's card. */
@@ -19,13 +20,6 @@ export interface ClosenessAnswer {
     accept: boolean;
 }
 
-/** One entry of the closeness menu: what choosing it does, worded from the current level. */
-interface ClosenessOption {
-    closeness: Closeness;
-    label: string;
-    hint: string;
-}
-
 /**
  * One user, with the action buttons their relationship status allows.
  *
@@ -36,7 +30,7 @@ interface ClosenessOption {
 @Component({
     selector: 'app-user-card',
     standalone: true,
-    imports: [MatIconModule, MatButtonModule, MatMenuModule],
+    imports: [MatIconModule, MatButtonModule, MatMenuModule, RouterLink],
     templateUrl: './user-card.html',
     styleUrl: './user-card.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -77,29 +71,10 @@ export class UserCardComponent {
         return friendship?.proposal && !friendship.proposedByFriend ? CLOSENESS_LABELS[friendship.proposal] : null;
     });
 
-    /**
-     * Every other level, worded for what choosing it does: above is a proposal the friend has to
-     * accept, below applies at once.
-     */
+    /** Every other level, worded for what choosing it does. */
     readonly closenessOptions = computed<ClosenessOption[]>(() => {
         const friendship = this.friendship();
-        if (!friendship) {
-            return [];
-        }
-        return CLOSENESS_LEVELS
-            .filter(level => level !== friendship.closeness && level !== this.ownProposal())
-            .map(level => ({
-                closeness: level,
-                label: isAbove(level, friendship.closeness)
-                    ? `Proposer : ${CLOSENESS_LABELS[level]}`
-                    : `Redescendre à ${CLOSENESS_LABELS[level]}`,
-                hint: CLOSENESS_HINTS[level]
-            }));
-    });
-
-    private readonly ownProposal = computed(() => {
-        const friendship = this.friendship();
-        return friendship?.proposal && !friendship.proposedByFriend ? friendship.proposal : null;
+        return friendship ? closenessOptions(friendship) : [];
     });
 
     /** Recomputed only when the user changes, where the template used to call a method on every
