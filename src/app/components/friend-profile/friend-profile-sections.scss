@@ -184,7 +184,7 @@
         font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
-        color: #c2410c;
+        color: var(--orange-ink);
     }
 
     .day {
@@ -214,7 +214,7 @@
     padding: 4px 10px;
     border-radius: 999px;
     background: var(--brand-tint);
-    color: #1d4ed8;
+    color: var(--blue-ink);
     font-size: 13px;
     font-weight: 700;
 }

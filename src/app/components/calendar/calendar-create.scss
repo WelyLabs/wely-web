@@ -117,7 +117,7 @@
         cursor: pointer;
 
         &:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: color-mix(in srgb, var(--text-primary) 5%, transparent);
         }
 
         mat-icon {
@@ -137,7 +137,7 @@
     width: 100%;
     flex-shrink: 0;
     padding: 14px;
-    border: 1.5px dashed rgba(0, 0, 0, 0.15);
+    border: 1.5px dashed color-mix(in srgb, var(--text-primary) 15%, transparent);
     border-radius: 16px;
     background: transparent;
     color: var(--text-primary);

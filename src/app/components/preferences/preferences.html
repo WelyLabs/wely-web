@@ -1,0 +1,39 @@
+<div class="preferences-page">
+  <header class="page-header">
+    <h1>Préférences</h1>
+    <p class="subtitle">Gardées avec ton compte, sur tous tes appareils</p>
+  </header>
+
+  <section class="card" aria-labelledby="theme-title">
+    <h2 id="theme-title">Thème</h2>
+    <p class="card-hint" id="theme-hint">L'apparence de Wely.</p>
+
+    <div class="theme-options" role="radiogroup" aria-labelledby="theme-title" aria-describedby="theme-hint">
+      @for (option of options; track option.value) {
+        <label class="theme-option" [class.selected]="selected() === option.value" [attr.data-theme-option]="option.value">
+          <input type="radio" name="theme" class="visually-hidden" [value]="option.value"
+            [checked]="selected() === option.value" [disabled]="saving()" (change)="choose(option.value)">
+          <span class="preview" [class]="'preview-' + option.value.toLowerCase()" aria-hidden="true">
+            <span class="preview-bar"></span>
+            <span class="preview-line"></span>
+            <span class="preview-line short"></span>
+          </span>
+          <span class="option-text">
+            <span class="option-label">
+              <mat-icon aria-hidden="true">{{ option.icon }}</mat-icon>
+              {{ option.label }}
+            </span>
+            <span class="option-detail">{{ detailOf(option) }}</span>
+          </span>
+          @if (selected() === option.value) {
+            <mat-icon class="check" aria-hidden="true">check_circle</mat-icon>
+          }
+        </label>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+  </section>
+</div>

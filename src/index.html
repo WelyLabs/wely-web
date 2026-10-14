@@ -42,6 +42,19 @@
   <script>
     window.KEYCLOAK_URL = '${KEYCLOAK_URL}';
   </script>
+  <!-- The theme last chosen on this browser, set before the first paint: applied by Angular
+       only, a dark theme flashed white on every load. ThemeService takes over once started;
+       the key and the values are its THEME_STORAGE_KEY and ThemePreference. -->
+  <script>
+    (function () {
+      var theme = 'SYSTEM';
+      try { theme = localStorage.getItem('wely.theme') || theme; } catch (e) { /* storage refused */ }
+      var dark = theme === 'DARK'
+        || (theme !== 'LIGHT' && !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    })();
+  </script>
 </head>
 
 <body>

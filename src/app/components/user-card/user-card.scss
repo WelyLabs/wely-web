@@ -175,7 +175,7 @@
             }
 
             &:hover {
-                background: #e5e7eb;
+                background: var(--bg-subtle);
                 transform: translateY(-1px);
             }
         }
@@ -295,12 +295,12 @@
     // orange for intimate.
     &[data-closeness='CLOSE'] {
         background: color-mix(in srgb, var(--brand-mid) 14%, transparent);
-        color: color-mix(in srgb, var(--brand-mid) 80%, black);
+        color: color-mix(in srgb, var(--brand-mid) 80%, var(--ink-shade));
     }
 
     &[data-closeness='INTIMATE'] {
         background: color-mix(in srgb, var(--brand-orange) 14%, transparent);
-        color: color-mix(in srgb, var(--brand-orange) 75%, black);
+        color: color-mix(in srgb, var(--brand-orange) 75%, var(--ink-shade));
     }
 }
 

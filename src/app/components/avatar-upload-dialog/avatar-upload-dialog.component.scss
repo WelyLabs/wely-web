@@ -58,7 +58,7 @@
         margin-right: 8px;
 
         &:hover {
-            background: rgba(0, 0, 0, 0.05); // Gray background only on hover
+            background: color-mix(in srgb, var(--text-primary) 5%, transparent); // Gray background only on hover
             color: var(--text-primary);
             transform: rotate(90deg);
         }

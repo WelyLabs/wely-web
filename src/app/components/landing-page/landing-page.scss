@@ -4,6 +4,9 @@
 // --accent-gradient, --text-*), Outfit at 800 for titles, the black pill of the active
 // sidebar item, 12px-radius event cards with a gradient accent, the red dot on today.
 // The hero visual is a replica of the week view in those same styles, not a picture.
+//
+// Always in the light theme (styles.scss): it is shown before anyone signs in, its replica is
+// drawn in the light design, and the theme is an account preference.
 
 :host {
     display: block;

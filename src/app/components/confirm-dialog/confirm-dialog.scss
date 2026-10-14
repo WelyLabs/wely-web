@@ -31,7 +31,7 @@
             background: transparent !important;
 
             &:hover {
-                background: rgba(0, 0, 0, 0.05) !important;
+                background: color-mix(in srgb, var(--text-primary) 5%, transparent) !important;
                 color: var(--text-primary);
                 transform: rotate(90deg);
             }

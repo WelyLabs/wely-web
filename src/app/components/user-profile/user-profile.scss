@@ -159,7 +159,7 @@ a {
     height: 44px;
     padding: 0 18px;
     border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.14);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 14%, transparent);
     background: var(--bg-card);
     font: inherit;
     font-size: 15px;
@@ -204,23 +204,23 @@ a {
     font-weight: 600;
 
     &.tint-0 {
-        background: #eff4ff;
-        color: #1d4ed8;
+        background: color-mix(in srgb, var(--brand-blue) 10%, var(--bg-card));
+        color: var(--blue-ink);
     }
 
     &.tint-1 {
-        background: #fff1e7;
-        color: #c2410c;
+        background: color-mix(in srgb, var(--brand-orange) 10%, var(--bg-card));
+        color: var(--orange-ink);
     }
 
     &.tint-2 {
-        background: #f3effe;
-        color: #6d28d9;
+        background: color-mix(in srgb, #8b5cf6 10%, var(--bg-card));
+        color: var(--violet-ink);
     }
 
     &.tint-3 {
         background: var(--bg-subtle);
-        color: #4a4a4a;
+        color: color-mix(in srgb, var(--text-primary) 80%, var(--bg-card));
     }
 }
 
@@ -414,7 +414,7 @@ a {
         font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
-        color: #c2410c;
+        color: var(--orange-ink);
     }
 
     .day {
@@ -444,7 +444,7 @@ a {
     padding: 4px 10px;
     border-radius: 999px;
     background: var(--brand-tint);
-    color: #1d4ed8;
+    color: var(--blue-ink);
     font-size: 13px;
     font-weight: 700;
 }

@@ -10,7 +10,7 @@
     gap: 8px;
     padding: 6px 10px;
     border-radius: 10px;
-    background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
+    background: var(--bg-subtle, color-mix(in srgb, var(--text-primary) 4%, transparent));
 
     mat-icon {
         font-size: 18px;
@@ -68,7 +68,7 @@
     height: 220px;
     border-radius: 12px;
     overflow: hidden;
-    background: #e8eef3;
+    background: var(--bg-subtle);
     // The popover is dragged by its background: the map keeps the pointer to itself.
     touch-action: none;
     cursor: crosshair;

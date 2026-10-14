@@ -1,0 +1,105 @@
+// The app's colours, as custom properties, for each theme.
+//
+// Light is the app as it was designed. Dark keeps its hues and swaps the surfaces and the ink:
+// warm off-black canvas, raised cards a step lighter (in the dark, height reads as light, not
+// shadow), off-white text, and the status inks one step lighter to stay readable on them.
+// Tokens that only mix others (tints, the gradient's middle) need no dark value.
+//
+// html[data-theme] is set by ThemeService, and before the first paint by index.html.
+
+@mixin light-tokens {
+  // Brand: the two ends of the Wely gradient. Every blue and orange of the app derives from them.
+  --brand-blue: #3b82f6;
+  --brand-orange: #f97316;
+  // The gradient's middle, interpolated in OKLCH: what sits between the two, e.g. "close" friends.
+  --brand-mid: color-mix(in oklch, var(--brand-blue), var(--brand-orange));
+  // Solid fills and blue text: the brand blue one step darker, which white text and small type
+  // need to stay readable (5.2:1 against white, where --brand-blue reaches 3.7:1).
+  --primary-blue: #2563eb;
+  --primary-orange: var(--brand-orange);
+  // Tints of the brand blue, for selected and hovered states.
+  --brand-tint: color-mix(in srgb, var(--brand-blue) 10%, transparent);
+  --brand-tint-strong: color-mix(in srgb, var(--brand-blue) 20%, transparent);
+  --brand-glow: color-mix(in srgb, var(--brand-blue) 30%, transparent);
+  --brand-wash: color-mix(in srgb, var(--brand-blue) 5%, transparent);
+
+  // Status colours, deliberately apart from the brand.
+  --danger: #ef4444;
+  --danger-ink: #dc2626;
+  --success: #22c55e;
+  --success-ink: #15803d;
+  --warning: #f59e0b;
+  // The now-line and today's date, red as in Apple's calendar.
+  --now-red: #ff3b30;
+  --now-red-line: color-mix(in srgb, var(--now-red) 80%, transparent);
+  --now-red-glow: color-mix(in srgb, var(--now-red) 35%, transparent);
+  --now-red-wash: color-mix(in srgb, var(--now-red) 2%, transparent);
+  --success-tint: color-mix(in srgb, var(--success) 12%, transparent);
+
+  // Soft, premium background colors from mockup
+  --bg-canvas: #fcfaf7;
+  --bg-subtle: #f3f0ea;
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.7);
+
+  // Borders & Accents
+  --border-default: rgba(0, 0, 0, 0.03);
+  --border-subtle: rgba(0, 0, 0, 0.015);
+
+  // Refined Micro-shadows
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.01);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.04);
+  --shadow-premium: 0 10px 40px rgba(0, 0, 0, 0.02);
+
+  // Typography
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #a1a1a1;
+
+  // Coloured text on the brand's tints (interest chips, links in a card): the hue one step
+  // darker on a light page, one step lighter on a dark one.
+  --blue-ink: #1d4ed8;
+  --orange-ink: #c2410c;
+  --violet-ink: #6d28d9;
+  // What a colour is mixed with to deepen it into readable text: black here, white in the dark.
+  --ink-shade: black;
+
+}
+
+@mixin dark-tokens {
+  --brand-blue: #3b82f6;
+  // On a dark surface the step-darker blue reads as dim: the brand blue itself is the readable one
+  // there (4.9:1 against --bg-card).
+  --primary-blue: #3b82f6;
+
+  --danger: #f87171;
+  --danger-ink: #f87171;
+  --success: #22c55e;
+  --success-ink: #4ade80;
+
+  --bg-canvas: #121214;
+  --bg-subtle: #222226;
+  --bg-card: #1b1b1f;
+  --bg-glass: rgba(27, 27, 31, 0.72);
+
+  --border-default: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+
+  // Shadows barely show on a dark page; they are kept, deeper, for what floats (menus, dialogs).
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.5);
+  --shadow-premium: 0 10px 40px rgba(0, 0, 0, 0.35);
+
+  --text-primary: #ededef;
+  --text-secondary: #a3a3ab;
+  --text-tertiary: #6f6f78;
+
+  --blue-ink: #93c5fd;
+  --orange-ink: #fdba74;
+  --violet-ink: #c4b5fd;
+  --ink-shade: white;
+}

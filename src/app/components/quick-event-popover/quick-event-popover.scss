@@ -66,7 +66,7 @@
         .extra {
             grid-area: extra;
             padding-top: 14px;
-            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            border-top: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
         }
     }
 
@@ -131,7 +131,7 @@
                 flex: none;
                 padding: 4px 8px;
                 border-radius: 8px;
-                background: rgba(0, 0, 0, 0.04);
+                background: color-mix(in srgb, var(--text-primary) 4%, transparent);
                 font-weight: 600;
                 font-variant-numeric: tabular-nums;
             }
@@ -192,7 +192,7 @@
                     padding: 6px 12px;
                 }
                 border-radius: 999px;
-                border: 1px solid rgba(0, 0, 0, 0.1);
+                border: 1px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
                 background: transparent;
                 font-size: 12px;
                 color: var(--text-secondary);
@@ -321,7 +321,7 @@
 
                 &:hover {
                     color: var(--text-primary);
-                    background: rgba(0, 0, 0, 0.05);
+                    background: color-mix(in srgb, var(--text-primary) 5%, transparent);
                 }
             }
 
@@ -387,7 +387,7 @@
             margin: auto -16px 0;
             padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
             background: var(--bg-card);
-            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            border-top: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
 
             button {
                 flex: 1;

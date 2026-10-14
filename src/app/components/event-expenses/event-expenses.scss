@@ -224,7 +224,7 @@ h3 {
 }
 
 .small-outline-button {
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
     background: var(--bg-card);
     color: var(--text-primary);
 }
