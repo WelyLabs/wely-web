@@ -66,7 +66,9 @@
           <h1>{{ event.title }}</h1>
           <p class="hero-meta" [class.polling]="polling()">{{ whenLabel(event) }} · {{ event.location }}</p>
           @if (organizerName()) {
-            <p class="organizer">Organisé par {{ isOrganizer() ? 'toi' : organizerName() }}</p>
+            <p class="organizer">Organisé par
+              <button type="button" class="person-link" (click)="openPerson(event.organizerId)">{{ isOrganizer() ? 'toi' : organizerName() }}</button>
+            </p>
           }
         </div>
       }
@@ -221,13 +223,14 @@
       @if (shown.length > 0) {
         <div class="avatars">
           @for (person of shown.slice(0, 5); track person.id) {
-            <span class="avatar" [style.background]="avatarColor(person.id)" [title]="person.name">
+            <button type="button" class="avatar" [style.background]="avatarColor(person.id)" [title]="person.name"
+              [attr.aria-label]="'Voir ' + person.name" (click)="openPerson(person.id)">
               @if (person.picture) {
                 <img [src]="person.picture" alt="">
               } @else {
                 {{ person.initials }}
               }
-            </span>
+            </button>
           }
         </div>
       }
@@ -254,14 +257,16 @@
       }
       @for (person of people(); track person.id) {
         <div class="person-row">
-          <span class="avatar small" [style.background]="avatarColor(person.id)">
-            @if (person.picture) {
-              <img [src]="person.picture" alt="">
-            } @else {
-              {{ person.initials }}
-            }
-          </span>
-          <span class="person-name">{{ person.name }}</span>
+          <button type="button" class="person-open" (click)="openPerson(person.id)">
+            <span class="avatar small" [style.background]="avatarColor(person.id)">
+              @if (person.picture) {
+                <img [src]="person.picture" alt="">
+              } @else {
+                {{ person.initials }}
+              }
+            </span>
+            <span class="person-name">{{ person.name }}</span>
+          </button>
           @switch (person.relation) {
             @case ('FRIENDS') {
               <span class="relation">Ami</span>

@@ -258,4 +258,12 @@ describe('UserProfileComponent', () => {
             expect(component.about()?.bio).toBe('Toujours partante');
         });
     });
+
+    it('template_shouldLinkEachMemberOfTheCircleToTheirPage', async () => {
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const links = [...fixture.nativeElement.querySelectorAll('.circle-link')].map((link: HTMLAnchorElement) => link.getAttribute('href'));
+        expect(links).toEqual(['/friends/lea', '/friends/bob']);
+    });
 });

@@ -516,10 +516,21 @@ a {
     flex-direction: column;
     gap: 12px;
 
-    li {
+    // Each row opens that person's page.
+    .circle-link {
         display: flex;
         align-items: center;
         gap: 12px;
+        color: var(--text-primary);
+        font-weight: 400;
+
+        &:hover {
+            text-decoration: none;
+
+            strong {
+                text-decoration: underline;
+            }
+        }
     }
 }
 

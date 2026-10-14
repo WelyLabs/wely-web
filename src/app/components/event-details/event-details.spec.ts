@@ -215,6 +215,41 @@ describe('EventDetailsComponent', () => {
         expect(fixture.nativeElement.textContent).toContain('Léo y va');
     });
 
+    it('openPerson_shouldOpenTheOrganizersPage_fromTheOrganizerLine', () => {
+        create();
+
+        (fixture.nativeElement.querySelector('.organizer .person-link') as HTMLButtonElement).click();
+
+        expect(router.navigate).toHaveBeenCalledWith(['/friends', 'org']);
+    });
+
+    it('openPerson_shouldOpenMyProfile_forMe', () => {
+        create();
+
+        component.openPerson('me');
+
+        expect(router.navigate).toHaveBeenCalledWith(['/profile']);
+    });
+
+    it('template_shouldOpenAFriendsPage_fromTheAvatarsOfWhoComes', () => {
+        create();
+
+        (fixture.nativeElement.querySelector('.who button.avatar') as HTMLButtonElement).click();
+
+        expect(router.navigate).toHaveBeenCalledWith(['/friends', 'f1']);
+    });
+
+    it('template_shouldOpenEachPersonsPage_fromThePeopleList', () => {
+        eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['u2', 'me', 'f1'] })));
+        create();
+
+        const rows = [...fixture.nativeElement.querySelectorAll('.person-open')] as HTMLButtonElement[];
+        rows.forEach(row => row.click());
+
+        expect(router.navigate.mock.calls.map(call => call[0])).toEqual(
+            expect.arrayContaining([['/friends', 'u2'], ['/friends', 'f1'], ['/profile']]));
+    });
+
     it('phase_shouldBeMemberAndShowTheGroupThreadOnceJoined', () => {
         eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['u2', 'me', 'f1'] })));
 

@@ -72,6 +72,7 @@
 /* Avatar Container */
 .avatar-container {
     position: relative;
+    display: block;
     margin-bottom: 20px;
 
     .avatar-gradient {
@@ -345,5 +346,16 @@
         font-size: 16px;
         width: 16px;
         height: 16px;
+    }
+}
+
+// The name opens the friend's page; it reads as a name, not as a link.
+.profile-link {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+        text-decoration: underline;
     }
 }

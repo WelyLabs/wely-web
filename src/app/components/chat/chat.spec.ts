@@ -115,6 +115,14 @@ describe('ChatComponent', () => {
         expect(component.isLoading()).toBe(false);
     });
 
+    it('openPartner_shouldOpenThePartnersPage_fromTheHeader', () => {
+        fixture.detectChanges();
+
+        (fixture.nativeElement.querySelector('.user-info') as HTMLButtonElement).click();
+
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/friends', 'friend']);
+    });
+
     it('should derive the friend id from the participants', () => {
         // Loading by conversation id gives no friend id, and sending needs one. Asserted through
         // the send call rather than by reading a private field: what matters is that the message
@@ -373,6 +381,15 @@ describe('ChatComponent', () => {
             component.onSendMessage('hi');
 
             expect(chatServiceMock.sendMessage).toHaveBeenCalledWith('conv-ev', 'hi', '');
+        });
+
+        it('openPartner_shouldDoNothingForAGroup', async () => {
+            await openGroup();
+
+            const header = fixture.nativeElement.querySelector('.user-info') as HTMLButtonElement;
+            expect(header.disabled).toBe(true);
+            component.openPartner();
+            expect(routerMock.navigate).not.toHaveBeenCalledWith(['/friends', expect.anything()]);
         });
 
         it('openEvent_shouldOpenTheGroupsEvent', async () => {

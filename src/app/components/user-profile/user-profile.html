@@ -165,18 +165,20 @@
                   <ul class="circle">
                     @for (member of circle(); track member.id) {
                       <li>
-                        <span class="avatar small" [style.background]="member.color" aria-hidden="true">
-                          @if (member.picture) {
-                            <img [src]="member.picture" alt="">
-                          } @else {
-                            {{ member.initials }}
-                          }
-                        </span>
-                        <span class="circle-text">
-                          <strong>{{ member.name }}</strong>
-                          <span class="muted">{{ member.outingsTogether }} sortie{{ member.outingsTogether > 1 ? 's' : '' }} ensemble</span>
-                        </span>
-                        <span class="bar" aria-hidden="true"><span [style.width.%]="member.share"></span></span>
+                        <a class="circle-link" [routerLink]="['/friends', member.id]">
+                          <span class="avatar small" [style.background]="member.color" aria-hidden="true">
+                            @if (member.picture) {
+                              <img [src]="member.picture" alt="">
+                            } @else {
+                              {{ member.initials }}
+                            }
+                          </span>
+                          <span class="circle-text">
+                            <strong>{{ member.name }}</strong>
+                            <span class="muted">{{ member.outingsTogether }} sortie{{ member.outingsTogether > 1 ? 's' : '' }} ensemble</span>
+                          </span>
+                          <span class="bar" aria-hidden="true"><span [style.width.%]="member.share"></span></span>
+                        </a>
                       </li>
                     }
                   </ul>

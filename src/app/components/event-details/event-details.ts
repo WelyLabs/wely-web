@@ -6,6 +6,7 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { personLink } from '../../core/ui/person-link';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { EMPTY, Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
@@ -208,6 +209,11 @@ export class EventDetailsComponent implements OnInit {
     const all = (this.participants()?.participantIds ?? []).map(id => this.person(id));
     return [...all.filter(person => person.isFriend), ...all.filter(person => !person.isFriend)];
   });
+
+  /** Opens someone's page: a friend's, or the viewer's own profile. */
+  openPerson(userId: string): void {
+    this.router.navigate(personLink(userId, this.me()?.id));
+  }
 
   /** The viewer's id, once known: the expenses card needs it to say where they stand. */
   readonly meId = computed(() => this.me()?.id ?? null);

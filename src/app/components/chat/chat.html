@@ -5,8 +5,10 @@
       <button mat-icon-button class="back-btn" (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <div class="user-info">
-        <div class="avatar-sm">
+      <!-- A direct conversation's header opens the partner's page; a group's stays plain. -->
+      <button type="button" class="user-info" [class.opens-profile]="!isEventGroup() && partnerId()"
+        [disabled]="isEventGroup() || !partnerId()" (click)="openPartner()">
+        <span class="avatar-sm">
           @if (isEventGroup()) {
             <mat-icon>groups</mat-icon>
           } @else if (partnerPicture(); as src) {
@@ -14,16 +16,16 @@
           } @else {
             {{ getAvatarInitial(conversationTitle() ?? undefined) }}
           }
-        </div>
-        <div class="text-info">
-          <h2 class="chat-title">{{ conversationTitle() ?? 'Chargement…' }}</h2>
+        </span>
+        <span class="text-info">
+          <span class="chat-title">{{ conversationTitle() ?? 'Chargement…' }}</span>
           @if (isEventGroup()) {
             <span class="status-text offline">{{ memberCount() }} membre{{ memberCount() > 1 ? 's' : '' }}</span>
           } @else if (presenceText(); as status) {
             <span class="status-text" [class.offline]="!isPartnerOnline()">{{ status }}</span>
           }
-        </div>
-      </div>
+        </span>
+      </button>
       <button mat-icon-button class="media-toggle" [class.active]="showMedia()" (click)="toggleMedia()"
         [attr.aria-pressed]="showMedia()" aria-label="Photos de la conversation">
         <mat-icon>photo_library</mat-icon>
