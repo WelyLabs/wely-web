@@ -183,14 +183,16 @@ describe('EventFeedComponent', () => {
     });
 
     describe('views', () => {
-        it('view_shouldStartOnTheCards', () => {
-            expect(component.view()).toBe('swipe');
-            expect(fixture.nativeElement.querySelector('.swipe-container')).not.toBeNull();
+        it('view_shouldStartOnTheMap', () => {
+            expect(component.view()).toBe('map');
+            expect(fixture.nativeElement.querySelector('.view-switch button').textContent).toContain('Carte');
         });
 
         it('showView_shouldSwapTheCardsForTheMap', async () => {
-            // Swipe, grid, map: the map is the third button.
-            (fixture.nativeElement.querySelectorAll('.view-switch button')[2] as HTMLButtonElement).click();
+            component.showView('swipe');
+            fixture.detectChanges();
+            // Map, swipe, grid: the map is the first button.
+            (fixture.nativeElement.querySelectorAll('.view-switch button')[0] as HTMLButtonElement).click();
             fixture.detectChanges();
 
             expect(component.view()).toBe('map');
@@ -222,7 +224,7 @@ describe('EventFeedComponent', () => {
         const cards = () => fixture.nativeElement.querySelectorAll('.grid-card');
 
         it('showView_shouldLayTheFeedOutInAGrid', () => {
-            (fixture.nativeElement.querySelectorAll('.view-switch button')[1] as HTMLButtonElement).click();
+            (fixture.nativeElement.querySelectorAll('.view-switch button')[2] as HTMLButtonElement).click();
             fixture.detectChanges();
 
             expect(component.view()).toBe('grid');
@@ -350,6 +352,8 @@ describe('EventFeedComponent', () => {
     });
 
     it('template_shouldShowAGradientTile_forAnEventWithoutCover', () => {
+        component.showView('swipe');
+        fixture.detectChanges();
         const card = fixture.nativeElement.querySelector('.card-image') as HTMLElement;
 
         expect(card.classList).toContain('no-image');
@@ -369,6 +373,7 @@ describe('EventFeedComponent', () => {
         };
 
         it('template_shouldBadgeACardWhoseDateIsBeingVotedOn', () => {
+            component.showView('swipe');
             showOnly([polled]);
 
             expect(fixture.nativeElement.querySelector('.card-image .poll-badge')?.textContent).toContain('Sondage en cours');

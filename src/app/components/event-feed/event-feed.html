@@ -11,12 +11,12 @@
       }
     </p>
     <div class="view-switch" role="radiogroup" aria-label="Affichage">
+      <button type="button" role="radio" [class.active]="view() === 'map'" [attr.aria-checked]="view() === 'map'"
+        (click)="showView('map')"><mat-icon>map</mat-icon>Carte</button>
       <button type="button" role="radio" [class.active]="view() === 'swipe'" [attr.aria-checked]="view() === 'swipe'"
         (click)="showView('swipe')"><mat-icon>style</mat-icon>Swipe</button>
       <button type="button" role="radio" [class.active]="view() === 'grid'" [attr.aria-checked]="view() === 'grid'"
         (click)="showView('grid')"><mat-icon>grid_view</mat-icon>Grille</button>
-      <button type="button" role="radio" [class.active]="view() === 'map'" [attr.aria-checked]="view() === 'map'"
-        (click)="showView('map')"><mat-icon>map</mat-icon>Carte</button>
     </div>
   </div>
 

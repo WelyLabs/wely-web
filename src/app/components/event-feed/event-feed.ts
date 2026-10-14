@@ -74,7 +74,8 @@ export class EventFeedComponent implements OnInit {
   readonly organiserNames = signal<ReadonlyMap<string, string>>(new Map());
 
   /** Cards to swipe, the whole feed in a grid, or every upcoming event on a map. */
-  readonly view = signal<FeedView>('swipe');
+  /** The map first: where things happen around you is the quickest way into them. */
+  readonly view = signal<FeedView>('map');
 
   /** The grid's cards, soonest first: the feed arrives in no order a reader could use. */
   readonly gridEvents = computed(() =>

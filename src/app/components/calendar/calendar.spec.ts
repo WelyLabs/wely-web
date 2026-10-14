@@ -67,13 +67,16 @@ describe('CalendarComponent', () => {
     });
 
     it('should generate calendar on init', () => {
-        expect(component.days().length).toBe(42);
+        // The week view by default.
+        expect(component.viewMode()).toBe('week');
+        expect(component.days().length).toBe(7);
         // Exactly the subscribed events, and nothing else. Three hardcoded demo events used to
         // be merged in, which is why this assertion read "greater than".
         expect(component.events().length).toBe(mockEvents.length);
     });
 
     it('should change month when navigate(1) is called', () => {
+        component.toggleView('month');
         const initialMonth = component.currentDate().getMonth();
         component.navigate(1);
         expect(component.currentDate().getMonth()).toBe((initialMonth + 1) % 12);
@@ -102,6 +105,7 @@ describe('CalendarComponent', () => {
     });
 
     it('should change month when navigate(-1) is called', () => {
+        component.toggleView('month');
         const initialMonth = component.currentDate().getMonth();
         component.navigate(-1);
         expect(component.currentDate().getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
@@ -929,6 +933,7 @@ describe('CalendarComponent', () => {
         });
 
         it('openNewEvent_shouldUseTheFirstDayOfTheMonth_whenTodayIsNotShown', () => {
+            component.toggleView('month');
             component.currentDate.set(new Date(2030, 4, 1));
             component.generateCalendar();
 
@@ -1112,6 +1117,7 @@ describe('CalendarComponent', () => {
         });
 
         it('onSwipeEnd_shouldGoToTheNextPeriod_onASwipeLeft', () => {
+            component.toggleView('month');
             const month = component.currentDate().getMonth();
 
             swipe(300, 150);
@@ -1120,6 +1126,7 @@ describe('CalendarComponent', () => {
         });
 
         it('onSwipeEnd_shouldGoBack_onASwipeRight', () => {
+            component.toggleView('month');
             const month = component.currentDate().getMonth();
 
             swipe(100, 260);
@@ -1239,6 +1246,7 @@ describe('CalendarComponent', () => {
         });
 
         it('template_shouldNameAProposedSlotInItalics_inAMonthCell', () => {
+            component.toggleView('month');
             getMyPolls().mockReturnValue(of([feedEvent()]));
             component.ngOnInit();
             fixture.detectChanges();

@@ -200,7 +200,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   readonly hours = Array.from({ length: 24 }, (_, i) => i);
   readonly currentTimePosition = signal(0);
-  readonly viewMode = signal<'month' | 'week' | 'day'>('month');
+  /** The week (three days on a phone) by default: what a week holds is what people plan. */
+  readonly viewMode = signal<'month' | 'week' | 'day'>('week');
 
   readonly selectedDate = signal<Date | null>(null);
   readonly selectedEvents = signal<CalendarEvent[]>([]);
@@ -457,6 +458,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // went out at bootstrap, including for a signed-out visitor on the landing page, where they
     // could only come back 401.
     this.eventService.refreshEvents();
+    // The default week view opens on the current hour, as switching to it does.
+    setTimeout(() => this.scrollToCurrentTime(), 100);
 
     // Open polls show as tentative slots: those subscribed to, plus those organized or voted on,
     // read again whenever the subscribed list is.
@@ -587,7 +590,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   private scrollToCurrentTime() {
     const container = document.querySelector('.week-schedule-container');
-    if (!container) return;
+    if (!container?.scrollTo) return;
 
     const now = new Date();
     const currentHour = now.getHours();
