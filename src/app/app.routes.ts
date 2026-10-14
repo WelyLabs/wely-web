@@ -23,6 +23,10 @@ export const routes: Routes = [
             // The middle segment named where the page was opened from and nothing read it. Kept for links already shared.
             { path: 'event/:from/:id', redirectTo: 'event/:id' },
             { path: 'profile', loadComponent: () => import('./components/user-profile/user-profile').then(m => m.UserProfileComponent) },
+            {
+                path: 'preferences',
+                loadComponent: () => import('./components/preferences/preferences').then(m => m.PreferencesComponent)
+            },
             { path: 'friends', loadComponent: () => import('./components/user-search/user-search').then(m => m.UserSearchComponent) },
             {
                 path: 'friends/:userId',

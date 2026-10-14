@@ -5,7 +5,7 @@
     padding: 14px 18px;
     min-width: min(340px, calc(100vw - 16px));
     max-width: min(480px, calc(100vw - 16px));
-    background: rgba(255, 255, 255, 0.82);
+    background: color-mix(in srgb, var(--bg-card) 82%, transparent);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     border-radius: 20px;
@@ -31,7 +31,7 @@
     @media (hover: hover) {
         &:hover {
             transform: translateY(-2px) scale(1.02);
-            background: rgba(255, 255, 255, 0.9);
+            background: color-mix(in srgb, var(--bg-card) 90%, transparent);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
         }
     }
@@ -83,7 +83,7 @@
         font-size: 11px;
         color: var(--text-secondary);
         font-weight: 500;
-        background: rgba(0, 0, 0, 0.05);
+        background: color-mix(in srgb, var(--text-primary) 5%, transparent);
         padding: 2px 8px;
         border-radius: 12px;
     }
@@ -107,7 +107,7 @@
     justify-content: center !important;
     padding: 0 !important;
     color: var(--text-secondary);
-    background: rgba(0, 0, 0, 0.03);
+    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
     margin-left: 4px;
 
     mat-icon {
@@ -120,7 +120,7 @@
     }
 
     &:hover {
-        background: rgba(0, 0, 0, 0.08) !important;
+        background: color-mix(in srgb, var(--text-primary) 8%, transparent) !important;
         color: var(--text-primary);
     }
 }

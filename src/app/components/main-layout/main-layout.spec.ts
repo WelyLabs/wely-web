@@ -275,6 +275,17 @@ describe('MainLayoutComponent', () => {
         expect(fixture.nativeElement.textContent).not.toContain('Mes Amis');
     });
 
+    it('template_shouldOpenThePreferencesFromBothProfileMenus', () => {
+        fixture.detectChanges();
+        const menus = fixture.nativeElement.querySelectorAll('.user-menu, .mobile-menu-items') as NodeListOf<HTMLElement>;
+
+        expect(menus.length).toBe(2);
+        menus.forEach(menu => {
+            const link = menu.querySelector('[routerlink="/preferences"]');
+            expect(link?.textContent).toContain('Préférences');
+        });
+    });
+
     describe('bottom bar on a phone', () => {
         let list: HTMLDivElement;
         const scrollTo = (top: number) => {

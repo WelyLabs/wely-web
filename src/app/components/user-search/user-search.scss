@@ -155,14 +155,14 @@
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
         &.active {
-            background: white;
+            background: var(--bg-card);
             color: var(--primary-blue);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             transform: scale(1.02);
         }
 
         &:hover:not(.active) {
-            background: rgba(0, 0, 0, 0.03);
+            background: color-mix(in srgb, var(--text-primary) 3%, transparent);
             color: var(--text-primary);
         }
     }

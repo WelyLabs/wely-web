@@ -86,7 +86,7 @@
     padding: 4px 4px 4px 12px;
     border-radius: 999px;
     background: var(--brand-tint);
-    color: #1d4ed8;
+    color: var(--blue-ink);
     font-size: 14px;
     font-weight: 600;
 
@@ -127,7 +127,7 @@
 .add-button {
     flex-shrink: 0;
     padding: 0 14px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
     border-radius: 12px;
     background: var(--bg-card);
     font: inherit;

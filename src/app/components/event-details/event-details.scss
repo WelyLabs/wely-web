@@ -36,7 +36,7 @@
         position: absolute;
         top: 16px;
         left: 16px;
-        background: rgba(255, 255, 255, 0.92);
+        background: color-mix(in srgb, var(--bg-card) 92%, transparent);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     }
 
@@ -59,7 +59,7 @@
     gap: 8px;
     background: var(--bg-glass);
     backdrop-filter: blur(16px) saturate(180%);
-    border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+    border-bottom: 1px solid var(--border-subtle, color-mix(in srgb, var(--text-primary) 6%, transparent));
     transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
@@ -265,7 +265,7 @@
     height: 30px;
     padding: 0 12px;
     border-radius: 15px;
-    background: white;
+    background: var(--bg-card);
     color: var(--text-primary);
     font-size: 13px;
     font-weight: 800;
@@ -305,13 +305,13 @@
 }
 
 .light-button {
-    background: white;
+    background: var(--bg-card);
     color: var(--text-primary);
 }
 
 .outline-button {
     height: 40px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
     background: var(--bg-card);
     color: var(--text-primary);
 }
@@ -468,7 +468,7 @@
     gap: 4px;
     text-align: center;
     padding: 24px 16px;
-    border: 1px dashed rgba(0, 0, 0, 0.15);
+    border: 1px dashed color-mix(in srgb, var(--text-primary) 15%, transparent);
     box-shadow: none;
     background: transparent;
 
@@ -502,7 +502,7 @@
         content: '';
         flex: 1;
         height: 1px;
-        background: rgba(0, 0, 0, 0.08);
+        background: color-mix(in srgb, var(--text-primary) 8%, transparent);
     }
 }
 
@@ -602,7 +602,7 @@
 }
 
 .small-outline-button {
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
     background: var(--bg-card);
     color: var(--text-primary);
 }
@@ -628,7 +628,7 @@
     gap: 14px;
     background: var(--bg-glass);
     backdrop-filter: blur(16px) saturate(180%);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
 
     .action-text {
         flex: 1;

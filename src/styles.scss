@@ -1,5 +1,6 @@
 // Custom Theming for Angular Material
 @use '@angular/material' as mat;
+@use 'styles/theme' as theme;
 
 @include mat.core();
 
@@ -65,62 +66,62 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
 @include mat.tabs-theme($calendar-app-theme);
 @include mat.toolbar-theme($calendar-app-theme);
 
-/* Modern Startup Theme Variables */
+// The same components in the dark theme: colours only, density and typography stay as above.
+// Surfaces take the app's own tokens rather than Material's grey #424242, so a dialog or a menu
+// sits on the page like the app's cards do.
+$calendar-app-dark-theme: mat.m2-define-dark-theme((color: (primary: $calendar-app-primary,
+        accent: $calendar-app-accent,
+        warn: $calendar-app-warn,
+      ),
+    ));
+
+html[data-theme='dark'] {
+  @include mat.core-color($calendar-app-dark-theme);
+  @include mat.button-color($calendar-app-dark-theme);
+  @include mat.icon-button-color($calendar-app-dark-theme);
+  @include mat.fab-color($calendar-app-dark-theme);
+  @include mat.icon-color($calendar-app-dark-theme);
+  @include mat.card-color($calendar-app-dark-theme);
+  @include mat.chips-color($calendar-app-dark-theme);
+  @include mat.dialog-color($calendar-app-dark-theme);
+  @include mat.form-field-color($calendar-app-dark-theme);
+  @include mat.input-color($calendar-app-dark-theme);
+  @include mat.list-color($calendar-app-dark-theme);
+  @include mat.menu-color($calendar-app-dark-theme);
+  @include mat.sidenav-color($calendar-app-dark-theme);
+  @include mat.slider-color($calendar-app-dark-theme);
+  @include mat.snack-bar-color($calendar-app-dark-theme);
+  @include mat.tabs-color($calendar-app-dark-theme);
+  @include mat.toolbar-color($calendar-app-dark-theme);
+
+  --mat-dialog-container-color: var(--bg-card);
+  --mat-menu-container-color: var(--bg-card);
+  --mat-sidenav-container-background-color: var(--bg-card);
+  --mat-sidenav-content-background-color: var(--bg-canvas);
+  --mat-card-elevated-container-color: var(--bg-card);
+  --mat-card-outlined-container-color: var(--bg-card);
+  --mat-toolbar-container-background-color: var(--bg-card);
+}
+
+/* Theme tokens: light by default, dark when ThemeService says so (src/styles/_theme.scss). */
 :root {
-  // Brand: the two ends of the Wely gradient. Every blue and orange of the app derives from them.
-  --brand-blue: #3b82f6;
-  --brand-orange: #f97316;
-  // The gradient's middle, interpolated in OKLCH: what sits between the two, e.g. "close" friends.
-  --brand-mid: color-mix(in oklch, var(--brand-blue), var(--brand-orange));
-  // Solid fills and blue text: the brand blue one step darker, which white text and small type
-  // need to stay readable (5.2:1 against white, where --brand-blue reaches 3.7:1).
-  --primary-blue: #2563eb;
-  --primary-orange: var(--brand-orange);
-  // Tints of the brand blue, for selected and hovered states.
-  --brand-tint: color-mix(in srgb, var(--brand-blue) 10%, transparent);
-  --brand-tint-strong: color-mix(in srgb, var(--brand-blue) 20%, transparent);
-  --brand-glow: color-mix(in srgb, var(--brand-blue) 30%, transparent);
-  --brand-wash: color-mix(in srgb, var(--brand-blue) 5%, transparent);
-
-  // Status colours, deliberately apart from the brand.
-  --danger: #ef4444;
-  --danger-ink: #dc2626;
-  --success: #22c55e;
-  --success-ink: #15803d;
-  --warning: #f59e0b;
-  // The now-line and today's date, red as in Apple's calendar.
-  --now-red: #ff3b30;
-  --now-red-line: color-mix(in srgb, var(--now-red) 80%, transparent);
-  --now-red-glow: color-mix(in srgb, var(--now-red) 35%, transparent);
-  --now-red-wash: color-mix(in srgb, var(--now-red) 2%, transparent);
-  --success-tint: color-mix(in srgb, var(--success) 12%, transparent);
-
-  // Soft, premium background colors from mockup
-  --bg-canvas: #fcfaf7;
-  --bg-subtle: #f3f0ea;
-  --bg-card: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.7);
-
-  // Borders & Accents
-  --border-default: rgba(0, 0, 0, 0.03);
-  --border-subtle: rgba(0, 0, 0, 0.015);
-
-  // Refined Micro-shadows
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.01);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.03);
-  --shadow-xl: 0 32px 64px rgba(0, 0, 0, 0.04);
-  --shadow-premium: 0 10px 40px rgba(0, 0, 0, 0.02);
-
-  // Typography
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b6b6b;
-  --text-tertiary: #a1a1a1;
+  @include theme.light-tokens;
 
   // The brand gradient. Fallback in sRGB, then OKLCH where supported: in sRGB its middle is a
   // dull grey-mauve. Same gradient as the login screen and the landing page.
   --accent-gradient: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-orange) 100%);
   --sidebar-width: 280px;
+}
+
+html[data-theme='dark'] {
+  @include theme.dark-tokens;
+}
+
+// The landing page stays light: it is shown before anyone signs in, and its replica of the app
+// is drawn in the light design. Here rather than in its own styles, which have a size budget.
+html[data-theme='dark'] app-landing-page {
+  @include theme.light-tokens;
+  color-scheme: light;
 }
 
 @supports (background: linear-gradient(in oklch, red, blue)) {
@@ -183,6 +184,10 @@ mat-icon,
     --bg-glass: rgba(255, 255, 255, 0.96);
   }
 
+  html[data-theme='dark'] {
+    --bg-glass: rgba(27, 27, 31, 0.96);
+  }
+
   *,
   *::before,
   *::after {
@@ -226,7 +231,7 @@ mat-icon,
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--bg-card) 10%, transparent);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -253,8 +258,11 @@ mat-icon,
 
 /* Skeleton Loader Styles */
 .skeleton {
-  background: #f0f2f5;
-  background: linear-gradient(90deg, #f0f2f5 25%, #e0e4e8 50%, #f0f2f5 75%);
+  // Shades of the ink rather than fixed greys, so the shimmer shows on either theme.
+  --skeleton-base: color-mix(in srgb, var(--text-primary) 6%, var(--bg-card));
+  --skeleton-shine: color-mix(in srgb, var(--text-primary) 11%, var(--bg-card));
+  background: var(--skeleton-base);
+  background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite linear;
   border-radius: 4px;
@@ -303,9 +311,9 @@ mat-icon,
 /* Glass Menu Styling */
 .glass-menu {
   &.mat-mdc-menu-panel {
-    background: rgba(255, 255, 255, 0.9) !important;
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent) !important;
     backdrop-filter: blur(16px) saturate(180%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid var(--border-default) !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
     padding: 8px !important;
@@ -326,7 +334,7 @@ mat-icon,
     transition: all 0.2s ease !important;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.04) !important;
+      background: color-mix(in srgb, var(--text-primary) 4%, transparent) !important;
     }
 
     mat-icon {
@@ -346,15 +354,15 @@ mat-icon,
     /* Destructive items in menu */
     &.destructive-item {
       &:hover {
-        background: rgba(239, 68, 68, 0.08) !important;
+        background: color-mix(in srgb, var(--danger) 8%, transparent) !important;
       }
 
       mat-icon {
-        color: #ef4444 !important;
+        color: var(--danger) !important;
       }
 
       span {
-        color: #ef4444 !important;
+        color: var(--danger) !important;
       }
     }
   }

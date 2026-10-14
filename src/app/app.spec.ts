@@ -3,12 +3,14 @@ import { App } from './app';
 import { KeycloakService, KeycloakEventTypeLegacy } from 'keycloak-angular';
 import { UserService } from './services/user.service';
 import { AuthService } from './core/auth/auth.service';
+import { ThemeService } from './services/theme.service';
 import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('App', () => {
   let keycloakMock: any;
   let userServiceMock: any;
+  let themeMock: { sync: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     keycloakMock = {
@@ -20,12 +22,14 @@ describe('App', () => {
     userServiceMock = {
       loadAndSetCurrentUser: vi.fn().mockReturnValue(of({}))
     };
+    themeMock = { sync: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         { provide: KeycloakService, useValue: keycloakMock },
-        { provide: UserService, useValue: userServiceMock }
+        { provide: UserService, useValue: userServiceMock },
+        { provide: ThemeService, useValue: themeMock }
       ]
     }).compileComponents();
   });
@@ -74,6 +78,15 @@ describe('App', () => {
     expect(userServiceMock.loadAndSetCurrentUser).toHaveBeenCalled();
   });
 
+  it('should take up the theme kept with the account once signed in', () => {
+    const fixture = TestBed.createComponent(App);
+    keycloakMock.isLoggedIn.mockReturnValue(true);
+
+    fixture.componentInstance.ngOnInit();
+
+    expect(themeMock.sync).toHaveBeenCalledTimes(1);
+  });
+
   it('should not load user profile if not logged in', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
@@ -82,6 +95,7 @@ describe('App', () => {
     app.ngOnInit();
 
     expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
+    expect(themeMock.sync).not.toHaveBeenCalled();
   });
 
   it('should show the startup error screen, and nothing that needs a session, when Keycloak failed', () => {

@@ -12,7 +12,7 @@
     border-radius: 24px;
     overflow: hidden;
     box-shadow: var(--shadow-md);
-    background: #e8eef3;
+    background: var(--bg-subtle);
 
     @media (max-width: 768px) {
         border-radius: 16px;

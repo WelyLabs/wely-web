@@ -16,7 +16,7 @@
     display: block;
     height: 3px;
     border-radius: 2px;
-    background: rgba(0, 0, 0, 0.06);
+    background: color-mix(in srgb, var(--text-primary) 6%, transparent);
     overflow: hidden;
 
     .fill {

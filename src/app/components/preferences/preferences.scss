@@ -1,0 +1,198 @@
+.preferences-page {
+    padding: 60px 40px;
+    max-width: 760px;
+    margin: 0 auto;
+
+    @media (max-width: 768px) {
+        padding: 28px 16px;
+    }
+}
+
+.page-header {
+    margin-bottom: 32px;
+
+    h1 {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 4px;
+        color: var(--text-primary);
+    }
+
+    .subtitle {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+
+    h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .card-hint {
+        margin: 4px 0 20px;
+        color: var(--text-secondary);
+    }
+}
+
+.theme-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.theme-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    border: 1.5px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+
+    &:hover {
+        background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+    }
+
+    &.selected {
+        border-color: var(--primary-blue);
+        background: var(--brand-wash);
+    }
+
+    // The radio is hidden: its focus shows on the card it stands for.
+    &:has(input:focus-visible) {
+        outline: 2px solid var(--brand-blue);
+        outline-offset: 2px;
+    }
+
+    &:has(input:disabled) {
+        cursor: progress;
+    }
+
+    @media (max-width: 640px) {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+// A miniature of the app in each theme: fixed colours on purpose, it shows the theme to come,
+// not the one on screen.
+.preview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 72px;
+    padding: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+
+    @media (max-width: 640px) {
+        flex: 0 0 88px;
+        height: 56px;
+    }
+
+    .preview-bar {
+        height: 10px;
+        width: 40%;
+        border-radius: 5px;
+        background: linear-gradient(135deg, #3b82f6 0%, #f97316 100%);
+    }
+
+    .preview-line {
+        height: 8px;
+        border-radius: 4px;
+
+        &.short {
+            width: 60%;
+        }
+    }
+}
+
+.preview-light {
+    background: #fcfaf7;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+
+    .preview-line {
+        background: #e7e3dc;
+    }
+}
+
+.preview-dark {
+    background: #121214;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .preview-line {
+        background: #2c2c32;
+    }
+}
+
+// Half and half: the device decides.
+.preview-system {
+    background: linear-gradient(110deg, #fcfaf7 0 50%, #121214 50% 100%);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
+
+    .preview-line {
+        background: linear-gradient(110deg, #e7e3dc 0 50%, #2c2c32 50% 100%);
+    }
+}
+
+.option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.option-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: var(--text-primary);
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--text-secondary);
+    }
+}
+
+.option-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: var(--primary-blue);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.error {
+    margin: 16px 0 0;
+    color: var(--danger-ink);
+    font-weight: 600;
+}

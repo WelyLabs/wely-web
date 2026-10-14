@@ -28,7 +28,7 @@
     border-left: 3px solid var(--lane-color);
     background: color-mix(in srgb, var(--lane-color) 14%, transparent);
     font-size: 11px;
-    color: color-mix(in srgb, var(--lane-color) 80%, black);
+    color: color-mix(in srgb, var(--lane-color) 80%, var(--ink-shade));
 
     &.busy {
         background: repeating-linear-gradient(135deg,

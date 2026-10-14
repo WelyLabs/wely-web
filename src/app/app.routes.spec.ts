@@ -13,6 +13,7 @@ import { EventDetailsComponent } from './components/event-details/event-details'
 import { UserProfileComponent } from './components/user-profile/user-profile';
 import { ConversationsListComponent } from './components/conversations-list/conversations-list';
 import { ChatComponent } from './components/chat/chat';
+import { PreferencesComponent } from './components/preferences/preferences';
 
 // Reaches ChatService through the components it loads: rsocket-js is replaced by the shared stub, so this
 // file never loads the real module first for the specs that share its chunk.
@@ -46,6 +47,7 @@ describe('routes', () => {
         ['friends/:userId', FriendProfileComponent],
         ['event/:id', EventDetailsComponent],
         ['profile', UserProfileComponent],
+        ['preferences', PreferencesComponent],
         ['conversations', ConversationsListComponent],
         ['chat/:convId', ChatComponent]
     ] as [string, Type<unknown>][])('routes_shouldLoad %s on demand', async (path, component) => {
