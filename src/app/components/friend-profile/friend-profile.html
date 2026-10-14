@@ -1,0 +1,317 @@
+@switch (page().state) {
+  @case ('loading') {
+    <div class="friend-page" aria-busy="true">
+      <div class="hero card">
+        <div class="banner skeleton"></div>
+        <div class="hero-body">
+          <div class="avatar-ring skeleton"></div>
+          <div class="identity">
+            <div class="skeleton line wide"></div>
+            <div class="skeleton line"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card skeleton-card"></div>
+    </div>
+  }
+  @case ('notFound') {
+    <div class="friend-page">
+      <div class="card state-card">
+        <mat-icon>person_off</mat-icon>
+        <h1>Personne introuvable</h1>
+        <p class="muted">Ce compte n’existe pas ou n’existe plus.</p>
+        <a routerLink="/friends">Retour à mes amis</a>
+      </div>
+    </div>
+  }
+  @case ('error') {
+    <div class="friend-page">
+      <div class="card state-card" role="alert">
+        <mat-icon>cloud_off</mat-icon>
+        <h1>Page indisponible</h1>
+        <p class="muted">Impossible de charger ce profil pour le moment.</p>
+        <button type="button" class="outline-button" (click)="reload()">Réessayer</button>
+      </div>
+    </div>
+  }
+  @default {
+    @if (person(); as person) {
+      <div class="friend-page fade-in">
+        <!-- Identity -->
+        <section class="hero card" aria-label="Identité">
+          <div class="banner"></div>
+          <div class="hero-body">
+            <div class="avatar-ring">
+              @let picture = avatars.url(person.userId)();
+              <span class="avatar" [style.background]="avatarColor(person.userId)">
+                @if (picture) {
+                  <img [src]="picture" [alt]="'Photo de profil de ' + person.userName">
+                } @else {
+                  <span aria-hidden="true">{{ initials() }}</span>
+                }
+              </span>
+            </div>
+            <div class="identity">
+              <h1>{{ displayName() }}</h1>
+              <p class="handle">{{ person.userName }}#{{ person.hashtag }}</p>
+              @if (isFriend()) {
+                <p class="friend-meta">
+                  @if (closenessLabel(); as label) {
+                    <span class="closeness-badge" [attr.data-closeness]="person.closeness">
+                      <mat-icon>favorite</mat-icon>{{ label }}
+                    </span>
+                  }
+                  @if (since(); as since) {
+                    <span class="since">Amis depuis {{ since | date:'MMMM y' }}</span>
+                  }
+                </p>
+                @if (page().profile; as profile) {
+                  @if (profile.bio) {
+                    <p class="bio">{{ profile.bio }}</p>
+                  }
+                  @if (profile.interests.length > 0) {
+                    <div class="interests">
+                      @for (interest of profile.interests; track interest; let i = $index) {
+                        <span [class]="'interest tint-' + (i % 4)">{{ interest }}</span>
+                      }
+                    </div>
+                  }
+                }
+                @if (outgoingProposal(); as proposal) {
+                  <span class="closeness-pending">Vous avez proposé « {{ proposal }} » · en attente</span>
+                }
+              }
+            </div>
+
+            <div class="hero-actions">
+              @if (isFriend()) {
+                <button type="button" class="gradient-button" (click)="openChat()" [disabled]="busy()">
+                  <mat-icon>chat_bubble_outline</mat-icon>Message
+                </button>
+                <button type="button" class="outline-button" [matMenuTriggerFor]="closenessMenu" [disabled]="busy()">
+                  <mat-icon>favorite_border</mat-icon>Proximité
+                </button>
+                <mat-menu #closenessMenu="matMenu" class="glass-menu">
+                  @for (option of closenessOptions(); track option.closeness) {
+                    <button mat-menu-item (click)="changeCloseness(option.closeness)">
+                      <mat-icon>favorite_border</mat-icon>
+                      <span class="closeness-option">
+                        <span>{{ option.label }}</span>
+                        <small>{{ option.hint }}</small>
+                      </span>
+                    </button>
+                  }
+                  @if (outgoingProposal()) {
+                    <button mat-menu-item (click)="withdrawProposal()">
+                      <mat-icon>undo</mat-icon>
+                      <span>Retirer ma proposition</span>
+                    </button>
+                  }
+                </mat-menu>
+                <button type="button" class="outline-button destructive" (click)="removeFriend()" [disabled]="busy()">
+                  <mat-icon>person_remove</mat-icon>Retirer
+                </button>
+              } @else {
+                @switch (person.relationStatus) {
+                  @case ('NONE') {
+                    <button type="button" class="gradient-button" (click)="addFriend()" [disabled]="busy()">
+                      <mat-icon>person_add</mat-icon>Ajouter
+                    </button>
+                  }
+                  @case ('SENT_BY_ME') {
+                    <span class="pending-badge"><mat-icon>schedule</mat-icon>Demande envoyée</span>
+                  }
+                  @case ('SENT_BY_THEM') {
+                    <button type="button" class="outline-button" (click)="rejectFriend()" [disabled]="busy()">
+                      <mat-icon>close</mat-icon>Refuser
+                    </button>
+                    <button type="button" class="gradient-button" (click)="acceptFriend()" [disabled]="busy()">
+                      <mat-icon>check</mat-icon>Accepter
+                    </button>
+                  }
+                }
+              }
+            </div>
+          </div>
+
+          @if (isFriend() && incomingProposal(); as proposal) {
+            <div class="closeness-proposal">
+              <span>{{ person.userName }} propose de passer à « {{ proposal }} »</span>
+              <div class="proposal-buttons">
+                <button type="button" class="outline-button" (click)="answerProposal(false)" [disabled]="busy()">Refuser</button>
+                <button type="button" class="gradient-button" (click)="answerProposal(true)" [disabled]="busy()">Accepter</button>
+              </div>
+            </div>
+          }
+          @if (actionError(); as message) {
+            <p class="action-error" role="alert">{{ message }}</p>
+          }
+        </section>
+
+        @if (isFriend()) {
+          <div class="columns">
+            <div class="main-column">
+              <!-- Cette semaine -->
+              <section class="card section" aria-label="Cette semaine">
+                <div class="section-header">
+                  <h2>Cette semaine</h2>
+                  <button type="button" class="gradient-button small" (click)="proposeOuting()">
+                    <mat-icon>how_to_vote</mat-icon>Proposer une sortie
+                  </button>
+                </div>
+                @if (page().week === null) {
+                  <p class="muted">Son agenda n’est pas disponible pour le moment.</p>
+                }
+                <ol class="week">
+                  @for (day of week(); track day.date.getTime()) {
+                    <li class="week-day">
+                      <span class="day-label">
+                        <strong>{{ day.date | date:'EEE' }}</strong>
+                        <span>{{ day.date | date:'d MMM' }}</span>
+                      </span>
+                      <span class="day-items">
+                        @for (entry of day.entries; track $index) {
+                          <span class="busy" [class.disclosed]="entry.title">
+                            <span class="time">{{ entry.start | date:'HH:mm' }}–{{ entry.end | date:'HH:mm' }}</span>
+                            <span class="entry-title">{{ entry.title ?? 'Occupé' }}</span>
+                            @if (entry.location) {
+                              <span class="entry-detail">{{ entry.location }}</span>
+                            }
+                            @if (entry.description) {
+                              <span class="entry-detail">{{ entry.description }}</span>
+                            }
+                          </span>
+                        }
+                        @for (free of day.free; track $index) {
+                          <span class="free">
+                            <mat-icon>event_available</mat-icon>
+                            Libres ensemble {{ free.start | date:'HH:mm' }}–{{ free.end | date:'HH:mm' }}
+                          </span>
+                        }
+                        @if (day.entries.length === 0 && day.free.length === 0) {
+                          <span class="muted">Rien de prévu</span>
+                        }
+                      </span>
+                    </li>
+                  }
+                </ol>
+              </section>
+
+              <!-- Ensemble -->
+              @if (page().overview; as overview) {
+                <section class="card section" aria-label="Ensemble">
+                  <div class="section-header">
+                    <h2>Ensemble</h2>
+                    <span class="together-count">{{ overview.outingsTogether }} sortie{{ overview.outingsTogether > 1 ? 's' : '' }} ensemble</span>
+                  </div>
+                  @if (overview.upcomingTogether.length > 0) {
+                    <ul class="upcoming">
+                      @for (event of overview.upcomingTogether; track event.id) {
+                        <li>
+                          <a class="upcoming-item" [routerLink]="['/event', event.id]">
+                            <span class="date-tile" aria-hidden="true">
+                              <span class="month">{{ event.startDate | date:'MMM' }}</span>
+                              <span class="day">{{ event.startDate | date:'d' }}</span>
+                            </span>
+                            <span class="upcoming-text">
+                              <strong>{{ event.title }}</strong>
+                              <span class="muted">{{ event.location }}</span>
+                            </span>
+                            <span class="when">{{ countdown(event) }}</span>
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  }
+                  @if (overview.memoriesTogether.length > 0) {
+                    <div class="memories">
+                      @for (event of overview.memoriesTogether; track event.id) {
+                        <a class="memory" [routerLink]="['/event', event.id]" [style.background]="eventTint(event.id)">
+                          @if (event.image) {
+                            <img [src]="event.image" alt="">
+                          }
+                          <span class="memory-caption">
+                            <strong>{{ event.title }}</strong>
+                            <span>{{ event.startDate | date:'MMM y' }}</span>
+                          </span>
+                        </a>
+                      }
+                    </div>
+                  }
+                  @if (overview.upcomingTogether.length === 0 && overview.memoriesTogether.length === 0) {
+                    <p class="muted">Vos sorties communes apparaîtront ici.</p>
+                  }
+                </section>
+              }
+            </div>
+
+            <div class="side-column">
+              <!-- Ses prochaines sorties -->
+              @if (page().overview; as overview) {
+                <section class="card section" aria-label="Ses prochaines sorties">
+                  <h2>Ses prochaines sorties</h2>
+                  @if (joinError(); as message) {
+                    <p class="action-error" role="alert">{{ message }}</p>
+                  }
+                  @if (overview.friendUpcoming.length === 0) {
+                    <p class="muted">Rien d’autre de prévu que tu puisses rejoindre.</p>
+                  } @else {
+                    <ul class="outings">
+                      @for (event of overview.friendUpcoming; track event.id) {
+                        <li class="outing">
+                          <a class="outing-link" [routerLink]="['/event', event.id]">
+                            <strong>{{ event.title }}</strong>
+                            <span class="muted">
+                              {{ event.poll?.status === 'OPEN' ? 'Date à fixer' : (event.startDate | date:'EEE d MMM, HH:mm') }}
+                              @if (event.location) {
+                                · {{ event.location }}
+                              }
+                            </span>
+                          </a>
+                          <button type="button" class="outline-button small" (click)="join(event)"
+                            [disabled]="joining() !== null">{{ joining() === event.id ? '…' : 'Rejoindre' }}</button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </section>
+              } @else {
+                <p class="card muted unavailable">Vos sorties ne sont pas disponibles pour le moment.</p>
+              }
+              <ng-container *ngTemplateOutlet="mutualFriends" />
+            </div>
+          </div>
+        } @else {
+          <ng-container *ngTemplateOutlet="mutualFriends" />
+        }
+
+        <ng-template #mutualFriends>
+          <section class="card section" aria-label="Amis en commun">
+            <h2>Amis en commun</h2>
+            @if (page().mutual.length === 0) {
+              <p class="muted">Aucun ami en commun.</p>
+            } @else {
+              <ul class="mutual">
+                @for (friend of page().mutual; track friend.userId) {
+                  <li>
+                    <a class="mutual-link" [routerLink]="linkTo(friend.userId)">
+                      @let mutualPicture = avatars.url(friend.userId)();
+                      <span class="avatar small" [style.background]="avatarColor(friend.userId)" aria-hidden="true">
+                        @if (mutualPicture) {
+                          <img [src]="mutualPicture" alt="">
+                        } @else {
+                          {{ initialsOf(friend.userName) }}
+                        }
+                      </span>
+                      <span class="mutual-name">{{ friend.userName }}</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        </ng-template>
+      </div>
+    }
+  }
+}

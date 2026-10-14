@@ -1,0 +1,427 @@
+// The page frame, the identity card and its actions; the sections have their own sheet.
+:host {
+    display: block;
+}
+
+.friend-page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.fade-in {
+    animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+.card {
+    background: var(--bg-card);
+    border-radius: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.muted {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+a {
+    color: var(--primary-blue);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+/* Buttons ------------------------------------------------------------------------------------ */
+
+.gradient-button,
+.outline-button {
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 14px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+
+    &.small {
+        height: 36px;
+        padding: 0 14px;
+        font-size: 14px;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+}
+
+.gradient-button {
+    border: none;
+    background: var(--accent-gradient);
+    color: white;
+}
+
+.outline-button {
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    background: var(--bg-card);
+    color: var(--text-primary);
+
+    &:hover:not(:disabled) {
+        background: var(--bg-subtle);
+    }
+
+    &.destructive {
+        color: var(--danger-ink);
+    }
+}
+
+/* Identity ----------------------------------------------------------------------------------- */
+
+.hero {
+    overflow: hidden;
+
+    .banner {
+        height: 132px;
+        background: var(--accent-gradient);
+    }
+}
+
+.hero-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 16px 28px 24px;
+}
+
+.avatar-ring {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 36px;
+    background: var(--accent-gradient);
+    margin-top: -72px;
+
+    .avatar {
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        border-radius: 32px;
+        border: 4px solid var(--bg-card);
+        color: white;
+        font-size: 38px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+}
+
+.identity {
+    flex: 999 1 280px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        overflow-wrap: anywhere;
+    }
+
+    .handle {
+        margin: 0;
+        font-size: 16px;
+        color: var(--text-secondary);
+    }
+}
+
+.friend-meta {
+    margin: 4px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+
+    .since {
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+}
+
+// Closeness walks along the brand gradient, as on a friend's card.
+.closeness-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--brand-tint);
+    color: var(--primary-blue);
+
+    mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+    }
+
+    &[data-closeness='CLOSE'] {
+        background: color-mix(in srgb, var(--brand-mid) 14%, transparent);
+        color: color-mix(in srgb, var(--brand-mid) 80%, black);
+    }
+
+    &[data-closeness='INTIMATE'] {
+        background: color-mix(in srgb, var(--brand-orange) 14%, transparent);
+        color: color-mix(in srgb, var(--brand-orange) 75%, black);
+    }
+}
+
+.closeness-pending {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.bio {
+    margin: 4px 0 0;
+    font-size: 17px;
+}
+
+.interests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.interest {
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+
+    &.tint-0 {
+        background: #eff4ff;
+        color: #1d4ed8;
+    }
+
+    &.tint-1 {
+        background: #fff1e7;
+        color: #c2410c;
+    }
+
+    &.tint-2 {
+        background: #f3effe;
+        color: #6d28d9;
+    }
+
+    &.tint-3 {
+        background: var(--bg-subtle);
+        color: #4a4a4a;
+    }
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.pending-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    font-weight: 700;
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.closeness-proposal {
+    margin: 0 28px 20px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--brand-orange) 8%, transparent);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.proposal-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.action-error {
+    margin: 0 28px 20px;
+    color: var(--danger-ink);
+    font-weight: 600;
+}
+
+// The menu renders in an overlay, outside this component: the hint is styled from the item.
+.closeness-option {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+
+    small {
+        font-size: 11px;
+        color: var(--text-tertiary);
+    }
+}
+
+/* States ------------------------------------------------------------------------------------- */
+
+.state-card {
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+
+    mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        color: var(--text-tertiary);
+    }
+
+    h1 {
+        margin: 0;
+        font-size: 22px;
+    }
+}
+
+.skeleton,
+.skeleton-card {
+    background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-canvas) 50%, var(--bg-subtle) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+}
+
+.hero .banner.skeleton {
+    background: var(--bg-subtle);
+}
+
+.skeleton-card {
+    height: 240px;
+}
+
+.line {
+    height: 18px;
+    width: 160px;
+    border-radius: 6px;
+
+    &.wide {
+        height: 28px;
+        width: 240px;
+    }
+}
+
+@keyframes shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fade-in,
+    .skeleton,
+    .skeleton-card {
+        animation: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .friend-page {
+        padding: 16px 12px 96px;
+        gap: 16px;
+    }
+
+    .hero-body {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 0 16px 20px;
+    }
+
+    .avatar-ring {
+        margin-top: -56px;
+    }
+
+    .identity {
+        flex: 1 1 auto;
+        align-items: center;
+
+        h1 {
+            font-size: 26px;
+        }
+    }
+
+    .friend-meta,
+    .interests,
+    .hero-actions {
+        justify-content: center;
+    }
+
+    .closeness-proposal,
+    .action-error {
+        margin: 0 16px 16px;
+    }
+}

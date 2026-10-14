@@ -401,6 +401,62 @@ describe('QuickEventPopoverComponent', () => {
 
         beforeEach(() => component.update('title', 'Dîner'));
 
+        describe('opened with proposed slots', () => {
+            const slots = [
+                { start: new Date('2025-06-02T18:00:00Z'), end: new Date('2025-06-02T20:00:00Z') },
+                { start: new Date('2025-06-03T18:30:00Z'), end: new Date('2025-06-03T20:30:00Z') }
+            ];
+            const open = (candidateSlots: { start: Date; end: Date }[]) => {
+                fixture.componentRef.setInput('data', { ...request(), title: 'Sortie avec lea', startDate: slots[0].start,
+                    endDate: slots[0].end, candidateSlots });
+                fixture.detectChanges();
+            };
+
+            it('pollMode_shouldStartOnWithTheProposedSlots', () => {
+                open(slots);
+
+                expect(component.pollMode()).toBe(true);
+                expect(component.candidates()).toEqual(slots);
+                expect(component.selectedSlot()).toBe(0);
+                expect(component.draft().title).toBe('Sortie avec lea');
+                expect(fixture.nativeElement.querySelectorAll('.slot-item').length).toBe(2);
+            });
+
+            it('pollMode_shouldStartOn_withASingleProposedSlot', () => {
+                open([slots[0]]);
+
+                expect(component.pollMode()).toBe(true);
+                expect(component.candidates()).toEqual([slots[0]]);
+                expect(component.tooFewSlots()).toBe(true);
+            });
+
+            it('pollMode_shouldStayOff_withAnEmptyList', () => {
+                open([]);
+
+                expect(component.pollMode()).toBe(false);
+                expect(component.candidates()).toEqual([]);
+            });
+
+            it('onSave_shouldSendTheProposedSlotsAsAPoll', () => {
+                open(slots);
+                const emit = vi.spyOn(component.save, 'emit');
+
+                component.onSave();
+
+                expect(emit).toHaveBeenCalledWith(expect.objectContaining({ candidateSlots: slots, startDate: slots[0].start }));
+            });
+
+            it('onSave_shouldSendAPlainEvent_whenThePollWasTurnedOff', () => {
+                open(slots);
+                const emit = vi.spyOn(component.save, 'emit');
+
+                component.togglePollMode();
+                component.onSave();
+
+                expect(emit.mock.calls[0][0].candidateSlots).toBeUndefined();
+            });
+        });
+
         it('togglePollMode_shouldMakeTheEditedSlotTheFirstCandidate', () => {
             component.togglePollMode();
 

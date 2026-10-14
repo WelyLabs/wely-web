@@ -143,4 +143,26 @@ describe('SocialService', () => {
         expect(req.request.method).toBe('PUT');
         req.flush({});
     });
+
+    it('getPerson_shouldReadThePersonAndTheRelation', () => {
+        let person: unknown = null;
+        service.getPerson('lea').subscribe(value => person = value);
+
+        const body = { userId: 'lea', userName: 'lea', hashtag: 6000, relationStatus: 'FRIENDS', closeness: 'CLOSE',
+            proposal: null, proposedByFriend: false, since: '2026-10-14T00:54:32.123456789Z' };
+        const call = httpMock.expectOne(`${apiUrl}/users/lea`);
+        expect(call.request.method).toBe('GET');
+        call.flush(body);
+
+        expect(person).toEqual(body);
+    });
+
+    it('getMutualFriends_shouldReadTheFriendsInCommon', () => {
+        let mutual: unknown = null;
+        service.getMutualFriends('lea').subscribe(value => mutual = value);
+
+        httpMock.expectOne(`${apiUrl}/users/lea/mutual`).flush([{ userId: 'hugo', userName: 'hugo', hashtag: 9074 }]);
+
+        expect(mutual).toEqual([{ userId: 'hugo', userName: 'hugo', hashtag: 9074 }]);
+    });
 });

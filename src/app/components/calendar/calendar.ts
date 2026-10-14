@@ -13,6 +13,7 @@ import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarE
 import { SocialService } from '../../services/social.service';
 import { NotificationService } from '../../services/notification.service';
 import { FriendSummary } from '../../models/friendship.model';
+import { readOutingProposal } from '../../core/ui/outing-proposal';
 
 /** How often the now-line is repositioned. */
 const TIME_MARKER_REFRESH_MS = 60000;
@@ -493,6 +494,26 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     this.updateTimePosition();
     this.timeUpdateInterval = setInterval(() => this.updateTimePosition(), TIME_MARKER_REFRESH_MS);
+    this.openProposedOuting();
+  }
+
+  /** « Proposer une sortie » on a friend's page: opens the form as a poll on the slots it picked. */
+  private openProposedOuting(): void {
+    const proposal = readOutingProposal(history.state);
+    if (!proposal) {
+      return;
+    }
+    // Read once: going back or reloading must not open the form again.
+    history.replaceState({ ...history.state, proposeSlots: undefined, proposeWith: undefined }, '');
+    const title = `Sortie avec ${proposal.proposeWith}`;
+    const [first] = proposal.proposeSlots;
+    if (!first) {
+      this.openNewEvent();
+      this.popoverData.update(data => ({ ...data, title }));
+      return;
+    }
+    this.startCreatingEvent(undefined, first.start, first.end);
+    this.popoverData.update(data => ({ ...data, title, candidateSlots: proposal.proposeSlots }));
   }
 
   ngOnDestroy(): void {

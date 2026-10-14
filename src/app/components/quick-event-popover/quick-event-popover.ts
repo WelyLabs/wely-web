@@ -99,7 +99,8 @@ export class QuickEventPopoverComponent {
      * the user typed — and a dismissed popover left those edits behind. Now the parent's object
      * is only ever read, and `save` carries the draft out explicitly.
      */
-    readonly draft = linkedSignal(() => ({ ...this.data() }));
+    // The proposed slots live in `candidates`: kept on the draft, they would survive turning the poll off.
+    readonly draft = linkedSignal<EventCreateRequest>(() => ({ ...this.data(), candidateSlots: undefined }));
 
     readonly visibilityOptions = VISIBILITY_OPTIONS;
     readonly visibility = computed<Visibility>(() => this.draft().visibility ?? 'FRIENDS');
@@ -139,10 +140,13 @@ export class QuickEventPopoverComponent {
         return !!endDate && startDate.toDateString() !== endDate.toDateString();
     });
 
-    /** « Proposer plusieurs dates »: the form then builds a date poll; off again on each new slot. */
-    readonly pollMode = linkedSignal({ source: this.data, computation: () => false });
-    /** The proposed slots; the date fields edit the selected one. */
-    readonly candidates = linkedSignal<EventCreateRequest, ProposedSlot[]>({ source: this.data, computation: () => [] });
+    /** « Proposer plusieurs dates »: on when the form opens with proposed slots, off otherwise. */
+    readonly pollMode = linkedSignal({ source: this.data, computation: data => (data.candidateSlots?.length ?? 0) > 0 });
+    /** The proposed slots, those the form opened with first; the date fields edit the selected one. */
+    readonly candidates = linkedSignal<EventCreateRequest, ProposedSlot[]>({
+        source: this.data,
+        computation: data => (data.candidateSlots ?? []).slice(0, MAX_POLL_SLOTS).map(slot => ({ start: slot.start, end: slot.end }))
+    });
     readonly selectedSlot = linkedSignal({ source: this.data, computation: () => 0 });
     readonly canAddSlot = computed(() => this.candidates().length < MAX_POLL_SLOTS);
     readonly tooFewSlots = computed(() => this.pollMode() && this.candidates().length < MIN_POLL_SLOTS);
