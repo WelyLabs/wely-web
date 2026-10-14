@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent, CalendarEvent, defaultStart, formatTimeRange, toCalendarEvents } from './calendar';
 import { NotificationService } from '../../services/notification.service';
+import { ScheduleService } from '../../services/schedule.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { EventService, FeedEvent, EventCreateRequest, Poll } from '../../services/event.service';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -19,6 +20,7 @@ describe('CalendarComponent', () => {
     let routerMock: Partial<Router>;
     let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
     let notificationsMock: { showAction: ReturnType<typeof vi.fn> };
+    let scheduleMock: { getConflicts: ReturnType<typeof vi.fn>; checkConflicts: ReturnType<typeof vi.fn> };
     const friendships: FriendSummary[] = [
         { userId: 'lea', userName: 'lea', hashtag: 6000, closeness: 'CLOSE', proposal: null, proposedByFriend: false },
         { userId: 'hugo', userName: 'hugo', hashtag: 9074, closeness: 'FRIEND', proposal: null, proposedByFriend: false }
@@ -46,6 +48,7 @@ describe('CalendarComponent', () => {
             listFriendships: vi.fn().mockReturnValue(of(friendships))
         };
         notificationsMock = { showAction: vi.fn() };
+        scheduleMock = { getConflicts: vi.fn().mockReturnValue(of([])), checkConflicts: vi.fn().mockReturnValue(of([])) };
 
         await TestBed.configureTestingModule({
             imports: [CalendarComponent, NoopAnimationsModule],
@@ -53,6 +56,7 @@ describe('CalendarComponent', () => {
                 { provide: EventService, useValue: eventServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
                 { provide: NotificationService, useValue: notificationsMock },
+                { provide: ScheduleService, useValue: scheduleMock },
                 { provide: Router, useValue: routerMock }
             ]
         }).compileComponents();
@@ -996,6 +1000,48 @@ describe('CalendarComponent', () => {
             expect(routerMock.navigate).toHaveBeenCalledWith(['/event', '101']);
         });
 
+        it('submitEvent_shouldNameWhatTheNewEventOverlaps_andOfferToResolveItOnItsPage', () => {
+            scheduleMock.getConflicts.mockReturnValue(of([{ id: 'b', title: 'Bowling' }]));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data);
+
+            expect(scheduleMock.getConflicts).toHaveBeenCalledWith('101');
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé · il chevauche « Bowling »', 'Replanifier',
+                expect.any(Function));
+            notificationsMock.showAction.mock.calls[0][2]();
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', '101']);
+        });
+
+        it('submitEvent_shouldCountSeveralOverlappedEvents', () => {
+            scheduleMock.getConflicts.mockReturnValue(of([{ id: 'b', title: 'Bowling' }, { id: 'r', title: 'Course' }]));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data);
+
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé · il chevauche 2 événements', 'Replanifier',
+                expect.any(Function));
+        });
+
+        it('submitEvent_shouldStillAnnounceTheEvent_whenTheConflictsCannotBeRead', () => {
+            scheduleMock.getConflicts.mockReturnValue(throwError(() => new Error('down')));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data);
+
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé', 'Voir', expect.any(Function));
+        });
+
+        it('submitEvent_shouldNotAskAboutConflicts_forADatePoll', () => {
+            (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(of({ id: '101', poll: { status: 'OPEN' } }));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data);
+
+            expect(scheduleMock.getConflicts).not.toHaveBeenCalled();
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé', 'Voir', expect.any(Function));
+        });
+
         it('submitEvent_shouldKeepTheFormOpenWithAMessage_whenItFails', () => {
             (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() => new Error('500')));
             component.openNewEvent(new Date(2030, 0, 10));
@@ -1061,6 +1107,8 @@ describe('CalendarComponent', () => {
                     { provide: EventService, useValue: eventServiceMock },
                     { provide: SocialService, useValue: socialServiceMock },
                     { provide: NotificationService, useValue: notificationsMock },
+                    { provide: ScheduleService, useValue: scheduleMock },
+                { provide: ScheduleService, useValue: scheduleMock },
                     { provide: Router, useValue: routerMock },
                     { provide: BreakpointObserver, useValue: { observe: () => of({ matches: on, breakpoints: {} }) } }
                 ]

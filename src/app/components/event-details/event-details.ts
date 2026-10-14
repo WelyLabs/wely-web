@@ -14,6 +14,7 @@ import { EMPTY, Observable, catchError, distinctUntilChanged, filter, interval, 
 import { EventParticipants, EventService, FeedEvent, Poll } from '../../services/event.service';
 import { PollStreamService } from '../../services/poll-stream.service';
 import { EventPollComponent, Voter } from '../event-poll/event-poll';
+import { EventConflictsComponent } from '../event-conflicts/event-conflicts';
 import { SocialService } from '../../services/social.service';
 import { ChatService, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
@@ -117,7 +118,7 @@ export function countdownOf(event: FeedEvent, now: Date): string {
   selector: 'app-event-details',
   standalone: true,
   imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent,
-    EventExpensesComponent, EventPollComponent],
+    EventExpensesComponent, EventPollComponent, EventConflictsComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -426,6 +427,11 @@ export class EventDetailsComponent implements OnInit {
   /** Day and hours, or « Sondage en cours » while the date is voted on. */
   whenLabel(event: FeedEvent): string {
     return event.poll?.status === 'OPEN' ? 'Sondage en cours' : `${this.dayLabel(event.startDate)} · ${this.timeRange(event)}`;
+  }
+
+  /** The organizer moved the event out of a conflict: the page shows its new dates. */
+  onRescheduled(moved: FeedEvent): void {
+    this.event.set(moved);
   }
 
   timeRange(event: FeedEvent): string {

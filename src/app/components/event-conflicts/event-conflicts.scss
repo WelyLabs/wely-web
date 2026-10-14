@@ -1,0 +1,138 @@
+.conflict-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--warning) 8%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+}
+
+.conflict-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+}
+
+.conflict-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--warning) 18%, transparent);
+    color: color-mix(in srgb, var(--warning) 70%, var(--text-primary));
+}
+
+.muted,
+.hint {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.hint {
+    margin: 0;
+}
+
+.conflict-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 8px;
+    }
+}
+
+.conflict-title {
+    font-weight: 600;
+}
+
+.tag {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--brand-tint);
+    color: var(--primary-blue);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.move {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.move-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+
+    span {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .chevron {
+        transition: transform 0.2s ease;
+    }
+
+    &.open .chevron {
+        transform: rotate(180deg);
+    }
+}
+
+.proposals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.proposal {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid var(--brand-tint-strong);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--primary-blue);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.6;
+    }
+}
+
+.error {
+    margin: 0;
+    color: var(--danger-ink);
+    font-size: 0.85rem;
+}

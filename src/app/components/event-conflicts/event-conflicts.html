@@ -1,0 +1,63 @@
+@if (conflicts().length > 0) {
+  <section class="conflict-card" aria-label="Conflit d'agenda">
+    <div class="conflict-head" role="status">
+      <span class="conflict-icon"><mat-icon>event_busy</mat-icon></span>
+      <div>
+        <strong>Conflit d'agenda</strong>
+        <span class="muted">
+          {{ conflicts().length === 1 ? 'Ça chevauche un autre de tes événements' : 'Ça chevauche ' + conflicts().length + ' de tes événements' }}
+        </span>
+      </div>
+    </div>
+
+    <ul class="conflict-list">
+      @for (other of conflicts(); track other.id) {
+        <li>
+          <span class="conflict-title">{{ other.title }}</span>
+          <span class="muted">{{ whenOf(other) }}</span>
+          @if (isMine(other)) {
+            <span class="tag">Tu organises</span>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (movable().length === 0) {
+      <p class="hint">Seul l'organisateur peut déplacer une sortie : parles-en dans le fil du groupe.</p>
+    }
+
+    @for (target of movable(); track target.id) {
+      <div class="move">
+        <button type="button" class="move-toggle" [class.open]="openId() === target.id"
+          [attr.aria-expanded]="openId() === target.id" (click)="toggle(target)">
+          <mat-icon>update</mat-icon>
+          <span>{{ isCurrent(target) ? 'Replanifier cette sortie' : 'Replanifier « ' + target.title + ' »' }}</span>
+          <mat-icon class="chevron">expand_more</mat-icon>
+        </button>
+        @if (openId() === target.id) {
+          @if (proposals(); as list) {
+            @if (list.length > 0) {
+              <div class="proposals" role="group" [attr.aria-label]="'Nouveaux horaires pour ' + target.title">
+                @for (proposal of list; track proposal.start.getTime()) {
+                  <button type="button" class="proposal" [disabled]="moving() !== null"
+                    [appPendingTrail]="moving() === proposal.start.getTime()" (click)="choose(target, proposal)">
+                    {{ proposalLabel(target, proposal) }}
+                  </button>
+                }
+              </div>
+              <small class="hint">Libre pour toi et les participants. Ils seront prévenus dans le fil du groupe.</small>
+            } @else if (!error()) {
+              <p class="hint">Aucun créneau où tout le monde est libre dans la semaine qui vient.</p>
+            }
+          } @else {
+            <p class="hint">Recherche des créneaux libres…</p>
+          }
+        }
+      </div>
+    }
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+  </section>
+}

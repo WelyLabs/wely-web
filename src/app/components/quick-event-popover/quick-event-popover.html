@@ -43,6 +43,28 @@
                 </div>
             </div>
 
+            <!-- The user's own events at that time: a warning, not a refusal. -->
+            @if (shownConflicts().length > 0) {
+                <div class="conflict-alert" role="status">
+                    <mat-icon>event_busy</mat-icon>
+                    <div class="conflict-text">
+                        <strong>{{ shownConflicts().length === 1 ? 'Ce créneau chevauche un de vos événements'
+                            : 'Ce créneau chevauche ' + shownConflicts().length + ' de vos événements' }}</strong>
+                        <ul>
+                            @for (other of shownConflicts(); track other.id) {
+                                <li>{{ other.title }} · {{ conflictWhen(other) }}</li>
+                            }
+                        </ul>
+                        @if (afterConflicts(); as next) {
+                            <button type="button" class="conflict-shift" (click)="shiftAfterConflicts()">
+                                <mat-icon>update</mat-icon>Décaler à {{ slotLabel(next) }}
+                            </button>
+                        }
+                        <small>Une fois l'événement créé, sa page vous proposera de replanifier les sorties que vous organisez.</small>
+                    </div>
+                </div>
+            }
+
             <!-- A date poll: the fields above edit the selected slot, « Ajouter » proposes one more. -->
             <button type="button" class="poll-toggle" role="switch" [attr.aria-checked]="pollMode()"
                 (click)="togglePollMode()">

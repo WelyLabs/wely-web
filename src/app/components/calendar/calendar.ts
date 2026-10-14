@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarEntry } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { NotificationService } from '../../services/notification.service';
+import { ScheduleService } from '../../services/schedule.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { readOutingProposal } from '../../core/ui/outing-proposal';
 
@@ -195,6 +196,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly socialService = inject(SocialService);
   private readonly notifications = inject(NotificationService);
+  private readonly schedule = inject(ScheduleService);
 
   readonly currentDate = signal(new Date());
   readonly days = signal<CalendarDay[]>([]);
@@ -1177,8 +1179,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         this.selectionEndHour.set(null);
         this.generateCalendar();
         this.dismissCreateHint();
-        this.notifications.showAction('Événement créé', 'Voir',
-          () => this.router.navigate(['/event', created.id]));
+        this.announceCreated(created);
       },
       error: (err: unknown) => {
         this.savingEvent.set(false);
@@ -1188,6 +1189,21 @@ export class CalendarComponent implements OnInit, OnDestroy {
           : 'L\'événement n\'a pas pu être créé. Réessayez dans un instant.');
         this.logger.error('CalendarComponent', 'Error creating event:', err);
       }
+    });
+  }
+
+  /**
+   * « Événement créé », naming what it overlaps if anything: the event's page is where the
+   * conflict can be resolved. Without an answer on conflicts, it is announced as created.
+   */
+  private announceCreated(created: FeedEvent): void {
+    const open = () => this.router.navigate(['/event', created.id]);
+    const conflicts$ = created.poll?.status === 'OPEN' ? of<FeedEvent[]>([]) : this.schedule.getConflicts(created.id);
+    conflicts$.pipe(catchError(() => of<FeedEvent[]>([]))).subscribe(conflicts => {
+      const message = conflicts.length === 0 ? 'Événement créé'
+        : conflicts.length === 1 ? `Événement créé · il chevauche « ${conflicts[0].title} »`
+        : `Événement créé · il chevauche ${conflicts.length} événements`;
+      this.notifications.showAction(message, conflicts.length === 0 ? 'Voir' : 'Replanifier', open);
     });
   }
 

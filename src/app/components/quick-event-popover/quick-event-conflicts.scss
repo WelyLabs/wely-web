@@ -1,0 +1,54 @@
+// The warning under the dates when they overlap the user's own events.
+.conflict-alert {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--warning) 10%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+    font-size: 0.85rem;
+
+    > mat-icon {
+        flex-shrink: 0;
+        color: color-mix(in srgb, var(--warning) 70%, var(--text-primary));
+    }
+}
+
+.conflict-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+
+    ul {
+        margin: 0;
+        padding-left: 16px;
+        overflow-wrap: anywhere;
+    }
+
+    small {
+        color: var(--text-secondary);
+    }
+}
+
+.conflict-shift {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--brand-tint-strong);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--primary-blue);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+    }
+}
