@@ -6,9 +6,12 @@ import { avatarColor } from '../../../core/ui/avatar';
 import { AvatarService } from '../../../services/avatar.service';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { DeletedUsersService } from '../../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../../testing/deleted-users.stub';
 
 describe('ChatBubbleComponent', () => {
   let fixture: ComponentFixture<ChatBubbleComponent>;
+  let deletedUsers: ReturnType<typeof deletedUsersStub>;
 
   const render = (message: ChatBubbleMessage): HTMLElement => {
     fixture.componentRef.setInput('message', message);
@@ -17,10 +20,15 @@ describe('ChatBubbleComponent', () => {
   };
 
   beforeEach(() => {
-    // Lea has a picture; nobody else does.
+    // Lea has a picture; nobody else does. Gone deleted her account.
+    deletedUsers = deletedUsersStub(['gone']);
     TestBed.configureTestingModule({
       imports: [ChatBubbleComponent],
-      providers: [provideRouter([]), { provide: AvatarService, useValue: { url: (id?: string | null) => signal(id === 'lea' ? '/pics/lea.jpg' : null) } }]
+      providers: [
+        provideRouter([]),
+        { provide: AvatarService, useValue: { url: vi.fn((id?: string | null) => signal(id === 'lea' || id === 'gone' ? `/pics/${id}.jpg` : null)) } },
+        { provide: DeletedUsersService, useValue: deletedUsers }
+      ]
     });
     fixture = TestBed.createComponent(ChatBubbleComponent);
   });
@@ -145,5 +153,47 @@ describe('ChatBubbleComponent', () => {
     render({ text: 'On se voit samedi ?', time: '2026-10-12T19:05:00', isMe: true });
 
     expect(fixture.componentInstance.invitation()).toBeNull();
+  });
+
+  it('author_shouldBeTheDeletedLabel_whenTheSenderIsConfirmedDeleted', () => {
+    const element = render({ text: 'Salut', time: '2026-10-12T19:05:00', isMe: false, senderName: null, senderId: 'gone' });
+
+    expect(fixture.componentInstance.deletedSender()).toBe(true);
+    expect(element.querySelector('.author')?.textContent).toBe('Utilisateur supprimé');
+  });
+
+  it('author_shouldStayEmpty_untilTheDeletionIsConfirmed', () => {
+    const element = render({ text: 'Salut', time: '2026-10-12T19:05:00', isMe: false, senderName: null, senderId: 'later' });
+    expect(element.querySelector('.author')).toBeNull();
+
+    deletedUsers.deletedIds.set(new Set(['later']));
+    fixture.detectChanges();
+
+    expect(element.querySelector('.author')?.textContent).toBe('Utilisateur supprimé');
+  });
+
+  it('author_shouldNotAskAboutDeletion_whenTheMessageCarriesAName', () => {
+    render({ text: 'Salut', time: '2026-10-12T19:05:00', isMe: false, senderName: 'Léa', senderId: 'lea' });
+
+    expect(fixture.componentInstance.author()).toBe('Léa');
+    expect(deletedUsers.isDeleted).not.toHaveBeenCalled();
+  });
+
+  it('picture_shouldNotBeRequested_forADeletedSender', () => {
+    const avatars = TestBed.inject(AvatarService) as unknown as { url: ReturnType<typeof vi.fn> };
+    render({ text: 'Salut', time: '2026-10-12T19:05:00', isMe: false, senderName: null, senderId: 'gone' });
+
+    expect(fixture.componentInstance.picture()).toBeNull();
+    expect(avatars.url).not.toHaveBeenCalledWith('gone');
+  });
+
+  it('template_shouldShowANeutralAvatarWithoutInitials_forADeletedSender', () => {
+    const element = render({ text: 'Salut', time: '2026-10-12T19:05:00', isMe: false, senderName: null, senderId: 'gone' });
+
+    const avatar = element.querySelector('span.avatar') as HTMLElement;
+    expect(avatar.classList).toContain('deleted');
+    expect(avatar.querySelector('mat-icon')?.textContent).toBe('person');
+    expect(fixture.componentInstance.initials()).toBe('');
+    expect(fixture.componentInstance.color()).toBe('#8a8a93');
   });
 });

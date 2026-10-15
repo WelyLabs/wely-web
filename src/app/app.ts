@@ -44,13 +44,16 @@ export class App implements OnInit {
           // comparisons here used to cast event.type to any and compare against the new
           // enum, whose members have different names — so neither branch ever ran, and
           // this fallback was dead. Proactive refresh in AuthService covered for it.
+          // Once the account is deleted the page is being replaced: a login would win that navigation.
           if (event.type === KeycloakEventTypeLegacy.OnTokenExpired) {
             this.keycloakService.updateToken(20).catch(() => {
-              this.keycloakService.login();
+              if (!this.authService.sessionEnded()) {
+                this.keycloakService.login();
+              }
             });
           }
 
-          if (event.type === KeycloakEventTypeLegacy.OnAuthRefreshError) {
+          if (event.type === KeycloakEventTypeLegacy.OnAuthRefreshError && !this.authService.sessionEnded()) {
             this.keycloakService.login();
           }
         }

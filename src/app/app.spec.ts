@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 import { KeycloakService, KeycloakEventTypeLegacy } from 'keycloak-angular';
 import { UserService } from './services/user.service';
-import { AuthService } from './core/auth/auth.service';
+import { AuthService, REPLACE_PAGE } from './core/auth/auth.service';
 import { ThemeService } from './services/theme.service';
 import { of, Subject } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -17,7 +17,8 @@ describe('App', () => {
       keycloakEvents$: of({}),
       isLoggedIn: vi.fn().mockReturnValue(true),
       updateToken: vi.fn().mockResolvedValue(true),
-      login: vi.fn().mockResolvedValue(true)
+      login: vi.fn().mockResolvedValue(true),
+      clearToken: vi.fn()
     };
     userServiceMock = {
       loadAndSetCurrentUser: vi.fn().mockReturnValue(of({}))
@@ -29,7 +30,8 @@ describe('App', () => {
       providers: [
         { provide: KeycloakService, useValue: keycloakMock },
         { provide: UserService, useValue: userServiceMock },
-        { provide: ThemeService, useValue: themeMock }
+        { provide: ThemeService, useValue: themeMock },
+        { provide: REPLACE_PAGE, useValue: vi.fn() }
       ]
     }).compileComponents();
   });
@@ -109,5 +111,45 @@ describe('App', () => {
     expect(element.querySelector('router-outlet')).toBeNull();
     expect(keycloakMock.isLoggedIn).not.toHaveBeenCalled();
     expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it('ngOnInit_shouldNotLogin_onRefreshError_whenTheSessionHasEnded', async () => {
+    const fixture = TestBed.createComponent(App);
+    const eventsSubject = new Subject<any>();
+    keycloakMock.keycloakEvents$ = eventsSubject.asObservable();
+    fixture.componentInstance.ngOnInit();
+    TestBed.inject(AuthService).leaveAfterAccountDeletion();
+
+    eventsSubject.next({ type: KeycloakEventTypeLegacy.OnAuthRefreshError });
+
+    expect(keycloakMock.login).not.toHaveBeenCalled();
+  });
+
+  it('ngOnInit_shouldNotLogin_onTokenExpiry_whenTheSessionHasEnded', async () => {
+    const fixture = TestBed.createComponent(App);
+    const eventsSubject = new Subject<any>();
+    keycloakMock.keycloakEvents$ = eventsSubject.asObservable();
+    keycloakMock.updateToken.mockRejectedValue(new Error('refresh refused'));
+    fixture.componentInstance.ngOnInit();
+    TestBed.inject(AuthService).leaveAfterAccountDeletion();
+
+    eventsSubject.next({ type: KeycloakEventTypeLegacy.OnTokenExpired });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(keycloakMock.updateToken).toHaveBeenCalledWith(20);
+    expect(keycloakMock.login).not.toHaveBeenCalled();
+  });
+
+  it('ngOnInit_shouldLogin_onTokenExpiry_whenTheRefreshFails', async () => {
+    const fixture = TestBed.createComponent(App);
+    const eventsSubject = new Subject<any>();
+    keycloakMock.keycloakEvents$ = eventsSubject.asObservable();
+    keycloakMock.updateToken.mockRejectedValue(new Error('refresh refused'));
+    fixture.componentInstance.ngOnInit();
+
+    eventsSubject.next({ type: KeycloakEventTypeLegacy.OnTokenExpired });
+
+    await vi.waitFor(() => expect(keycloakMock.login).toHaveBeenCalled());
   });
 });

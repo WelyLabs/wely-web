@@ -4,11 +4,14 @@ import { KeycloakService } from 'keycloak-angular';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { LoggerService } from '../core/logging/logger.service';
-import { SseMessage, sseStream } from '../core/sse/sse-stream';
+import { AuthService } from '../core/auth/auth.service';
+import { SseMessage, SseStreamError, sseStream } from '../core/sse/sse-stream';
 import { AppNotification, NotificationPreferences } from '../models/notification.model';
 
 export const NOTIFICATIONS_PAGE_SIZE = 30;
 const SCOPE = 'NotificationCenterService';
+/** wely-notifications refuses the stream of a deleted account with 410. */
+const GONE = 410;
 
 type ReadRequest = { ids: string[] } | { groupKey: string } | { all: true };
 
@@ -24,6 +27,7 @@ export class NotificationCenterService {
   private readonly http = inject(HttpClient);
   private readonly keycloak = inject(KeycloakService);
   private readonly logger = inject(LoggerService);
+  private readonly authService = inject(AuthService);
   private readonly apiUrl = `${environment.apiUrl}/notifications-service`;
 
   private readonly items = signal<AppNotification[]>([]);
@@ -41,7 +45,7 @@ export class NotificationCenterService {
   /** Each unread notification that arrives live, new or updated in place: for toasts. */
   readonly events$: Observable<AppNotification> = this.arrivals.asObservable();
 
-  /** Opens the live stream once; each (re)connection reloads the first page. */
+  /** Opens the live stream once; each (re)connection reloads the first page, and a 410 means this account was deleted. */
   start(): void {
     if (this.connection) {
       return;
@@ -49,9 +53,18 @@ export class NotificationCenterService {
     this.connection = sseStream({
       url: `${this.apiUrl}/notifications/stream`,
       token: () => this.keycloak.getToken(),
+      finalStatuses: [GONE],
       onOpen: () => this.refresh(),
       onRetry: (delay, reason) => this.logger.warn(SCOPE, `Stream lost, retrying in ${delay} ms`, reason)
-    }).subscribe(message => this.onMessage(message));
+    }).subscribe({
+      next: message => this.onMessage(message),
+      error: (error: unknown) => {
+        this.connection = undefined;
+        if (error instanceof SseStreamError && error.status === GONE) {
+          this.authService.leaveAfterAccountDeletion();
+        }
+      }
+    });
   }
 
   stop(): void {

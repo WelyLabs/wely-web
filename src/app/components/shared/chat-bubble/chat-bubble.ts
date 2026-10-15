@@ -4,7 +4,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
 import { avatarColor, initialsOf } from '../../../core/ui/avatar';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../../core/ui/deleted-user';
 import { AvatarService } from '../../../services/avatar.service';
+import { DeletedUsersService } from '../../../services/deleted-users.service';
 import { invitationPath, invitationTokenIn } from '../../../models/community.model';
 
 /** What a bubble shows: one message, from the viewer or from someone else. */
@@ -12,8 +14,8 @@ export interface ChatBubbleMessage {
   text: string;
   time: Date | string;
   isMe: boolean;
-  /** Names the avatar and the author line of someone else's message. */
-  senderName?: string;
+  /** Names the avatar and the author line of someone else's message; null once the sender deleted their account. */
+  senderName?: string | null;
   /** Keeps the avatar's colour stable per person; the name stands in when it is missing. */
   senderId?: string;
   /** Sent, not yet acknowledged by the server. */
@@ -40,15 +42,24 @@ export interface ChatBubbleMessage {
 })
 export class ChatBubbleComponent {
   private readonly avatars = inject(AvatarService);
+  private readonly deletedUsers = inject(DeletedUsersService);
 
   readonly message = input.required<ChatBubbleMessage>();
   /** A tap on the photo; the page decides what opens. */
   readonly photoOpened = output<void>();
 
-  readonly author = computed(() => this.message().senderName ?? '');
-  readonly initials = computed(() => initialsOf(this.author()));
-  readonly color = computed(() => avatarColor(this.message().senderId ?? this.author()));
-  /** The author's photo; the coloured initials stand in until it arrives, or when there is none. */
+  readonly deletedIcon = DELETED_USER_ICON;
+
+  /** Someone else's message wely-chat anonymized, from an account wely-users confirms deleted. */
+  readonly deletedSender = computed(() => {
+    const message = this.message();
+    return !message.isMe && !message.system && !message.senderName && !!message.senderId
+      && this.deletedUsers.isDeleted(message.senderId)();
+  });
+  readonly author = computed(() => this.message().senderName || (this.deletedSender() ? DELETED_USER_LABEL : ''));
+  readonly initials = computed(() => this.deletedSender() ? '' : initialsOf(this.author()));
+  readonly color = computed(() =>
+    this.deletedSender() ? DELETED_USER_AVATAR_COLOR : avatarColor(this.message().senderId ?? this.author()));
   /**
    * A community invitation the message links to: shown as a card with a button rather than a bare
    * link, with the words that came before the link.
@@ -62,6 +73,7 @@ export class ChatBubbleComponent {
     const intro = text.slice(0, text.search(/https?:\/\/|\/communities\/invite\//)).replace(/\s*:\s*$/, '').trim();
     return { link: invitationPath(token), intro };
   });
+  /** The author's photo; the coloured initials stand in until it arrives, or when there is none. */
   readonly picture = computed(() =>
-    this.message().isMe || this.message().system ? null : this.avatars.url(this.message().senderId)());
+    this.message().isMe || this.message().system || this.deletedSender() ? null : this.avatars.url(this.message().senderId)());
 }

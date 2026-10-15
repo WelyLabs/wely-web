@@ -1,7 +1,7 @@
 // Must stay first: rsocket-js reads the Node globals this sets.
 import './node-shims';
 import { Injectable, OnDestroy, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, timer, throwError } from 'rxjs';
 import { filter, retry, switchMap, take, takeUntil } from 'rxjs/operators';
 import {
@@ -18,7 +18,10 @@ import {
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 import { Buffer } from 'buffer';
 import { environment } from '../../environments/environment';
-import { Conversation, ConversationSummary, Message, MessageBucket, MessageKind, MessageType, Presence } from '../models/chat.model';
+import {
+  CHAT_ACCOUNT_DELETED_CODE, CONVERSATION_READ_ONLY_CODE, Conversation, ConversationSummary, Message, MessageBucket, MessageKind,
+  MessageType, Presence
+} from '../models/chat.model';
 import { UserService } from './user.service';
 import { LoggerService } from '../core/logging/logger.service';
 
@@ -41,6 +44,24 @@ const SCOPE = 'ChatService';
 
 /** RSocket metadata prefix for a bearer token, per the well-known auth encoding. */
 const BEARER_AUTH_TYPE = 0x81;
+
+/** wely-chat's RSocket errors carry the problem's detail rather than its code: the ones the app acts on, mapped back. */
+const RSOCKET_DETAIL_CODES: readonly [detail: string, code: string][] = [
+  ['This account has been deleted.', CHAT_ACCOUNT_DELETED_CODE],
+  ['this conversation can be read, not written to', CONVERSATION_READ_ONLY_CODE],
+];
+
+/** The wely-chat error code of a failed request, REST or RSocket; null when there is none. */
+export function chatErrorCode(error: unknown): string | null {
+  if (error instanceof HttpErrorResponse) {
+    return (error.error as { code?: string } | null)?.code ?? null;
+  }
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  const known = RSOCKET_DETAIL_CODES.find(([detail]) => error.message.includes(detail));
+  return known?.[1] ?? /CHT-[A-Z]{3}-\d{3}/.exec(error.message)?.[0] ?? null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ChatService implements OnDestroy {
@@ -316,13 +337,7 @@ export class ChatService implements OnDestroy {
               return () => this.subscription?.cancel();
             }),
         ),
-        retry({
-          delay: (error, attempt) => {
-            const wait = Math.min(1_000 * 2 ** (attempt - 1), 30_000);
-            this.logger.warn(SCOPE, `stream failed, retrying in ${wait}ms`, error);
-            return timer(wait);
-          },
-        }),
+        retry({ delay: (error, attempt) => this.retryDelay('chat.stream', error, attempt) }),
         takeUntil(this.destroy$),
       )
       .subscribe({
@@ -365,15 +380,19 @@ export class ChatService implements OnDestroy {
             return () => upstream?.cancel();
           }),
       ),
-      retry({
-        delay: (error, attempt) => {
-          const wait = Math.min(1_000 * 2 ** (attempt - 1), 30_000);
-          this.logger.warn(SCOPE, `${route} failed, retrying in ${wait}ms`, error);
-          return timer(wait);
-        },
-      }),
+      retry({ delay: (error, attempt) => this.retryDelay(route, error, attempt) }),
       takeUntil(this.destroy$),
     );
+  }
+
+  /** Backoff before reopening a stream; a deleted account's stream is never reopened. */
+  private retryDelay(route: string, error: unknown, attempt: number): Observable<number> {
+    if (chatErrorCode(error) === CHAT_ACCOUNT_DELETED_CODE) {
+      return throwError(() => error);
+    }
+    const wait = Math.min(1_000 * 2 ** (attempt - 1), 30_000);
+    this.logger.warn(SCOPE, `${route} failed, retrying in ${wait}ms`, error);
+    return timer(wait);
   }
 
   private subscription?: { request(n: number): void; cancel(): void };

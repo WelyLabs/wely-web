@@ -5,8 +5,8 @@ import { environment } from '../../environments/environment';
 import { Observable, BehaviorSubject, catchError, from, map, of, switchMap, tap } from 'rxjs';
 import { KeycloakService } from 'keycloak-angular';
 import { User } from '../models/user.model';
+import { AccountDeletionEligibility } from '../models/account.model';
 
-/** What the profile form may change; the email stays with Keycloak. */
 /** What a user says about themselves on their profile. No bio is null, no interest an empty list. */
 export interface ProfileAbout {
     bio: string | null;
@@ -29,6 +29,7 @@ export interface FriendProfile {
     interests: string[];
 }
 
+/** What the profile form may change; the email stays with Keycloak. */
 export interface ProfileUpdate {
     userName: string;
     firstName: string;
@@ -96,15 +97,19 @@ export class UserService {
         return this.http.get<User>(`${this.apiUrl}/profile`);
     }
 
-    /**
-     * Saves the caller's username and names; wely-users answers with the profile as stored (the
-     * username lowercased, as Keycloak keeps it). The current user follows, and the token is
-     * refreshed at once: its preferred_username is the name wely-chat signs messages with.
-     * A failed refresh is not the save failing: the scheduled one will catch up.
-     */
-    /** A friend's profile; 403 when the two are not friends. */
+    /** A friend's profile; 403 when the two are not friends, 410 USR-BUS-012 when they deleted their account. */
     getFriendProfile(userId: string): Observable<FriendProfile> {
         return this.http.get<FriendProfile>(`${this.apiUrl}/users/${userId}/profile`);
+    }
+
+    /** Whether the signed-in account may be deleted; a demo account may not. */
+    getDeletionEligibility(): Observable<AccountDeletionEligibility> {
+        return this.http.get<AccountDeletionEligibility>(`${this.apiUrl}/profile/deletion`);
+    }
+
+    /** Deletes the signed-in account; wely-users answers 202 once the deletion is committed. */
+    deleteAccount(): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/profile`);
     }
 
     /** The signed-in user's bio and interests. */
@@ -117,6 +122,12 @@ export class UserService {
         return this.http.put<ProfileAbout>(`${this.apiUrl}/profile/about`, about);
     }
 
+    /**
+     * Saves the caller's username and names; wely-users answers with the profile as stored (the
+     * username lowercased, as Keycloak keeps it). The current user follows, and the token is
+     * refreshed at once: its preferred_username is the name wely-chat signs messages with.
+     * A failed refresh is not the save failing: the scheduled one will catch up.
+     */
     updateProfile(update: ProfileUpdate): Observable<User> {
         return this.http.put<User>(`${this.apiUrl}/profile`, update).pipe(
             tap(saved => this.updateCurrentUser({

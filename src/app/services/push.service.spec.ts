@@ -59,7 +59,7 @@ describe('push helpers', () => {
 describe('PushService', () => {
     let http: HttpTestingController;
     let router: { navigateByUrl: ReturnType<typeof vi.fn> };
-    let logger: { error: ReturnType<typeof vi.fn> };
+    let logger: { error: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn> };
     let container: {
         register: ReturnType<typeof vi.fn>;
         getRegistration: ReturnType<typeof vi.fn>;
@@ -90,7 +90,7 @@ describe('PushService', () => {
 
     beforeEach(() => {
         router = { navigateByUrl: vi.fn().mockResolvedValue(true) };
-        logger = { error: vi.fn() };
+        logger = { error: vi.fn(), warn: vi.fn() };
         subscription = {
             endpoint: 'https://push.example/abc',
             unsubscribe: vi.fn().mockResolvedValue(true),
@@ -311,5 +311,32 @@ describe('PushService', () => {
 
         expect(await done).toBe(false);
         expect(logger.error).toHaveBeenCalled();
+    });
+
+    it('clearShownNotifications_shouldCloseEveryNotificationShownByTheWorker', async () => {
+        const shown = [{ close: vi.fn() }, { close: vi.fn() }];
+        container.getRegistration.mockResolvedValue({ pushManager, getNotifications: vi.fn().mockResolvedValue(shown) });
+        const service = create();
+
+        await service.clearShownNotifications();
+
+        expect(container.getRegistration).toHaveBeenCalledWith('/');
+        shown.forEach(notification => expect(notification.close).toHaveBeenCalled());
+    });
+
+    it('clearShownNotifications_shouldDoNothing_withoutPushSupport', async () => {
+        delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+        const service = create();
+
+        await expect(service.clearShownNotifications()).resolves.toBeUndefined();
+        expect(container.getRegistration).not.toHaveBeenCalled();
+    });
+
+    it('clearShownNotifications_shouldLogAndResolve_whenTheWorkerCannotBeRead', async () => {
+        container.getRegistration.mockRejectedValue(new Error('no worker'));
+        const service = create();
+
+        await expect(service.clearShownNotifications()).resolves.toBeUndefined();
+        expect(logger.warn).toHaveBeenCalled();
     });
 });

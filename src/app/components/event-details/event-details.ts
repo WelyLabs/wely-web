@@ -25,7 +25,9 @@ import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
 import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
 import { ChatBubbleComponent, ChatBubbleMessage } from '../shared/chat-bubble/chat-bubble';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../core/ui/deleted-user';
 import { AvatarService } from '../../services/avatar.service';
+import { DeletedUsersService } from '../../services/deleted-users.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { EventExpensesComponent } from '../event-expenses/event-expenses';
 import { ExpenseMember } from '../../models/expense.model';
@@ -55,13 +57,16 @@ export interface Person {
   picture?: string;
   isFriend: boolean;
   relation: Relation;
+  /** A participant wely-users confirms deleted their account. */
+  deleted: boolean;
 }
 
 /** One message of the group's thread, as the page shows it. */
 export interface ThreadMessage {
   id: string;
   senderId: string;
-  senderName: string;
+  /** Null once the sender deleted their account. */
+  senderName: string | null;
   content: string;
   timestamp: string;
   photo?: MessagePhoto | null;
@@ -142,6 +147,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly socialService = inject(SocialService);
   private readonly chatService = inject(ChatService);
   private readonly avatars = inject(AvatarService);
+  private readonly deletedUsers = inject(DeletedUsersService);
   private readonly navigationService = inject(NavigationService);
   private readonly userService = inject(UserService);
   private readonly logger = inject(LoggerService);
@@ -166,6 +172,10 @@ export class EventDetailsComponent implements OnInit {
 
   /** Everyone the viewer can see, with where the viewer stands with each. */
   private readonly directory = signal<ReadonlyMap<string, UserWithStatusDTO>>(new Map());
+  /** The directory answered, or failed: only then is an unknown id worth asking about. */
+  private readonly directoryReady = signal(false);
+  readonly deletedAvatarColor = DELETED_USER_AVATAR_COLOR;
+  readonly deletedIcon = DELETED_USER_ICON;
   /** People a friend request or an acceptance is on its way for. */
   readonly sending = signal<ReadonlySet<string>>(new Set());
   private readonly me = toSignal(this.userService.currentUser$, { initialValue: null });
@@ -240,8 +250,8 @@ export class EventDetailsComponent implements OnInit {
     }
     const ids = [...new Set([event.organizerId, ...(this.participants()?.participantIds ?? [])])];
     return ids.map(id => {
-      const { name, initials, picture } = this.person(id);
-      return { id, name, initials, picture };
+      const { name, initials, picture, deleted } = this.person(id);
+      return { id, name, initials, picture, deleted };
     });
   });
 
@@ -400,17 +410,29 @@ export class EventDetailsComponent implements OnInit {
     this.askHowToLeave(event.id);
   }
 
-  /** The organizer's way out: a successor when others take part, the deletion otherwise. */
+  /** The organizer's way out: a successor among the live participants, the deletion when none is left. */
   private askHowToLeave(eventId: string): void {
-    if (this.others().length > 0) {
-      this.askSuccessor(eventId);
-    } else {
-      this.confirmDeletion(eventId);
-    }
+    // Every candidate is checked, named or not: a directory loaded before a deletion still names the account.
+    const candidates = this.liveOthers().map(person => person.id);
+    const deleted$ = candidates.length === 0 ? of(new Set<string>()) : this.deletedUsers.deletedAmong(candidates).pipe(
+      catchError((error: unknown) => {
+        this.logger.warn('EventDetailsComponent', 'Could not check for deleted participants', error);
+        return of(new Set<string>());
+      }));
+    this.busy.set(true);
+    deleted$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(deleted => {
+      this.busy.set(false);
+      const successors = this.liveOthers().filter(person => !deleted.has(person.id));
+      if (successors.length > 0) {
+        this.askSuccessor(eventId, successors);
+      } else {
+        this.confirmDeletion(eventId);
+      }
+    });
   }
 
-  private askSuccessor(eventId: string): void {
-    const data: HandOverDialogData = { people: this.others().map(({ id, name }) => ({ id, name })) };
+  private askSuccessor(eventId: string, candidates: readonly Person[]): void {
+    const data: HandOverDialogData = { people: candidates.map(({ id, name }) => ({ id, name })) };
     this.dialog.open<HandOverDialogComponent, HandOverDialogData, HandOverDialogResult>(HandOverDialogComponent, {
       width: '440px',
       maxWidth: '95vw',
@@ -601,16 +623,16 @@ export class EventDetailsComponent implements OnInit {
     this.connect(person, this.socialService.acceptFriend(person.id), 'Could not accept the friend request');
   }
 
-  /** The name a message is signed with: "Toi" for the viewer, the directory's name when known. */
-  authorOf(message: ThreadMessage): string {
+  /** The name a message is signed with: "Toi", the directory's, the stored one, else none and the bubble names the sender. */
+  authorOf(message: ThreadMessage): string | undefined {
     if (message.system) {
-      return message.senderName;
+      return message.senderName ?? undefined;
     }
     const me = this.me();
     if (me !== null && message.senderId === me.id) {
       return 'Toi';
     }
-    return this.directory().get(message.senderId)?.userName ?? message.senderName;
+    return this.directory().get(message.senderId)?.userName ?? message.senderName ?? undefined;
   }
 
   isMine(message: ThreadMessage): boolean {
@@ -620,8 +642,12 @@ export class EventDetailsComponent implements OnInit {
   /** Everyone but the viewer. */
   readonly others = computed(() => this.people().filter(person => person.relation !== 'ME'));
 
+  /** Everyone but the viewer and deleted accounts: who can take the event over. */
+  readonly liveOthers = computed(() => this.others().filter(person => !person.deleted));
+
   /** People the viewer is not friends with yet, the ones worth adding after the event. */
-  readonly strangers = computed(() => this.others().filter(person => person.relation === 'NONE' || person.relation === 'SENT_BY_THEM'));
+  readonly strangers = computed(() => this.liveOthers()
+    .filter(person => person.relation === 'NONE' || person.relation === 'SENT_BY_THEM'));
 
   private connect(person: Person, request: Observable<unknown>, failure: string): void {
     if (this.sending().has(person.id)) {
@@ -647,8 +673,14 @@ export class EventDetailsComponent implements OnInit {
 
   private loadDirectory(): void {
     this.socialService.searchUsers().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: users => this.directory.set(new Map(users.map(user => [user.userId, user]))),
-      error: error => this.logger.error('EventDetailsComponent', 'Could not load the names', error)
+      next: users => {
+        this.directory.set(new Map(users.map(user => [user.userId, user])));
+        this.directoryReady.set(true);
+      },
+      error: error => {
+        this.directoryReady.set(true);
+        this.logger.error('EventDetailsComponent', 'Could not load the names', error);
+      }
     });
   }
 
@@ -719,15 +751,18 @@ export class EventDetailsComponent implements OnInit {
     const known = this.directory().get(id);
     const me = this.me();
     const isMe = me !== null && id === me.id;
-    const name = isMe ? 'Toi' : known?.userName ?? 'Quelqu’un';
+    // Asked only for an id the loaded directory could not name.
+    const deleted = !isMe && !known && this.directoryReady() && this.deletedUsers.isDeleted(id)();
+    const name = isMe ? 'Toi' : known?.userName ?? (deleted ? DELETED_USER_LABEL : 'Quelqu’un');
     return {
       id,
       name,
-      initials: initialsOf(name),
+      initials: deleted ? '' : initialsOf(name),
       // Through AvatarService, as a signal: the picture shows once its signed URL arrives.
-      picture: this.avatars.url(id)() ?? undefined,
+      picture: deleted ? undefined : this.avatars.url(id)() ?? undefined,
       isFriend: (this.participants()?.friendsGoingIds ?? []).includes(id),
-      relation: isMe ? 'ME' : known?.relationStatus ?? 'NONE'
+      relation: isMe ? 'ME' : known?.relationStatus ?? 'NONE',
+      deleted
     };
   }
 }

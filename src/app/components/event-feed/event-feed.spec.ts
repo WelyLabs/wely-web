@@ -29,7 +29,7 @@ describe('EventFeedComponent', () => {
         };
         socialServiceMock = {
             searchUsers: vi.fn().mockReturnValue(of([
-                { userId: 'Org 1', userName: 'madie', relationStatus: 'FRIEND' }
+                { userId: 'Org 1', userName: 'lea', relationStatus: 'FRIEND' }
             ]))
         };
         routerMock = {
@@ -174,7 +174,7 @@ describe('EventFeedComponent', () => {
     it('shows the organiser name rather than their business id', () => {
         // The card used to print organizerId verbatim, which is a UUID: a feed event carries
         // no name, because wely-events does not know who its users are.
-        expect(component.organiserName('Org 1')).toBe('madie');
+        expect(component.organiserName('Org 1')).toBe('lea');
     });
 
     it('shows nothing for an organiser the social service does not know', () => {
@@ -213,7 +213,7 @@ describe('EventFeedComponent', () => {
         });
 
         it('organiserNames_shouldBeSharedWithTheMap', () => {
-            expect(component.organiserNames().get('Org 1')).toBe('madie');
+            expect(component.organiserNames().get('Org 1')).toBe('lea');
         });
     });
 

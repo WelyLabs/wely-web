@@ -16,7 +16,8 @@ export enum MessageType {
 export interface Message {
     id: string;
     senderId: string;
-    senderName: string;
+    /** Null once the sender deleted their account: the screen names them itself. */
+    senderName: string | null;
     receiverId: string;
     conversationId: string;
     content: string;
@@ -68,6 +69,8 @@ export interface Conversation {
     eventId?: string | null;
     /** An event group's organizer, who may remove its photos. Older groups do not name one. */
     organizerId?: string | null;
+    /** A DIRECT conversation whose other participant deleted their account. */
+    readOnly?: boolean;
     updatedAt: string; // ISO DateTime
     lastMessage?: Message;
     messages: Message[];
@@ -99,4 +102,11 @@ export interface ConversationSummary {
     lastBucketIndex: number;
     /** The event an EVENT conversation belongs to. */
     eventId?: string | null;
+    /** A DIRECT conversation whose other participant deleted their account. */
+    readOnly?: boolean;
 }
+
+/** wely-chat refuses a message to a conversation whose other participant deleted their account. */
+export const CONVERSATION_READ_ONLY_CODE = 'CHT-BUS-012';
+/** wely-chat refuses anything from a deleted account. */
+export const CHAT_ACCOUNT_DELETED_CODE = 'CHT-BUS-011';

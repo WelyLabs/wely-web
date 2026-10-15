@@ -51,9 +51,11 @@
             [style.animation-delay]="(i * 0.05) + 's'" matRipple (click)="openConversation(conv)"
             (keydown.enter)="openConversation(conv)" (keydown.space)="openConversation(conv)">
             <div class="avatar-wrapper">
-              <div class="avatar-gradient">
+              <div class="avatar-gradient" [class.deleted]="row.deleted" [style.background]="row.deleted ? deletedAvatarColor : null">
                 @if (row.avatarUrl) {
                   <img [src]="row.avatarUrl" [alt]="row.name">
+                } @else if (row.deleted) {
+                  <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
                 } @else {
                   {{ getAvatarInitial(row.name) }}
                 }

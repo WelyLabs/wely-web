@@ -405,6 +405,16 @@ mat-icon,
   border: 0;
 }
 
+/* A deleted account's avatar: a neutral person icon instead of initials, about 60% of the avatar. */
+.deleted-user-icon.mat-icon {
+  // Avatars size their initials at about a third of their width: 1.7em of that is about 60% of it.
+  font-size: 1.7em;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+  color: #fff;
+}
+
 /* Pending request: a light runs around the border (PendingTrailDirective) ------------------- */
 // The angle is registered so it can be animated: a plain custom property would jump, not turn.
 @property --trail-angle {

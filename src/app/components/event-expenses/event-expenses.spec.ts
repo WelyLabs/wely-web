@@ -7,12 +7,15 @@ import { EventExpensesComponent, EXPENSES_PREVIEW_SIZE } from './event-expenses'
 import { ExpenseService } from '../../services/expense.service';
 import { Expense, Ledger } from '../../models/expense.model';
 import { PhotoViewerComponent, PhotoViewerData } from '../photo-viewer/photo-viewer';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../testing/deleted-users.stub';
 
 describe('EventExpensesComponent', () => {
   let fixture: ComponentFixture<EventExpensesComponent>;
   let component: EventExpensesComponent;
   let expenseService: Record<'list' | 'ledger' | 'settle' | 'delete' | 'removeReceipt', ReturnType<typeof vi.fn>>;
   let dialog: { open: ReturnType<typeof vi.fn> };
+  let deletedUsers: ReturnType<typeof deletedUsersStub>;
 
   const members = [
     { id: 'me', name: 'Toi', initials: 'TO' },
@@ -35,7 +38,8 @@ describe('EventExpensesComponent', () => {
       imports: [EventExpensesComponent],
       providers: [
         { provide: ExpenseService, useValue: expenseService },
-        { provide: MatDialog, useValue: dialog }
+        { provide: MatDialog, useValue: dialog },
+        { provide: DeletedUsersService, useValue: deletedUsers }
       ]
     });
     fixture = TestBed.createComponent(EventExpensesComponent);
@@ -56,6 +60,8 @@ describe('EventExpensesComponent', () => {
       removeReceipt: vi.fn().mockReturnValue(of(undefined))
     };
     dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of('saved') }) };
+    // « zoe » deleted her account after paying; « gone » just left the event.
+    deletedUsers = deletedUsersStub(['zoe']);
   });
 
   it('load_shouldShowTheTotalAndWhereTheViewerStands', () => {
@@ -134,6 +140,37 @@ describe('EventExpensesComponent', () => {
     create();
 
     expect(component.name('gone')).toBe('Ancien participant');
+  });
+
+  it('name_shouldBeTheDeletedLabel_forAConfirmedDeletedFormerMember', () => {
+    create();
+
+    expect(component.name('zoe')).toBe('Utilisateur supprimé');
+    expect(component.transferLabel({ fromUserId: 'zoe', toUserId: 'me', amountCents: 500 })).toBe('Utilisateur supprimé → toi');
+  });
+
+  it('name_shouldStayAncienParticipant_forSomeoneWhoLeft', () => {
+    create();
+
+    expect(component.name('gone')).toBe('Ancien participant');
+    expect(deletedUsers.isDeleted).not.toHaveBeenCalledWith('lea');
+  });
+
+  it('member_shouldGiveADeletedUserNoInitials', () => {
+    create();
+
+    expect(component.member('zoe')).toEqual({ id: 'zoe', name: 'Utilisateur supprimé', initials: '', deleted: true });
+    expect(component.member('gone')).toMatchObject({ name: 'Ancien participant', initials: 'AP', deleted: false });
+    expect(component.member('lea')).toBe(members[1]);
+  });
+
+  it('template_shouldShowANeutralAvatar_forADeletedPayer', () => {
+    expenseService.list.mockReturnValue(of([expense({ paidBy: 'zoe' })]));
+    create();
+
+    const avatar = fixture.nativeElement.querySelector('.avatar') as HTMLElement;
+    expect(avatar.querySelector('mat-icon')?.textContent).toBe('person');
+    expect(avatar.style.background).toBe('rgb(138, 138, 147)');
   });
 
   it('visibleExpenses_shouldShowAFewUntilAskedForAll', () => {

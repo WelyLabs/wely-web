@@ -250,6 +250,47 @@ describe('ConversationsListComponent', () => {
             expect(component.rows()[0].name).toBe('Soirée jeux');
             expect(chatServiceMock.getPresence).not.toHaveBeenCalled();
         });
+
+        it('rows_shouldNameAReadOnlyDirectConversationWithTheDeletedLabel', () => {
+            load([withLea({ readOnly: true, lastMessage: { senderId: 'lea', senderName: null, content: 'hi' } as never })]);
+
+            expect(component.rows()[0]).toMatchObject({ name: 'Utilisateur supprimé', deleted: true });
+            expect(fixture.nativeElement.querySelector('.conv-item .name').textContent).toContain('Utilisateur supprimé');
+        });
+
+        it('rows_shouldShowANeutralAvatarAndNoPresence_forADeletedPartner', () => {
+            chatServiceMock.getPresence.mockReturnValue(of({ userId: 'lea', online: true, lastSeenAt: null }));
+
+            load([withLea({ readOnly: true })]);
+
+            expect(component.rows()[0]).toMatchObject({ avatarUrl: null, online: false });
+            const avatar = fixture.nativeElement.querySelector('.avatar-gradient') as HTMLElement;
+            expect(avatar.classList).toContain('deleted');
+            expect(avatar.querySelector('mat-icon')?.textContent).toBe('person');
+            expect(fixture.nativeElement.querySelector('.status-indicator')).toBeNull();
+        });
+
+        it('rows_shouldFallBackToConversation_whenTheLastMessageHasNoSenderName', () => {
+            load([withLea({ lastMessage: { senderId: 'lea', senderName: null, content: 'hi' } as never })]);
+
+            expect(component.rows()[0]).toMatchObject({ name: 'Conversation', deleted: false });
+        });
+
+        it('rows_shouldIgnoreTheReadOnlyFlag_ofAnEventGroup', () => {
+            load([withLea({ type: ConversationType.EVENT, title: 'Soirée jeux', readOnly: true })]);
+
+            expect(component.rows()[0]).toMatchObject({ name: 'Soirée jeux', deleted: false });
+        });
+
+        it('loadPresence_shouldSkipDeletedPartners', () => {
+            load([
+                withLea({ readOnly: true, updatedAt: '2026-10-11T18:00:00Z' }),
+                withLea({ id: 'c-bob', participantIds: ['me', 'bob'], updatedAt: '2026-10-11T17:00:00Z' })
+            ]);
+
+            expect(chatServiceMock.getPresence).toHaveBeenCalledWith('bob');
+            expect(chatServiceMock.getPresence).not.toHaveBeenCalledWith('lea');
+        });
     });
 });
 

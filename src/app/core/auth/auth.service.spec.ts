@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService } from './auth.service';
+import { AuthService, REPLACE_PAGE } from './auth.service';
 import { KeycloakService } from 'keycloak-angular';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('AuthService', () => {
     let service: AuthService;
     let keycloakMock: Partial<KeycloakService>;
+    let replacePage: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         TestBed.resetTestingModule();
@@ -20,13 +21,16 @@ describe('AuthService', () => {
             updateToken: vi.fn().mockReturnValue(Promise.resolve(true)),
             isLoggedIn: vi.fn().mockReturnValue(true),
             login: vi.fn().mockReturnValue(Promise.resolve()),
-            logout: vi.fn().mockReturnValue(Promise.resolve())
+            logout: vi.fn().mockReturnValue(Promise.resolve()),
+            clearToken: vi.fn()
         } as any; // Cast to any for the factory setup, but variable is Partial<KeycloakService>
+        replacePage = vi.fn();
 
         TestBed.configureTestingModule({
             providers: [
                 AuthService,
-                { provide: KeycloakService, useValue: keycloakMock }
+                { provide: KeycloakService, useValue: keycloakMock },
+                { provide: REPLACE_PAGE, useValue: replacePage }
             ]
         });
         service = TestBed.inject(AuthService);
@@ -38,6 +42,8 @@ describe('AuthService', () => {
         }
         vi.restoreAllMocks();
         vi.useRealTimers();
+        localStorage.clear();
+        sessionStorage.clear();
     });
 
     it('should be created', () => {
@@ -134,5 +140,100 @@ describe('AuthService', () => {
 
         vi.runAllTimers();
         expect(keycloakMock.updateToken).not.toHaveBeenCalled();
+    });
+
+    describe('account deletion', () => {
+        const instance = (tokenParsed: Record<string, unknown>, timeSkew: number | null = 0) =>
+            (keycloakMock.getKeycloakInstance as any).mockReturnValue({ tokenParsed, timeSkew, token: 'mock-token' });
+
+        it('reauthenticate_shouldForceAFullLogin_withPromptLoginAndTheRedirect', async () => {
+            await service.reauthenticate('https://app/preferences?account=delete');
+
+            expect(keycloakMock.login).toHaveBeenCalledWith({
+                prompt: 'login', redirectUri: 'https://app/preferences?account=delete', loginHint: undefined
+            });
+        });
+
+        it('reauthenticate_shouldPrefillTheUsername_whenAHintIsGiven', async () => {
+            await service.reauthenticate('https://app/preferences?account=delete', 'camille');
+
+            expect(keycloakMock.login).toHaveBeenCalledWith(expect.objectContaining({ loginHint: 'camille' }));
+        });
+
+        it('authenticatedAt_shouldReadAuthTimeInMilliseconds', () => {
+            instance({ auth_time: 1_760_000_000 });
+
+            expect(service.authenticatedAt()).toBe(1_760_000_000_000);
+        });
+
+        it('authenticatedAt_shouldConvertToTheDeviceClock_withTheTimeSkew', () => {
+            // keycloak-js measures timeSkew as the device clock minus Keycloak's, in seconds.
+            instance({ auth_time: 1_760_000_000 }, 120);
+
+            expect(service.authenticatedAt()).toBe(1_760_000_120_000);
+        });
+
+        it('authenticatedAt_shouldBeNull_whenTheTokenHasNoAuthTime', () => {
+            instance({ exp: 1 });
+
+            expect(service.authenticatedAt()).toBeNull();
+        });
+
+        it('sessionEnded_shouldBeFalse_atStart', () => {
+            expect(service.sessionEnded()).toBe(false);
+        });
+
+        it('leaveAfterAccountDeletion_shouldStopRefreshClearWelyStorageAndTheToken_thenReplaceThePage', () => {
+            localStorage.setItem('wely.theme', 'DARK');
+            localStorage.setItem('kc-callback-1', '{}');
+            sessionStorage.setItem('wely.accountDeletion.requestedAt', '1');
+            service.scheduleTokenRefresh();
+
+            service.leaveAfterAccountDeletion();
+
+            expect(localStorage.getItem('wely.theme')).toBeNull();
+            expect(localStorage.getItem('kc-callback-1')).toBe('{}');
+            expect(sessionStorage.getItem('wely.accountDeletion.requestedAt')).toBeNull();
+            expect(keycloakMock.clearToken).toHaveBeenCalledTimes(1);
+            expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
+            vi.runAllTimers();
+            expect(keycloakMock.updateToken).not.toHaveBeenCalled();
+        });
+
+        it('leaveAfterAccountDeletion_shouldMarkTheSessionEnded', () => {
+            service.leaveAfterAccountDeletion();
+
+            expect(service.sessionEnded()).toBe(true);
+        });
+
+        it('leaveAfterAccountDeletion_shouldDoNothing_whenCalledTwice', () => {
+            service.leaveAfterAccountDeletion();
+            service.leaveAfterAccountDeletion();
+
+            expect(keycloakMock.clearToken).toHaveBeenCalledTimes(1);
+            expect(replacePage).toHaveBeenCalledTimes(1);
+        });
+
+        it('leaveAfterAccountDeletion_shouldStillLeave_whenStorageIsBlocked', () => {
+            vi.spyOn(globalThis, 'localStorage', 'get').mockImplementation(() => {
+                throw new DOMException('blocked', 'SecurityError');
+            });
+
+            service.leaveAfterAccountDeletion();
+
+            expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
+            vi.restoreAllMocks();
+        });
+
+        it('leaveAfterAccountDeletion_shouldStillLeave_whenTheTokenCannotBeCleared', () => {
+            (keycloakMock.clearToken as any).mockImplementation(() => {
+                throw new Error('not initialised');
+            });
+            vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+            service.leaveAfterAccountDeletion();
+
+            expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
+        });
     });
 });

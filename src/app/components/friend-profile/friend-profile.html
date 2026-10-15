@@ -24,6 +24,16 @@
       </div>
     </div>
   }
+  @case ('deleted') {
+    <div class="friend-page">
+      <div class="card state-card">
+        <mat-icon>person_off</mat-icon>
+        <h1>Compte supprimé</h1>
+        <p class="muted">Cette personne a supprimé son compte Wely.</p>
+        <a routerLink="/friends">Retour à mes amis</a>
+      </div>
+    </div>
+  }
   @case ('error') {
     <div class="friend-page">
       <div class="card state-card" role="alert">

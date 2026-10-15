@@ -14,6 +14,8 @@ import { FriendProfile, UserService } from '../../services/user.service';
 import { EventService, FeedEvent, FreeRange, FriendCalendarEntry, FriendOverview } from '../../services/event.service';
 import { ChatService } from '../../services/chat.service';
 import { AvatarService } from '../../services/avatar.service';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { USER_DELETED_CODE } from '../../models/account.model';
 import { UserNodeDTO } from '../../models/user.model';
 import { CLOSENESS_LABELS, Closeness, ClosenessOption, SocialPerson, closenessOptions } from '../../models/friendship.model';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
@@ -31,7 +33,8 @@ const MIN_FREE_MINUTES = 30;
 
 /** Everything the page shows of one person, read together. */
 export interface FriendPage {
-  state: 'loading' | 'ready' | 'notFound' | 'error';
+  /** deleted: the person deleted their account. */
+  state: 'loading' | 'ready' | 'notFound' | 'deleted' | 'error';
   person: SocialPerson | null;
   /** Null when not friends, or when wely-users could not answer. */
   profile: FriendProfile | null;
@@ -80,6 +83,7 @@ export class FriendProfileComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly eventService = inject(EventService);
   private readonly chatService = inject(ChatService);
+  private readonly deletedUsers = inject(DeletedUsersService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   readonly avatars = inject(AvatarService);
@@ -213,26 +217,43 @@ export class FriendProfileComponent implements OnInit {
             friendIds: [id], start: this.now(),
             end: new Date(startOfToday(this.now()).getTime() + WEEK_DAYS * DAY_MS), durationMinutes: MIN_FREE_MINUTES
           }), 'free time')
-        }).pipe(map(({ profile, mutual, overview, week, free }) => ({
-          state: 'ready' as const, person, mutual, overview, week, free,
-          profile: profile === 'forbidden' ? null : profile,
-          forbidden: profile === 'forbidden'
-        })));
+        }).pipe(map(({ profile, mutual, overview, week, free }): FriendPage => profile === 'deleted'
+          ? { ...LOADING, state: 'deleted' }
+          : {
+            state: 'ready', person, mutual, overview, week, free,
+            profile: profile === 'forbidden' ? null : profile,
+            forbidden: profile === 'forbidden'
+          }));
       }),
-      catchError((error: unknown) => {
-        this.logger.error('FriendProfileComponent', 'Could not load the person', error);
-        // 400: the id in the address is not a user id at all.
-        const notFound = error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400);
-        return of({ ...LOADING, state: notFound ? 'notFound' as const : 'error' as const });
-      })
+      catchError((error: unknown) => this.whenMissing(id, error))
     );
   }
 
-  /** 403 means not friends after all; any other failure just leaves the details out. */
-  private fetchProfile(id: string): Observable<FriendProfile | 'forbidden' | null> {
+  /** wely-social no longer knows a deleted account: a 404 is checked with wely-users before saying not found. */
+  private whenMissing(id: string, error: unknown): Observable<FriendPage> {
+    if (error instanceof HttpErrorResponse && error.status === 404) {
+      return this.deletedUsers.check(id).pipe(
+        map((deleted): FriendPage => ({ ...LOADING, state: deleted ? 'deleted' : 'notFound' })),
+        catchError((checkError: unknown) => {
+          this.logger.warn('FriendProfileComponent', 'Could not check whether the account was deleted', checkError);
+          return of<FriendPage>({ ...LOADING, state: 'notFound' });
+        }));
+    }
+    this.logger.error('FriendProfileComponent', 'Could not load the person', error);
+    // 400: the id in the address is not a user id at all.
+    const notFound = error instanceof HttpErrorResponse && error.status === 400;
+    return of({ ...LOADING, state: notFound ? 'notFound' as const : 'error' as const });
+  }
+
+  /** 403 means not friends after all, 410 a deleted account; any other failure just leaves the details out. */
+  private fetchProfile(id: string): Observable<FriendProfile | 'forbidden' | 'deleted' | null> {
     return this.userService.getFriendProfile(id).pipe(catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 403) {
         return of('forbidden' as const);
+      }
+      if (error instanceof HttpErrorResponse && error.status === 410
+        && (error.error as { code?: string } | null)?.code === USER_DELETED_CODE) {
+        return of('deleted' as const);
       }
       this.logger.warn('FriendProfileComponent', 'Could not load the profile', error);
       return of(null);

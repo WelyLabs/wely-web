@@ -169,6 +169,8 @@
                           <span class="avatar small" [style.background]="member.color" aria-hidden="true">
                             @if (member.picture) {
                               <img [src]="member.picture" alt="">
+                            } @else if (member.deleted) {
+                              <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
                             } @else {
                               {{ member.initials }}
                             }

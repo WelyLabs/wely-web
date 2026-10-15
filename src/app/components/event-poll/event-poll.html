@@ -18,10 +18,13 @@
         @if (row.voters.length > 0) {
           <div class="voters">
             @for (voter of row.voters; track voter.id) {
-              <span class="voter" [class.maybe]="voter.maybe" [style.background]="avatarColor(voter.id)"
+              <span class="voter" [class.maybe]="voter.maybe"
+                [style.background]="voter.deleted ? deletedAvatarColor : avatarColor(voter.id)"
                 [title]="voter.name + (voter.maybe ? ' (peut-être)' : '')">
                 @if (voter.picture) {
                   <img [src]="voter.picture" alt="">
+                } @else if (voter.deleted) {
+                  <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
                 } @else {
                   {{ voter.initials }}
                 }

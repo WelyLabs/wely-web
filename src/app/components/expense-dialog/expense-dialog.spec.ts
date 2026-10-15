@@ -183,6 +183,44 @@ describe('ExpenseDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('.delete-button')).toBeNull();
   });
 
+  describe('deleted members', () => {
+    // A past event keeps the id of someone who deleted their account since.
+    const zoe = { id: 'zoe', name: 'Utilisateur supprimé', initials: '', deleted: true };
+    const rowNames = () => Array.from(fixture.nativeElement.querySelectorAll('.people .name') as NodeListOf<HTMLElement>)
+      .map(name => name.textContent?.trim());
+
+    it('save_shouldLeaveADeletedMemberOutOfANewExpense', () => {
+      create({ members: [...members, zoe] });
+      component.title.set('Courses');
+      component.amountText.set('30');
+
+      component.save();
+
+      expect(component.payers.map(member => member.id)).toEqual(['me', 'lea', 'bob']);
+      expect(rowNames()).toEqual(['Toi', 'lea', 'bob']);
+      expect(expenseService.add.mock.calls[0][1].shares.map((share: { userId: string }) => share.userId))
+        .toEqual(['me', 'lea', 'bob']);
+    });
+
+    it('members_shouldKeepADeletedMember_whomTheEditedExpenseIsFor', () => {
+      create({ members: [...members, zoe], expense: { ...stored, paidBy: 'me', shares: [...stored.shares, { userId: 'zoe', value: 0 }] } });
+
+      expect(component.members.map(member => member.id)).toEqual(['me', 'lea', 'bob', 'zoe']);
+      expect(component.payers.map(member => member.id)).toEqual(['me', 'lea', 'bob']);
+      expect(component.included().has('zoe')).toBe(true);
+      const row = (fixture.nativeElement.querySelectorAll('.people li') as NodeListOf<HTMLElement>)[3];
+      expect(row.querySelector('.avatar mat-icon')?.textContent).toBe('person');
+    });
+
+    it('payers_shouldKeepADeletedMember_whoPaidTheEditedExpense', () => {
+      create({ members: [...members, zoe], expense: { ...stored, paidBy: 'zoe' } });
+
+      expect(component.payers.map(member => member.id)).toEqual(['me', 'lea', 'bob', 'zoe']);
+      expect(component.members.map(member => member.id)).toEqual(['me', 'lea', 'bob']);
+      expect(component.paidBy()).toBe('zoe');
+    });
+  });
+
   describe('receipt', () => {
     const pick = (file: File) => ({ target: { files: [file], value: 'C:/ticket.jpg' } }) as unknown as Event;
     const withReceipt: Expense = { ...stored, receiptUrl: 'https://media/r.jpg' };

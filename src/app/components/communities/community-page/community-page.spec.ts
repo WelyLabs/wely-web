@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommunityPageComponent } from './community-page';
 import { CommunityService } from '../../../services/community.service';
@@ -10,6 +10,13 @@ import { EventService, FeedEvent } from '../../../services/event.service';
 import { UserService } from '../../../services/user.service';
 import { NotificationService } from '../../../services/notification.service';
 import { Community, CommunityInvitation, CommunityMember } from '../../../models/community.model';
+import { DeletedUsersService } from '../../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../../testing/deleted-users.stub';
+
+// Reaches ChatService through the invite dialog: rsocket-js is replaced by the shared stub, so this file never
+// loads the real module first for the specs that share its chunk.
+vi.mock('rsocket-core', () => import('../../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../../testing/rsocket-websocket-client.stub'));
 
 const community = (overrides: Partial<Community> = {}): Community => ({
   communityId: 'c1', name: 'Club Auto', description: 'Voitures', interests: ['auto'], visibility: 'PUBLIC',
@@ -30,6 +37,7 @@ describe('CommunityPageComponent', () => {
   let events: Record<string, ReturnType<typeof vi.fn>>;
   let notifications: { showInfo: ReturnType<typeof vi.fn> };
   let dialog: { open: ReturnType<typeof vi.fn> };
+  let deletedUsers: ReturnType<typeof deletedUsersStub>;
   let router: Router;
   let page: CommunityPageComponent;
   let fixture: ReturnType<typeof TestBed.createComponent<CommunityPageComponent>>;
@@ -50,6 +58,7 @@ describe('CommunityPageComponent', () => {
         { provide: EventService, useValue: events },
         { provide: NotificationService, useValue: notifications },
         { provide: MatDialog, useValue: dialog },
+        { provide: DeletedUsersService, useValue: deletedUsers },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'c1' })) } },
         {
           provide: UserService,
@@ -83,6 +92,8 @@ describe('CommunityPageComponent', () => {
     };
     notifications = { showInfo: vi.fn() };
     dialog = { open: vi.fn() };
+    // « gone » deleted their account; « ghost » simply left.
+    deletedUsers = deletedUsersStub(['gone']);
   });
 
   describe('as a member', () => {
@@ -102,6 +113,15 @@ describe('CommunityPageComponent', () => {
       expect(page.nameOf('lea')).toBe('lea');
       expect(page.nameOf('me')).toBe('Vous');
       expect(page.nameOf('ghost')).toBe('Ancien membre');
+    });
+
+    it('nameOf_shouldBeTheDeletedLabel_forAConfirmedDeletedId', () => {
+      expect(page.nameOf('gone')).toBe('Utilisateur supprimé');
+    });
+
+    it('nameOf_shouldStayAncienMembre_forSomeoneWhoLeft', () => {
+      expect(page.nameOf('ghost')).toBe('Ancien membre');
+      expect(deletedUsers.isDeleted).not.toHaveBeenCalledWith('lea');
     });
 
     it('reads the viewer\'s answer and the counts', () => {
@@ -488,5 +508,13 @@ describe('CommunityPageComponent', () => {
       expect(communities['changeRole']).not.toHaveBeenCalled();
       expect(communities['revoke']).not.toHaveBeenCalled();
     });
+  });
+
+  it('nameOf_shouldNotAskAboutDeletion_beforeMembersAreLoaded', () => {
+    communities['members'].mockReturnValue(new Subject<CommunityMember[]>());
+    open();
+
+    expect(page.nameOf('gone')).toBe('Ancien membre');
+    expect(deletedUsers.isDeleted).not.toHaveBeenCalled();
   });
 });

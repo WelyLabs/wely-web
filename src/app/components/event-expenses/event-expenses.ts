@@ -9,6 +9,8 @@ import { ExpenseService } from '../../services/expense.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../core/ui/deleted-user';
+import { DeletedUsersService } from '../../services/deleted-users.service';
 import { formatCents } from '../../core/ui/money';
 import { ExpenseDialogComponent, ExpenseDialogData, ExpenseDialogResult } from '../expense-dialog/expense-dialog';
 import { PhotoViewerComponent, PhotoViewerData, PhotoViewerResult } from '../photo-viewer/photo-viewer';
@@ -35,6 +37,7 @@ const FORMER_MEMBER = 'Ancien participant';
 })
 export class EventExpensesComponent implements OnInit {
   private readonly expenseService = inject(ExpenseService);
+  private readonly deletedUsers = inject(DeletedUsersService);
   private readonly dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
   private readonly destroyRef = inject(DestroyRef);
@@ -55,6 +58,8 @@ export class EventExpensesComponent implements OnInit {
 
   readonly formatCents = formatCents;
   readonly avatarColor = avatarColor;
+  readonly deletedAvatarColor = DELETED_USER_AVATAR_COLOR;
+  readonly deletedIcon = DELETED_USER_ICON;
 
   private readonly byId = computed(() => new Map(this.members().map(member => [member.id, member])));
 
@@ -99,12 +104,18 @@ export class EventExpensesComponent implements OnInit {
       });
   }
 
+  /** A member's name; someone no longer taking part is named as a deleted account once wely-users confirms it. */
   name(userId: string): string {
-    return this.byId().get(userId)?.name ?? FORMER_MEMBER;
+    return this.byId().get(userId)?.name ?? (this.deletedUsers.isDeleted(userId)() ? DELETED_USER_LABEL : FORMER_MEMBER);
   }
 
   member(userId: string): ExpenseMember {
-    return this.byId().get(userId) ?? { id: userId, name: FORMER_MEMBER, initials: initialsOf(FORMER_MEMBER) };
+    const known = this.byId().get(userId);
+    if (known) {
+      return known;
+    }
+    const deleted = this.deletedUsers.isDeleted(userId)();
+    return { id: userId, name: deleted ? DELETED_USER_LABEL : FORMER_MEMBER, initials: deleted ? '' : initialsOf(FORMER_MEMBER), deleted };
   }
 
   /** « Léa → toi », or « Léa → Bob ». */

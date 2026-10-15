@@ -1,5 +1,5 @@
 import { LoggerService } from '../logging/logger.service';
-import { initializeKeycloak, isOwnApiRequest } from './keycloak-init.factory';
+import { initializeKeycloak, isAccountDeletedLanding, isOwnApiRequest, shouldCheckSsoSilently } from './keycloak-init.factory';
 import { HttpRequest } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { of, throwError } from 'rxjs';
@@ -91,5 +91,29 @@ describe('initializeKeycloak bearer options', () => {
         await initializeKeycloak(keycloak as never, {} as never, auth as never, logger as never)();
 
         expect(keycloak.init.mock.calls[0][0].shouldAddToken).toBe(isOwnApiRequest);
+    });
+});
+
+describe('post-deletion landing', () => {
+    const at = (pathname: string, search = '') => ({ pathname, search });
+
+    it('isAccountDeletedLanding_shouldBeTrue_forTheRootWithAccountDeleted', () => {
+        expect(isAccountDeletedLanding(at('/', '?account=deleted'))).toBe(true);
+        expect(isAccountDeletedLanding(at('/', '?utm=x&account=deleted'))).toBe(true);
+    });
+
+    it('isAccountDeletedLanding_shouldBeFalse_forAnyOtherPathOrValue', () => {
+        expect(isAccountDeletedLanding(at('/'))).toBe(false);
+        expect(isAccountDeletedLanding(at('/', '?account=delete'))).toBe(false);
+        expect(isAccountDeletedLanding(at('/preferences', '?account=deleted'))).toBe(false);
+    });
+
+    it('shouldCheckSsoSilently_shouldFollowTheEnvironment_elsewhere', () => {
+        expect(shouldCheckSsoSilently({ keycloakSilentCheckSso: true }, at('/calendar'))).toBe(true);
+        expect(shouldCheckSsoSilently({ keycloakSilentCheckSso: false }, at('/calendar'))).toBe(false);
+    });
+
+    it('shouldCheckSsoSilently_shouldBeFalse_onThePostDeletionLanding', () => {
+        expect(shouldCheckSsoSilently({ keycloakSilentCheckSso: true }, at('/', '?account=deleted'))).toBe(false);
     });
 });

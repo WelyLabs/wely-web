@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { buildWeek, feedBadge, LandingPageComponent, weekLabel } from './landing-page';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { KeycloakService } from 'keycloak-angular';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -11,23 +11,17 @@ describe('LandingPageComponent', () => {
     let keycloakMock: { isLoggedIn: ReturnType<typeof vi.fn>; login: ReturnType<typeof vi.fn>; register: ReturnType<typeof vi.fn> };
     let routerMock: { navigate: ReturnType<typeof vi.fn> };
 
-    beforeEach(async () => {
-        keycloakMock = {
-            isLoggedIn: vi.fn().mockResolvedValue(false),
-            login: vi.fn().mockResolvedValue({}),
-            register: vi.fn().mockResolvedValue({})
-        };
-        routerMock = {
-            navigate: vi.fn()
-        };
-
+    /** Renders the page as opened with this query string. */
+    async function render(query: Record<string, string>): Promise<void> {
+        TestBed.resetTestingModule();
         await TestBed.configureTestingModule({
             imports: [LandingPageComponent, NoopAnimationsModule],
         }).overrideComponent(LandingPageComponent, {
             set: {
                 providers: [
                     { provide: KeycloakService, useValue: keycloakMock },
-                    { provide: Router, useValue: routerMock }
+                    { provide: Router, useValue: routerMock },
+                    { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } }
                 ]
             }
         }).compileComponents();
@@ -35,6 +29,19 @@ describe('LandingPageComponent', () => {
         fixture = TestBed.createComponent(LandingPageComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
+    }
+
+    beforeEach(async () => {
+        keycloakMock = {
+            isLoggedIn: vi.fn().mockResolvedValue(false),
+            login: vi.fn().mockResolvedValue({}),
+            register: vi.fn().mockResolvedValue({})
+        };
+        routerMock = {
+            navigate: vi.fn().mockResolvedValue(true)
+        };
+
+        await render({});
     });
 
     it('should create', () => {
@@ -88,6 +95,31 @@ describe('LandingPageComponent', () => {
 
     it('should mark exactly one day of the preview as today', () => {
         expect(fixture.nativeElement.querySelectorAll('.day-head.today')).toHaveLength(1);
+    });
+
+    it('accountDeleted_shouldShowTheConfirmation_onTheLandingAfterDeletion', async () => {
+        await render({ account: 'deleted' });
+
+        const notice: HTMLElement | null = fixture.nativeElement.querySelector('.deletion-notice');
+        expect(component.accountDeleted()).toBe(true);
+        expect(notice?.getAttribute('role')).toBe('status');
+        expect(notice?.textContent).toContain('Ton compte a été supprimé.');
+        expect(notice?.textContent).toContain('« Utilisateur supprimé »');
+    });
+
+    it('accountDeleted_shouldBeFalse_onAPlainVisit', () => {
+        expect(component.accountDeleted()).toBe(false);
+        expect(fixture.nativeElement.querySelector('.deletion-notice')).toBeNull();
+    });
+
+    it('dismissDeletionNotice_shouldHideIt_andCleanTheUrl', async () => {
+        await render({ account: 'deleted' });
+
+        fixture.nativeElement.querySelector('.deletion-close').click();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.deletion-notice')).toBeNull();
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/'], { replaceUrl: true });
     });
 });
 

@@ -7,7 +7,8 @@ import { environment } from '../../environments/environment';
 import { LoggerService } from '../core/logging/logger.service';
 import { AppNotification } from '../models/notification.model';
 import { aNotification } from '../../testing/notification-center.stub';
-import { streamResponse } from '../../testing/sse-response';
+import { statusResponse, streamResponse } from '../../testing/sse-response';
+import { AuthService } from '../core/auth/auth.service';
 import { NOTIFICATIONS_PAGE_SIZE, NotificationCenterService } from './notification-center.service';
 
 const API = `${environment.apiUrl}/notifications-service`;
@@ -17,6 +18,7 @@ describe('NotificationCenterService', () => {
     let http: HttpTestingController;
     let fetchMock: ReturnType<typeof vi.fn>;
     let logger: { warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+    let auth: { leaveAfterAccountDeletion: ReturnType<typeof vi.fn> };
 
     const at = (minute: number) => new Date(Date.UTC(2026, 9, 15, 12, minute)).toISOString();
     const page = (count: number, from = 59) =>
@@ -32,12 +34,14 @@ describe('NotificationCenterService', () => {
         fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
         logger = { warn: vi.fn(), error: vi.fn() };
+        auth = { leaveAfterAccountDeletion: vi.fn() };
         TestBed.configureTestingModule({
             providers: [
                 provideHttpClient(),
                 provideHttpClientTesting(),
                 { provide: KeycloakService, useValue: { getToken: () => Promise.resolve('tok') } },
-                { provide: LoggerService, useValue: logger }
+                { provide: LoggerService, useValue: logger },
+                { provide: AuthService, useValue: auth }
             ]
         });
         service = TestBed.inject(NotificationCenterService);
@@ -120,6 +124,40 @@ describe('NotificationCenterService', () => {
 
             expect(logger.error).toHaveBeenCalledWith('NotificationCenterService', 'Unreadable stream event', expect.anything());
             expect(service.unreadCount()).toBe(1);
+        });
+
+        it('start_shouldStopRetrying_whenTheStreamAnswers410', async () => {
+            vi.useFakeTimers();
+            fetchMock.mockResolvedValue(statusResponse(410));
+
+            service.start();
+            await vi.advanceTimersByTimeAsync(60_000);
+
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(logger.warn).not.toHaveBeenCalled();
+            vi.useRealTimers();
+        });
+
+        it('start_shouldLeaveTheApp_whenTheStreamAnswers410', async () => {
+            fetchMock.mockResolvedValue(statusResponse(410));
+
+            service.start();
+            await flush();
+
+            expect(auth.leaveAfterAccountDeletion).toHaveBeenCalledTimes(1);
+        });
+
+        it('start_shouldKeepRetrying_onAnotherRefusal', async () => {
+            vi.useFakeTimers();
+            fetchMock.mockResolvedValue(statusResponse(503));
+
+            service.start();
+            await vi.advanceTimersByTimeAsync(1_000);
+
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+            expect(auth.leaveAfterAccountDeletion).not.toHaveBeenCalled();
+            service.stop();
+            vi.useRealTimers();
         });
     });
 

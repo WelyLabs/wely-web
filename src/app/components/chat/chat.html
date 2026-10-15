@@ -5,12 +5,14 @@
       <button mat-icon-button class="back-btn" (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <!-- A direct conversation's header opens the partner's page; a group's stays plain. -->
-      <button type="button" class="user-info" [class.opens-profile]="!isEventGroup() && partnerId()"
-        [disabled]="isEventGroup() || !partnerId()" (click)="openPartner()">
-        <span class="avatar-sm">
+      <!-- A direct conversation's header opens the partner's page; a group's, or a deleted partner's, stays plain. -->
+      <button type="button" class="user-info" [class.opens-profile]="!isEventGroup() && !readOnly() && partnerId()"
+        [disabled]="isEventGroup() || readOnly() || !partnerId()" (click)="openPartner()">
+        <span class="avatar-sm" [class.deleted]="readOnly()" [style.background]="readOnly() ? deletedAvatarColor : null">
           @if (isEventGroup()) {
             <mat-icon>groups</mat-icon>
+          } @else if (readOnly()) {
+            <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
           } @else if (partnerPicture(); as src) {
             <img [src]="src" alt="">
           } @else {
@@ -30,7 +32,9 @@
         [attr.aria-pressed]="showMedia()" aria-label="Photos de la conversation">
         <mat-icon>photo_library</mat-icon>
       </button>
-      @if (liveCall(); as call) {
+      @if (readOnly()) {
+        <!-- Nobody to call: the partner deleted their account. -->
+      } @else if (liveCall(); as call) {
         <button mat-flat-button class="join-call" (click)="startCall(call.media)" [disabled]="callStarting()">
           <mat-icon>call</mat-icon>Rejoindre
         </button>
@@ -79,7 +83,9 @@
             @if (mediaState() === 'unavailable') {
               <p class="media-empty">Les photos ne sont pas disponibles pour le moment.</p>
             } @else if (mediaState() === 'ready' && mediaPhotos().length === 0) {
-              <p class="media-empty">Aucune photo pour l’instant. Envoie la première avec le bouton photo.</p>
+              <p class="media-empty">
+                {{ readOnly() ? 'Aucune photo dans cette conversation.' : 'Aucune photo pour l’instant. Envoie la première avec le bouton photo.' }}
+              </p>
             } @else {
               <div class="media-grid">
                 @for (photo of mediaPhotos(); track photo.messageId) {
@@ -106,7 +112,8 @@
         } @else {
           <div class="chat-shared-wrapper">
             <app-shared-chat [messages]="chatMessages()" [loading]="isSending()" [historyLoading]="isHistoryLoading()"
-              [hasMore]="hasMoreHistory()" [placeholder]="placeholder" [photos]="true" (send)="onSendMessage($event)"
+              [hasMore]="hasMoreHistory()" [placeholder]="placeholder" [photos]="!readOnly()" [readOnly]="readOnly()"
+              [readOnlyNotice]="readOnlyNotice" (send)="onSendMessage($event)"
               (sendPhoto)="onSendPhoto($event)" (openPhoto)="openPhotoFromThread($event)"
               (loadMore)="onLoadMoreMessages()">
             </app-shared-chat>

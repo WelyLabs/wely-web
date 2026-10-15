@@ -26,7 +26,7 @@
         <div class="empty-icon">
           <mat-icon>forum</mat-icon>
         </div>
-        <p>Aucun message encore. Envoyez le premier !</p>
+        <p>{{ readOnly() ? 'Aucun message.' : 'Aucun message encore. Envoyez le premier !' }}</p>
       </div>
     }
 
@@ -37,7 +37,12 @@
   </div>
 
   <!-- Input Bar -->
-  @if (!loading() || messages().length > 0) {
+  @if (readOnly()) {
+    <p class="read-only-notice" role="note">
+      <mat-icon aria-hidden="true">lock</mat-icon>
+      <span>{{ readOnlyNotice() }}</span>
+    </p>
+  } @else if (!loading() || messages().length > 0) {
     <div class="chat-input-bar">
       <div class="input-glass-container">
         @if (photos()) {

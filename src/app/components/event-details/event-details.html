@@ -230,10 +230,12 @@
       @if (shown.length > 0) {
         <div class="avatars">
           @for (person of shown.slice(0, 5); track person.id) {
-            <button type="button" class="avatar" [style.background]="avatarColor(person.id)" [title]="person.name"
-              [attr.aria-label]="'Voir ' + person.name" (click)="openPerson(person.id)">
+            <button type="button" class="avatar" [style.background]="person.deleted ? deletedAvatarColor : avatarColor(person.id)"
+              [title]="person.name" [attr.aria-label]="'Voir ' + person.name" (click)="openPerson(person.id)">
               @if (person.picture) {
                 <img [src]="person.picture" alt="">
+              } @else if (person.deleted) {
+                <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
               } @else {
                 {{ person.initials }}
               }
@@ -265,32 +267,37 @@
       @for (person of people(); track person.id) {
         <div class="person-row">
           <button type="button" class="person-open" (click)="openPerson(person.id)">
-            <span class="avatar small" [style.background]="avatarColor(person.id)">
+            <span class="avatar small" [style.background]="person.deleted ? deletedAvatarColor : avatarColor(person.id)">
               @if (person.picture) {
                 <img [src]="person.picture" alt="">
+              } @else if (person.deleted) {
+                <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
               } @else {
                 {{ person.initials }}
               }
             </span>
             <span class="person-name">{{ person.name }}</span>
           </button>
-          @switch (person.relation) {
-            @case ('FRIENDS') {
-              <span class="relation">Ami</span>
-            }
-            @case ('SENT_BY_ME') {
-              <span class="relation">Demande envoyée</span>
-            }
-            @case ('SENT_BY_THEM') {
-              <button type="button" class="small-gradient-button" (click)="acceptFriend(person)"
-                [disabled]="sending().has(person.id)" [appPendingTrail]="sending().has(person.id)">Accepter</button>
-            }
-            @case ('NONE') {
-              <button type="button" class="small-outline-button" (click)="addFriend(person)"
-                [disabled]="sending().has(person.id)" [appPendingTrail]="sending().has(person.id)"
-                [attr.aria-label]="'Ajouter ' + person.name + ' en ami'">
-                <mat-icon>person_add</mat-icon>Ajouter
-              </button>
+          <!-- No friendship to offer a deleted account. -->
+          @if (!person.deleted) {
+            @switch (person.relation) {
+              @case ('FRIENDS') {
+                <span class="relation">Ami</span>
+              }
+              @case ('SENT_BY_ME') {
+                <span class="relation">Demande envoyée</span>
+              }
+              @case ('SENT_BY_THEM') {
+                <button type="button" class="small-gradient-button" (click)="acceptFriend(person)"
+                  [disabled]="sending().has(person.id)" [appPendingTrail]="sending().has(person.id)">Accepter</button>
+              }
+              @case ('NONE') {
+                <button type="button" class="small-outline-button" (click)="addFriend(person)"
+                  [disabled]="sending().has(person.id)" [appPendingTrail]="sending().has(person.id)"
+                  [attr.aria-label]="'Ajouter ' + person.name + ' en ami'">
+                  <mat-icon>person_add</mat-icon>Ajouter
+                </button>
+              }
             }
           }
         </div>

@@ -48,6 +48,9 @@ function startOfDay(day: Date): Date {
 /** Common free time shorter than this is not worth showing on the grid. */
 const MIN_COMMON_FREE_MINUTES = 30;
 
+/** The title « Proposer une sortie » prefills; the organizer names the outing as they like. */
+export const OUTING_TITLE = 'Sortie';
+
 /** What the overlay fetched for the visible days: each friend's calendar, and the common free time. */
 interface OverlayData {
   calendars: { friendId: string; entries: FriendCalendarEntry[]; failed: boolean }[];
@@ -521,7 +524,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     // Read once: going back or reloading must not open the form again.
     history.replaceState({ ...history.state, proposeSlots: undefined, proposeWith: undefined }, '');
-    const title = `Sortie avec ${proposal.proposeWith}`;
+    // A plain title: a friend's name copied into the event would outlive their account in other services.
+    const title = OUTING_TITLE;
     const [first] = proposal.proposeSlots;
     if (!first) {
       this.openNewEvent();
