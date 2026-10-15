@@ -219,7 +219,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
     location: '',
     startDate: new Date(),
     endDate: new Date(),
-    subscribeByDefault: false,
   });
 
   /**
@@ -1123,7 +1122,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
       location: '',
       startDate: baseDate,
       endDate: finalEndDate,
-      subscribeByDefault: false,
     });
 
     this.isPopoverVisible.set(true);

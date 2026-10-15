@@ -32,6 +32,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 | | |
 |---|---|
 | **Calendrier** | Vue mensuelle des événements auxquels l'utilisateur est inscrit |
+| **Participation** | Le créateur d'un événement y est toujours inscrit ; tout membre peut le quitter : l'organisateur confie d'abord l'événement à un autre participant, et le dernier à partir le supprime, après confirmation |
 | **Sondage de date** | L'organisateur propose de 2 à 5 créneaux ; ceux qui voient l'événement votent Oui / Peut-être / Non, en direct (Server-Sent Events) ; les créneaux proposés s'affichent en pointillés dans le calendrier, et fixer la date inscrit ceux qui ont voté Oui |
 | **Feed** | Découverte des événements auxquels il n'est pas inscrit, en cartes à faire glisser ou sur une carte de la zone affichée, d'où on les rejoint |
 | **Lieux** | Lieu d'un événement choisi sur une carte (MapLibre, tuiles OpenFreeMap) avec recherche d'adresse (Photon) ; mini-carte sur la page de l'événement |

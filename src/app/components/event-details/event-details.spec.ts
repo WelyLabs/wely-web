@@ -17,6 +17,9 @@ import { ScheduleService } from '../../services/schedule.service';
 import { UserService } from '../../services/user.service';
 import { ChatService } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
+import { NotificationService } from '../../services/notification.service';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
+import { HandOverDialogComponent } from '../hand-over-dialog/hand-over-dialog';
 import { Conversation, ConversationType, Message, MessageType } from '../../models/chat.model';
 import { User } from '../../models/user.model';
 import { MatDialog } from '@angular/material/dialog';
@@ -86,7 +89,9 @@ describe('EventDetailsComponent', () => {
         getParticipants: ReturnType<typeof vi.fn>;
         toggleSubscription: ReturnType<typeof vi.fn>;
         removeCover: ReturnType<typeof vi.fn>;
+        leave: ReturnType<typeof vi.fn>;
     };
+    let notifications: { showInfo: ReturnType<typeof vi.fn> };
     let dialog: { open: ReturnType<typeof vi.fn> };
     let pollStream: { follow: ReturnType<typeof vi.fn> };
     let router: { navigate: ReturnType<typeof vi.fn> };
@@ -146,8 +151,10 @@ describe('EventDetailsComponent', () => {
             getEvent: vi.fn().mockReturnValue(of(event())),
             getParticipants: vi.fn().mockReturnValue(of(participants())),
             toggleSubscription: vi.fn().mockReturnValue(of(event())),
-            removeCover: vi.fn().mockReturnValue(of(undefined))
+            removeCover: vi.fn().mockReturnValue(of(undefined)),
+            leave: vi.fn().mockReturnValue(of({ deleted: false, event: event() }))
         };
+        notifications = { showInfo: vi.fn() };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
         calls = callServiceStub();
         schedule = { getConflicts: vi.fn().mockReturnValue(of([])) };
@@ -184,6 +191,7 @@ describe('EventDetailsComponent', () => {
                 { provide: Router, useValue: router },
                 { provide: NavigationService, useValue: navigation },
                 { provide: MatDialog, useValue: dialog },
+                { provide: NotificationService, useValue: notifications },
                 { provide: PollStreamService, useValue: pollStream },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
             ]
@@ -465,6 +473,190 @@ describe('EventDetailsComponent', () => {
 
         expect(component.busy()).toBe(false);
         expect(eventService.getParticipants).toHaveBeenCalledTimes(1);
+    });
+
+    describe('leaving', () => {
+        const refusal = (code: string, status = 409) =>
+            throwError(() => new HttpErrorResponse({ status, error: { code } }));
+        const leaveButton = (): HTMLButtonElement | null => fixture.nativeElement.querySelector('.leave-button');
+        /** Dialogs answer in turn, the last answer repeated. */
+        const dialogAnswers = (...answers: unknown[]) => {
+            let index = 0;
+            dialog.open.mockImplementation(() => {
+                const answer = answers[Math.min(index++, answers.length - 1)];
+                return { afterClosed: () => of(answer) };
+            });
+        };
+        const asOrganizer = (participantIds: string[]) => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me' })));
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds })));
+        };
+
+        it('template_shouldOfferToLeave_toAParticipant', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'] })));
+            create();
+
+            expect(leaveButton()?.textContent).toContain("Quitter l'événement");
+        });
+
+        it('template_shouldOfferToLeave_toAnOrganizerNotRegistered', () => {
+            asOrganizer(['f1']);
+            create();
+
+            expect(leaveButton()).not.toBeNull();
+        });
+
+        it('template_shouldNotOfferToLeave_toAGuest', () => {
+            create();
+
+            expect(leaveButton()).toBeNull();
+        });
+
+        it('leave_shouldLeaveDirectlyThenReloadTheParticipants_whenNotOrganizer', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'] })));
+            create();
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org'] })));
+
+            leaveButton()!.click();
+
+            expect(dialog.open).not.toHaveBeenCalled();
+            expect(eventService.leave).toHaveBeenCalledWith('e1', {});
+            expect(eventService.getParticipants).toHaveBeenCalledTimes(2);
+            expect(component.joined()).toBe(false);
+            expect(component.busy()).toBe(false);
+        });
+
+        it('leave_shouldDoNothing_whileBusy', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'] })));
+            create();
+            component.busy.set(true);
+
+            component.leave();
+
+            expect(eventService.leave).not.toHaveBeenCalled();
+        });
+
+        it('leave_shouldAskTheOrganizerForASuccessor_thenHandTheEventOver', () => {
+            asOrganizer(['me', 'f1', 'u2']);
+            dialogAnswers('u2');
+            eventService.leave.mockReturnValue(of({ deleted: false, event: event({ organizerId: 'u2' }) }));
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(HandOverDialogComponent, expect.objectContaining({
+                data: { people: [{ id: 'f1', name: 'Léo Martin' }, { id: 'u2', name: 'Inès Bernard' }] }
+            }));
+            expect(eventService.leave).toHaveBeenCalledWith('e1', { newOrganizerId: 'u2' });
+            expect(component.event()?.organizerId).toBe('u2');
+            expect(component.isOrganizer()).toBe(false);
+            expect(eventService.getParticipants).toHaveBeenCalledTimes(2);
+            expect(component.busy()).toBe(false);
+        });
+
+        it('leave_shouldStay_whenTheOrganizerCancelsTheHandOver', () => {
+            asOrganizer(['me', 'f1']);
+            dialogAnswers(undefined);
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(HandOverDialogComponent, expect.anything());
+            expect(eventService.leave).not.toHaveBeenCalled();
+        });
+
+        it('leave_shouldConfirmTheDeletion_thenGoBack_whenTheOrganizerIsAlone', () => {
+            asOrganizer(['me']);
+            dialogAnswers(true);
+            eventService.leave.mockReturnValue(of({ deleted: true, event: null }));
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.objectContaining({
+                data: expect.objectContaining({
+                    title: "Supprimer l'événement ?",
+                    confirmText: 'Supprimer et partir',
+                    isDestructive: true
+                })
+            }));
+            expect(eventService.leave).toHaveBeenCalledWith('e1', { deleteIfLast: true });
+            expect(notifications.showInfo).toHaveBeenCalledWith('Événement supprimé');
+            expect(navigation.back).toHaveBeenCalledWith('/calendar');
+        });
+
+        it('leave_shouldKeepTheEvent_whenTheDeletionIsNotConfirmed', () => {
+            asOrganizer(['me']);
+            dialogAnswers(false);
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.anything());
+            expect(eventService.leave).not.toHaveBeenCalled();
+            expect(navigation.back).not.toHaveBeenCalled();
+        });
+
+        it('leave_shouldReloadAndAskForASuccessor_whenSomeoneJoinedMeanwhile', () => {
+            asOrganizer(['me']);
+            dialogAnswers(true, 'f1');
+            eventService.leave
+                .mockReturnValueOnce(refusal('EVT-BUS-020'))
+                .mockReturnValue(of({ deleted: false, event: event({ organizerId: 'f1' }) }));
+            create();
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'f1'] })));
+
+            component.leave();
+
+            expect(dialog.open.mock.calls.map(call => call[0])).toEqual([ConfirmDialogComponent, HandOverDialogComponent]);
+            expect(eventService.leave.mock.calls).toEqual([['e1', { deleteIfLast: true }], ['e1', { newOrganizerId: 'f1' }]]);
+            expect(navigation.back).not.toHaveBeenCalled();
+            expect(component.event()?.organizerId).toBe('f1');
+        });
+
+        it('leave_shouldAskAgainWithTheFreshList_whenTheSuccessorLeftMeanwhile', () => {
+            asOrganizer(['me', 'f1', 'u2']);
+            dialogAnswers('f1', 'u2');
+            eventService.leave
+                .mockReturnValueOnce(refusal('EVT-BUS-021', 400))
+                .mockReturnValue(of({ deleted: false, event: event({ organizerId: 'u2' }) }));
+            create();
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u2'] })));
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledTimes(2);
+            expect(dialog.open.mock.calls[1][1].data).toEqual({ people: [{ id: 'u2', name: 'Inès Bernard' }] });
+            expect(eventService.leave).toHaveBeenLastCalledWith('e1', { newOrganizerId: 'u2' });
+        });
+
+        it('leave_shouldConfirmTheDeletion_whenTheServerSaysTheViewerIsTheLastMember', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'] })));
+            dialogAnswers(true);
+            eventService.leave
+                .mockReturnValueOnce(refusal('EVT-BUS-022'))
+                .mockReturnValue(of({ deleted: true, event: null }));
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.anything());
+            expect(eventService.leave.mock.calls).toEqual([['e1', {}], ['e1', { deleteIfLast: true }]]);
+            expect(navigation.back).toHaveBeenCalledWith('/calendar');
+        });
+
+        it('leave_shouldStayAndReleaseTheButton_whenItFailsOtherwise', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'] })));
+            eventService.leave.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+            create();
+
+            component.leave();
+
+            expect(component.busy()).toBe(false);
+            expect(dialog.open).not.toHaveBeenCalled();
+            expect(eventService.getParticipants).toHaveBeenCalledTimes(1);
+            expect(component.joined()).toBe(true);
+        });
     });
 
     it('mapUrl_shouldSearchTheTypedLocationWhenThereAreNoCoordinates', () => {

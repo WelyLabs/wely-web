@@ -155,7 +155,6 @@ describe('EventService', () => {
                 title: 'New',
                 startDate: new Date('2026-03-14T09:30:00Z'),
                 location: 'L',
-                subscribeByDefault: true,
             })
             .subscribe((event) => (created = event));
 
@@ -215,6 +214,48 @@ describe('EventService', () => {
 
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
         httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+    });
+
+    it('leave_shouldPostTheChoiceAndRefreshBothLists_whenTheEventStays', () => {
+        let result: { deleted: boolean; event: FeedEvent | null } | undefined;
+        service.leave('1', { newOrganizerId: 'lea' }).subscribe((left) => (result = left));
+
+        const request = httpMock.expectOne(`${apiUrl}/1/leave`);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({ newOrganizerId: 'lea' });
+        request.flush({ deleted: false, event: payload({ id: '1', organizerId: 'lea' }) });
+
+        expect(result?.deleted).toBe(false);
+        expect(result?.event?.organizerId).toBe('lea');
+        expect(result?.event?.startDate).toEqual(new Date('2026-03-14T09:30:00Z'));
+
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+    });
+
+    it('leave_shouldReportNoEvent_whenTheLastMemberDeletedIt', () => {
+        let result: { deleted: boolean; event: FeedEvent | null } | undefined;
+        service.leave('1', { deleteIfLast: true }).subscribe((left) => (result = left));
+
+        const request = httpMock.expectOne(`${apiUrl}/1/leave`);
+        expect(request.request.body).toEqual({ deleteIfLast: true });
+        request.flush({ deleted: true, event: null });
+
+        expect(result).toEqual({ deleted: true, event: null });
+
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+    });
+
+    it('leave_shouldPassTheErrorOnWithoutRefreshing_whenRefused', () => {
+        let failure: HttpErrorResponse | undefined;
+        service.leave('1', {}).subscribe({ error: (error: HttpErrorResponse) => (failure = error) });
+
+        httpMock.expectOne(`${apiUrl}/1/leave`).flush(
+            { code: 'EVT-BUS-020' }, { status: 409, statusText: 'Conflict' });
+
+        expect(failure?.status).toBe(409);
+        expect(failure?.error.code).toBe('EVT-BUS-020');
     });
 
     it('searches free slots and converts the ranges into Dates', () => {
@@ -359,7 +400,7 @@ describe('EventService', () => {
                 { start: new Date('2026-11-02T18:00:00Z'), end: new Date('2026-11-02T20:00:00Z') },
                 { start: new Date('2026-11-03T18:00:00Z'), end: new Date('2026-11-03T20:00:00Z') },
             ];
-            service.createEvent({ title: 'Poll', startDate: slots[0].start, location: '', subscribeByDefault: false, candidateSlots: slots }).subscribe();
+            service.createEvent({ title: 'Poll', startDate: slots[0].start, location: '', candidateSlots: slots }).subscribe();
 
             const request = httpMock.expectOne(apiUrl);
             expect(request.request.body.candidateSlots).toEqual(slots);

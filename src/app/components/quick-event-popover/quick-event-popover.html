@@ -157,13 +157,6 @@
                     <textarea id="quick-event-notes" [ngModel]="draft().description"
                         (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
                 </div>
-
-                <div class="form-group checkbox-group">
-                    <label class="checkbox-container">
-                        <input type="checkbox" [ngModel]="draft().subscribeByDefault" (ngModelChange)="update('subscribeByDefault', $event)">
-                        <span>S'inscrire par défaut</span>
-                    </label>
-                </div>
             }
         </section>
     </div>

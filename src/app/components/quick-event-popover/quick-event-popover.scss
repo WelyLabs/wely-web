@@ -216,23 +216,6 @@
                 color: var(--text-tertiary);
             }
         }
-
-        &.checkbox-group {
-            .checkbox-container {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                cursor: pointer;
-                font-size: 13px;
-                color: var(--text-secondary);
-
-                input {
-                    width: 16px;
-                    height: 16px;
-                    cursor: pointer;
-                }
-            }
-        }
     }
 
     .map-toggle {

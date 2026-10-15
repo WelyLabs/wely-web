@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { EMPTY, Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
 
-import { EventParticipants, EventService, FeedEvent, Poll } from '../../services/event.service';
+import { EventParticipants, EventService, FeedEvent, LeaveChoice, LeaveResult, Poll } from '../../services/event.service';
 import { PollStreamService } from '../../services/poll-stream.service';
 import { EventPollComponent, Voter } from '../event-poll/event-poll';
 import { EventConflictsComponent } from '../event-conflicts/event-conflicts';
@@ -32,6 +32,9 @@ import { ExpenseMember } from '../../models/expense.model';
 import { EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult } from '../event-cover-dialog/event-cover-dialog';
 import { eventMediaError } from '../../core/ui/event-media-errors';
 import { CallService } from '../../services/call.service';
+import { NotificationService } from '../../services/notification.service';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
+import { HandOverDialogComponent, HandOverDialogData, HandOverDialogResult } from '../hand-over-dialog/hand-over-dialog';
 import { Call, CallMedia, isLive } from '../../models/call.model';
 
 /**
@@ -74,6 +77,13 @@ export const THREAD_PREVIEW_SIZE = 3;
 /** wely-chat creates the group a moment after joining (relay, then Kafka): asked again this often. */
 const GROUP_RETRY_DELAY_MS = 1_500;
 const GROUP_RETRY_COUNT = 6;
+
+/** Leaving refused: the organizer must name a successor (someone joined meanwhile). */
+export const NEW_ORGANIZER_REQUIRED = 'EVT-BUS-020';
+/** Leaving refused: the chosen successor no longer takes part. */
+export const SUCCESSOR_NOT_PARTICIPANT = 'EVT-BUS-021';
+/** Leaving refused: the last member has to confirm the deletion. */
+export const LAST_MEMBER = 'EVT-BUS-022';
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -137,6 +147,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly pollStream = inject(PollStreamService);
+  private readonly notifications = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly heroEnd = viewChild<ElementRef<HTMLElement>>('heroEnd');
@@ -373,6 +384,110 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  /**
+   * Leaves the event. A participant just goes; the organizer hands it over to someone taking
+   * part, or, being the last one, confirms that leaving deletes it.
+   */
+  leave(): void {
+    const event = this.event();
+    if (!event || this.busy()) {
+      return;
+    }
+    if (!this.isOrganizer()) {
+      this.sendLeave(event.id, {});
+      return;
+    }
+    this.askHowToLeave(event.id);
+  }
+
+  /** The organizer's way out: a successor when others take part, the deletion otherwise. */
+  private askHowToLeave(eventId: string): void {
+    if (this.others().length > 0) {
+      this.askSuccessor(eventId);
+    } else {
+      this.confirmDeletion(eventId);
+    }
+  }
+
+  private askSuccessor(eventId: string): void {
+    const data: HandOverDialogData = { people: this.others().map(({ id, name }) => ({ id, name })) };
+    this.dialog.open<HandOverDialogComponent, HandOverDialogData, HandOverDialogResult>(HandOverDialogComponent, {
+      width: '440px',
+      maxWidth: '95vw',
+      data,
+      panelClass: 'confirm-dialog-panel'
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(newOrganizerId => {
+        if (newOrganizerId) {
+          this.sendLeave(eventId, { newOrganizerId });
+        }
+      });
+  }
+
+  private confirmDeletion(eventId: string): void {
+    const data: ConfirmDialogData = {
+      title: "Supprimer l'événement ?",
+      message: "Tu es le dernier participant : en partant, l'événement est supprimé, avec ses photos, ses dépenses et sa discussion.",
+      confirmText: 'Supprimer et partir',
+      cancelText: 'Annuler',
+      isDestructive: true
+    };
+    this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+      width: '400px',
+      maxWidth: '95vw',
+      data,
+      panelClass: 'confirm-dialog-panel'
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(confirmed => {
+        if (confirmed) {
+          this.sendLeave(eventId, { deleteIfLast: true });
+        }
+      });
+  }
+
+  private sendLeave(eventId: string, choice: LeaveChoice): void {
+    this.busy.set(true);
+    this.eventService.leave(eventId, choice).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.busy.set(false);
+        this.afterLeaving(eventId, result);
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.onLeaveRefused(eventId, error);
+      }
+    });
+  }
+
+  private afterLeaving(eventId: string, result: LeaveResult): void {
+    if (result.deleted) {
+      this.notifications.showInfo('Événement supprimé');
+      this.navigationService.back('/calendar');
+      return;
+    }
+    // The event as it stands now, organizer included: a private one may no longer be readable.
+    if (result.event) {
+      this.event.set(result.event);
+    }
+    this.loadParticipants(eventId);
+  }
+
+  /** The group changed while the viewer was choosing: asked again with the fresh list. */
+  private onLeaveRefused(eventId: string, error: unknown): void {
+    const code = error instanceof HttpErrorResponse ? (error.error as { code?: string } | null)?.code : undefined;
+    if (code === NEW_ORGANIZER_REQUIRED || code === SUCCESSOR_NOT_PARTICIPANT) {
+      this.loadParticipants(eventId, () => this.askHowToLeave(eventId));
+      return;
+    }
+    if (code === LAST_MEMBER) {
+      this.confirmDeletion(eventId);
+      return;
+    }
+    this.logger.error('EventDetailsComponent', 'Could not leave the event', error);
+  }
+
   /** The organizer picked a picture: it is cropped in a dialog, which uploads it. */
   onCoverPicked(pick: Event): void {
     const input = pick.target as HTMLInputElement | null;
@@ -588,9 +703,12 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
-  private loadParticipants(id: string): void {
+  private loadParticipants(id: string, then?: () => void): void {
     this.eventService.getParticipants(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: participants => this.participants.set(participants),
+      next: participants => {
+        this.participants.set(participants);
+        then?.();
+      },
       error: error => this.logger.error('EventDetailsComponent', 'Could not load the participants', error)
     });
   }

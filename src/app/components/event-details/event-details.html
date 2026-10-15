@@ -192,10 +192,10 @@
             }
           </section>
 
-          @if (joined()) {
-            <button type="button" class="text-button" (click)="toggleParticipation()" [disabled]="busy()"
+          @if (member()) {
+            <button type="button" class="text-button leave-button" (click)="leave()" [disabled]="busy()"
               [appPendingTrail]="busy()">
-              Ne plus participer
+              Quitter l'événement
             </button>
           }
         }

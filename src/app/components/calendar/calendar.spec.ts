@@ -170,7 +170,7 @@ describe('CalendarComponent', () => {
     });
 
     it('should submit event', () => {
-        const data: EventCreateRequest = { title: 'New', startDate: new Date(), subscribeByDefault: false, location: '' };
+        const data: EventCreateRequest = { title: 'New', startDate: new Date(), location: '' };
         component.submitEvent(data);
         expect(eventServiceMock.createEvent).toHaveBeenCalledWith(data);
     });
@@ -902,6 +902,12 @@ describe('CalendarComponent', () => {
 
             expect(component.popoverData().title).toBe('');
         });
+
+        it('startCreatingEvent_shouldNotAskWhetherToRegister_sinceTheCreatorAlwaysTakesPart', () => {
+            component.startCreatingEvent(new Date(2026, 9, 14));
+
+            expect(Object.keys(component.popoverData())).not.toContain('subscribeByDefault');
+        });
     });
 
     describe('new event button', () => {
@@ -983,7 +989,7 @@ describe('CalendarComponent', () => {
     });
 
     describe('saving a new event', () => {
-        const data: EventCreateRequest = { title: 'Afterwork', startDate: new Date(2030, 0, 10, 18), subscribeByDefault: false, location: '' };
+        const data: EventCreateRequest = { title: 'Afterwork', startDate: new Date(2030, 0, 10, 18), location: '' };
 
         beforeEach(() => {
             try { localStorage.removeItem('wely.calendar.createHintDone'); } catch { /* no storage */ }
@@ -1342,7 +1348,7 @@ describe('CalendarComponent', () => {
                 new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-014' } })));
             component.openNewEvent(new Date(2030, 0, 10));
 
-            component.submitEvent({ title: 'Apéro', startDate: new Date(2030, 0, 10, 18), subscribeByDefault: false, location: '' });
+            component.submitEvent({ title: 'Apéro', startDate: new Date(2030, 0, 10, 18), location: '' });
 
             expect(component.createError()).toContain('créneaux proposés');
         });

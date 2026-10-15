@@ -1,0 +1,38 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title id="hand-over-title">Qui organise après toi ?</h2>
+    <button mat-icon-button type="button" (click)="onCancel()" class="close-button" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <p class="message" id="hand-over-hint">Choisis le participant à qui confier l'événement avant de partir.</p>
+
+    <div class="people" role="radiogroup" aria-labelledby="hand-over-title" aria-describedby="hand-over-hint">
+      @for (person of data.people; track person.id) {
+        @let picture = pictureOf(person.id);
+        <label class="person" [class.selected]="chosen() === person.id">
+          <input class="visually-hidden" type="radio" name="hand-over" [value]="person.id"
+            [checked]="chosen() === person.id" (change)="choose(person.id)">
+          <span class="avatar" [style.background]="avatarColor(person.id)" aria-hidden="true">
+            @if (picture) {
+              <img [src]="picture" alt="">
+            } @else {
+              {{ initialsOf(person.name) }}
+            }
+          </span>
+          <span class="name">{{ person.name }}</span>
+          <mat-icon class="check" aria-hidden="true">{{ chosen() === person.id ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+        </label>
+      }
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-stroked-button type="button" (click)="onCancel()" class="cancel-btn">Annuler</button>
+    <button mat-flat-button type="button" color="primary" class="confirm-btn" [disabled]="!chosen()" (click)="onConfirm()">
+      Lui confier l'événement et partir
+    </button>
+  </mat-dialog-actions>
+</div>

@@ -22,8 +22,7 @@ describe('QuickEventPopoverComponent', () => {
         location: '',
         startDate,
         endDate,
-        description: '',
-        subscribeByDefault: true
+        description: ''
     });
 
     beforeEach(async () => {
@@ -74,11 +73,9 @@ describe('QuickEventPopoverComponent', () => {
     it('should update each editable field', () => {
         component.update('location', 'Room 2');
         component.update('description', 'Weekly sync');
-        component.update('subscribeByDefault', false);
 
         expect(component.draft().location).toBe('Room 2');
         expect(component.draft().description).toBe('Weekly sync');
-        expect(component.draft().subscribeByDefault).toBe(false);
     });
 
     it('should emit the draft on save', () => {
@@ -375,7 +372,7 @@ describe('QuickEventPopoverComponent', () => {
     });
 
     describe('more options', () => {
-        it('toggleMoreOptions_shouldShowThenHideNotesAndSubscription', () => {
+        it('toggleMoreOptions_shouldShowThenHideNotes', () => {
             expect(fixture.nativeElement.querySelector('#quick-event-notes')).toBeNull();
 
             component.toggleMoreOptions();
@@ -385,6 +382,14 @@ describe('QuickEventPopoverComponent', () => {
             component.toggleMoreOptions();
             fixture.detectChanges();
             expect(fixture.nativeElement.querySelector('#quick-event-notes')).toBeNull();
+        });
+
+        it('template_shouldNotOfferToSkipRegistration_sinceTheCreatorAlwaysTakesPart', () => {
+            component.toggleMoreOptions();
+            fixture.detectChanges();
+
+            expect(fixture.nativeElement.querySelector('input[type="checkbox"]')).toBeNull();
+            expect(fixture.nativeElement.textContent).not.toContain("S'inscrire par défaut");
         });
 
         it('showMoreOptions_shouldCloseWhenANewSlotIsOpened', () => {
@@ -692,7 +697,7 @@ describe('QuickEventPopoverComponent on a wide screen', () => {
         const fixture = TestBed.createComponent(QuickEventPopoverComponent);
         fixture.componentRef.setInput('data', {
             title: '', location: '', startDate: new Date(2026, 9, 16, 19), endDate: new Date(2026, 9, 16, 20),
-            description: '', subscribeByDefault: false
+            description: ''
         });
         fixture.detectChanges();
         const el: HTMLElement = fixture.nativeElement;
@@ -738,7 +743,7 @@ describe('QuickEventPopoverComponent schedule conflicts', () => {
         fixture = TestBed.createComponent(QuickEventPopoverComponent);
         component = fixture.componentInstance;
         fixture.componentRef.setInput('data', {
-            title: 'Médecin', location: '', startDate: start, endDate: end, description: '', subscribeByDefault: false
+            title: 'Médecin', location: '', startDate: start, endDate: end, description: ''
         });
     });
 

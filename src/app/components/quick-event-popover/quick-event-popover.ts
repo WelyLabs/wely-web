@@ -129,7 +129,7 @@ export class QuickEventPopoverComponent {
     readonly wide = toSignal(inject(BreakpointObserver).observe(WIDE_LAYOUT).pipe(map(state => state.matches)),
         { initialValue: window.matchMedia?.(WIDE_LAYOUT).matches ?? false });
 
-    /** Notes and « S'inscrire par défaut », folded away on a phone; closed again on each new slot. */
+    /** Notes, folded away on a phone; closed again on each new slot. */
     readonly showMoreOptions = linkedSignal({ source: this.data, computation: () => false });
     readonly optionsShown = computed(() => this.wide() || this.showMoreOptions());
 

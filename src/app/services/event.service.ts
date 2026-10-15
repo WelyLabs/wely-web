@@ -15,7 +15,6 @@ export interface EventCreateRequest {
   /** Set when the location was picked on the map. */
   coordinates?: Coordinates | null;
   description?: string;
-  subscribeByDefault: boolean;
   /** FRIENDS when left out. */
   visibility?: Visibility;
   /** 2 to 5 proposed slots: the event then opens as a date poll. */
@@ -182,6 +181,23 @@ export interface FreeRangePayload {
   end: string | number[];
 }
 
+/** How the caller leaves: who takes over when they organize, or the go-ahead to delete when they are the last. */
+export interface LeaveChoice {
+  newOrganizerId?: string;
+  deleteIfLast?: boolean;
+}
+
+/** What leaving did: the event as it stands, or nothing when it was deleted. */
+export interface LeaveResult {
+  deleted: boolean;
+  event: FeedEvent | null;
+}
+
+interface LeaveResultPayload {
+  deleted: boolean;
+  event: EventPayload | null;
+}
+
 /** Fallback duration when the backend sends no end date. */
 const DEFAULT_DURATION_MS = 3_600_000;
 
@@ -252,6 +268,14 @@ export class EventService {
   toggleSubscription(event: FeedEvent): Observable<FeedEvent> {
     return this.http.post<EventPayload>(`${this.apiUrl}/${event.id}/subscribe`, {}).pipe(
       map((updated) => this.toFeedEvent(updated)),
+      tap(() => this.refreshEvents()),
+    );
+  }
+
+  /** Leaves the event; the organizer names a successor, the last member confirms the deletion. */
+  leave(eventId: string, choice: LeaveChoice): Observable<LeaveResult> {
+    return this.http.post<LeaveResultPayload>(`${this.apiUrl}/${eventId}/leave`, choice).pipe(
+      map((result) => ({ deleted: result.deleted, event: result.event ? this.toFeedEvent(result.event) : null })),
       tap(() => this.refreshEvents()),
     );
   }
