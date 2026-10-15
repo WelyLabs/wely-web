@@ -28,6 +28,14 @@ function hasVisibleClient(windowClients) {
   return windowClients.some(client => client.visibilityState === 'visible');
 }
 
+/**
+ * Safari (every browser on iPhone) revokes the push permission after a push that shows nothing,
+ * so there a notification is always shown, even with Wely on screen.
+ */
+function mustAlwaysShow(userAgent) {
+  return /AppleWebKit/.test(userAgent || '') && !/Chrome|Chromium|Edg|Firefox|OPR/.test(userAgent || '');
+}
+
 function notificationOptions(payload) {
   return {
     body: payload.body || '',
@@ -53,13 +61,14 @@ function safeLink(link, origin) {
 
 /*
  * Pushes are subscribed with userVisibleOnly, so each one should show a notification. Skipping it
- * while a Wely tab is visible is the accepted compromise: Chrome does not count a push as silent
- * when one of the site's pages is on screen, and the tab already shows a toast.
+ * while a Wely tab is visible is the accepted compromise on Chrome and Firefox, which do not count a
+ * push as silent when one of the site's pages is on screen; the tab already shows a toast.
  */
 async function handlePush(scope, data) {
   const payload = readPayload(data);
   const windowClients = await scope.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  if (hasVisibleClient(windowClients)) {
+  const userAgent = scope.navigator && scope.navigator.userAgent;
+  if (!mustAlwaysShow(userAgent) && hasVisibleClient(windowClients)) {
     return;
   }
   const title = (payload && payload.title) || 'Wely';

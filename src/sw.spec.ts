@@ -21,6 +21,9 @@ function fakeClient(visibilityState: 'visible' | 'hidden', focused = false): Fak
     return { visibilityState, focused, focus: vi.fn().mockResolvedValue(undefined), postMessage: vi.fn() };
 }
 
+const CHROME = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1';
+
 describe('sw.js', () => {
     let listeners: Record<string, Listener>;
     let clients: FakeClient[];
@@ -28,6 +31,7 @@ describe('sw.js', () => {
         addEventListener: (type: string, listener: Listener) => void;
         skipWaiting: ReturnType<typeof vi.fn>;
         location: { origin: string };
+        navigator: { userAgent: string };
         registration: { showNotification: ReturnType<typeof vi.fn> };
         clients: { matchAll: ReturnType<typeof vi.fn>; openWindow: ReturnType<typeof vi.fn>; claim: ReturnType<typeof vi.fn> };
     };
@@ -39,6 +43,7 @@ describe('sw.js', () => {
             addEventListener: (type, listener) => (listeners[type] = listener),
             skipWaiting: vi.fn(),
             location: { origin: ORIGIN },
+            navigator: { userAgent: CHROME },
             registration: { showNotification: vi.fn().mockResolvedValue(undefined) },
             clients: {
                 matchAll: vi.fn(() => Promise.resolve(clients)),
@@ -95,6 +100,16 @@ describe('sw.js', () => {
         await push({ title: 'Alice', body: 'Salut', link: '/chat/conv-1' });
 
         expect(scope.registration.showNotification).not.toHaveBeenCalled();
+    });
+
+    it('push_shouldAlwaysShow_onSafari_evenWithAWelyTabVisible', async () => {
+        // Safari revokes the permission after a push that shows nothing.
+        scope.navigator.userAgent = IPHONE;
+        clients = [fakeClient('visible')];
+
+        await push({ title: 'Alice', body: 'Salut', link: '/chat/conv-1' });
+
+        expect(scope.registration.showNotification).toHaveBeenCalledWith('Alice', expect.anything());
     });
 
     it('push_shouldStillShowSomething_whenThePayloadIsUnreadable', async () => {
