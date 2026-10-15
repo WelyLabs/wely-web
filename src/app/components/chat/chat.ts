@@ -10,12 +10,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '../../services/user.service';
-import { ChatService, PendingMessage, upsertById } from '../../services/chat.service';
+import { ChatService, PendingMessage, chatErrorCode, upsertById } from '../../services/chat.service';
 import { NavigationService } from '../../services/navigation.service';
-import { Conversation, ConversationPhoto, ConversationType, Message, MessagePhoto, Presence, isSystemMessage } from '../../models/chat.model';
+import {
+    CONVERSATION_READ_ONLY_CODE, Conversation, ConversationPhoto, ConversationType, Message, MessagePhoto, Presence, isSystemMessage
+} from '../../models/chat.model';
 import { SharedChatComponent, ChatMessage } from '../shared/chat/shared-chat';
 import { SocialService } from '../../services/social.service';
 import { AvatarService } from '../../services/avatar.service';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../core/ui/deleted-user';
 import { FriendSummary } from '../../models/friendship.model';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -29,6 +33,9 @@ export const MEDIA_PAGE_SIZE = 30;
 
 /** How often the other participant's presence is re-read: wely-chat refreshes it every 30 s. */
 const PRESENCE_POLL_MS = 30_000;
+
+/** What replaces the composer once the other participant deleted their account. */
+export const READ_ONLY_NOTICE = 'Ce compte a été supprimé. Tu peux relire la conversation, mais plus y répondre.';
 
 /**
  * "En ligne", or when the person was last seen, in French: "Vu à 14:32" today, "Vu hier à 09:10",
@@ -81,6 +88,7 @@ export class ChatComponent implements OnInit {
     private readonly navigationService = inject(NavigationService);
     private readonly socialService = inject(SocialService);
     private readonly avatars = inject(AvatarService);
+    private readonly deletedUsers = inject(DeletedUsersService);
     private readonly chatPhotos = inject(ChatPhotoService);
     private readonly photoResizer = inject(PhotoResizer);
     private readonly dialog = inject(MatDialog);
@@ -104,6 +112,9 @@ export class ChatComponent implements OnInit {
     readonly convId = signal<string | null>(null);
 
     readonly placeholder = 'Écrivez votre message...';
+    readonly readOnlyNotice = READ_ONLY_NOTICE;
+    readonly deletedAvatarColor = DELETED_USER_AVATAR_COLOR;
+    readonly deletedIcon = DELETED_USER_ICON;
 
     private friendId: string | null = null;
     private currentUserId: string | null = null;
@@ -133,15 +144,19 @@ export class ChatComponent implements OnInit {
         const partnerId = this.partnerId();
         return conversation.title
             || (partnerId ? this.friends().get(partnerId)?.userName : undefined)
+            || (this.readOnly() ? DELETED_USER_LABEL : undefined)
             || this.messages().find(message => message.senderId === partnerId)?.senderName
             || 'Conversation';
     });
 
-    /** The partner's photo in the header; a group shows its icon instead. */
-    readonly partnerPicture = computed(() => this.isEventGroup() ? null : this.avatars.url(this.partnerId())());
+    /** The partner's photo in the header; a group shows its icon instead, a deleted partner a neutral one. */
+    readonly partnerPicture = computed(() => this.isEventGroup() || this.readOnly() ? null : this.avatars.url(this.partnerId())());
 
     /** An event's group: no single partner, every member may write. */
     readonly isEventGroup = computed(() => this.conversation()?.type === ConversationType.EVENT);
+
+    /** A private conversation whose partner deleted their account: readable, not writable; wely-chat enforces it. */
+    readonly readOnly = computed(() => !this.isEventGroup() && this.conversation()?.readOnly === true);
 
     /** The media tab: the conversation's photos, newest first, read a page at a time. */
     readonly showMedia = signal(false);
@@ -166,11 +181,14 @@ export class ChatComponent implements OnInit {
     /** The other participant, once the conversation is loaded. */
     readonly partnerId = signal<string | null>(null);
 
+    /** Whose presence to poll: nobody's once the partner deleted their account. */
+    private readonly presenceTarget = computed(() => this.readOnly() ? null : this.partnerId());
+
     /**
      * Their presence, re-read every {@link PRESENCE_POLL_MS} while the conversation is open. It
      * used to be a hardcoded « En ligne ». A failed read shows nothing rather than a stale answer.
      */
-    readonly partnerPresence = toSignal(toObservable(this.partnerId).pipe(
+    readonly partnerPresence = toSignal(toObservable(this.presenceTarget).pipe(
         switchMap(partnerId => partnerId
             ? timer(0, PRESENCE_POLL_MS).pipe(switchMap(() =>
                 this.chatService.getPresence(partnerId).pipe(catchError(() => of(null)))))
@@ -288,7 +306,7 @@ export class ChatComponent implements OnInit {
             text: message.content,
             time: message.timestamp,
             isMe: message.senderId === this.currentUserId,
-            senderName: message.senderName,
+            senderName: message.senderName ?? undefined,
             senderId: message.senderId,
             system: isSystemMessage(message) || undefined,
             pending: 'pending' in message ? message.pending : undefined,
@@ -309,7 +327,7 @@ export class ChatComponent implements OnInit {
      */
     async onSendPhoto(file: File): Promise<void> {
         const conversation = this.conversation();
-        if (!conversation) {
+        if (!conversation || this.readOnly()) {
             return;
         }
         const localId = `local-photo-${Date.now()}`;
@@ -336,6 +354,7 @@ export class ChatComponent implements OnInit {
                         this.logger.error('ChatComponent', 'Could not send the photo', error);
                         this.chatMessages.update(entries => entries.map(entry =>
                             entry.id === localId ? { ...entry, pending: false, failed: true } : entry));
+                        this.switchToReadOnlyIfRefused(error);
                     }
                 });
         } catch (error) {
@@ -458,9 +477,20 @@ export class ChatComponent implements OnInit {
         if (senderId && senderId === this.currentUserId) {
             return 'Toi';
         }
+        // Asked about deletion last, only when neither the friend list nor the stored name can name the sender.
         return (senderId ? this.friends().get(senderId)?.userName : undefined)
             ?? this.messages().find(message => message.senderId === senderId)?.senderName
-            ?? 'Un membre';
+            ?? (senderId && ((this.readOnly() && senderId === this.partnerId()) || this.deletedUsers.isDeleted(senderId)())
+                ? DELETED_USER_LABEL : 'Un membre');
+    }
+
+    /** The partner deleted their account while the conversation was open: it becomes read-only. */
+    private switchToReadOnlyIfRefused(error: unknown): boolean {
+        if (chatErrorCode(error) !== CONVERSATION_READ_ONLY_CODE) {
+            return false;
+        }
+        this.conversation.update(current => current ? { ...current, readOnly: true } : current);
+        return true;
     }
 
     onLoadMoreMessages(): void {
@@ -502,7 +532,7 @@ export class ChatComponent implements OnInit {
     onSendMessage(content: string): void {
         const conversation = this.conversation();
         const isGroup = conversation?.type === ConversationType.EVENT;
-        if (!content.trim() || !conversation || (!isGroup && !this.friendId)) {
+        if (!content.trim() || !conversation || (!isGroup && !this.friendId) || this.readOnly()) {
             return;
         }
 
@@ -542,8 +572,10 @@ export class ChatComponent implements OnInit {
                 },
                 error: (err) => {
                     this.logger.error('ChatComponent', 'message delivery failed', err);
-                    this.error.set("Erreur lors de l'envoi du message");
                     this.isSending.set(false);
+                    if (!this.switchToReadOnlyIfRefused(err)) {
+                        this.error.set("Erreur lors de l'envoi du message");
+                    }
                 }
             });
     }
@@ -555,7 +587,7 @@ export class ChatComponent implements OnInit {
     /** Calls the conversation's members, or joins the call already going on, then opens it. */
     async startCall(media: CallMedia): Promise<void> {
         const conversationId = this.conversation()?.id;
-        if (!conversationId || this.callStarting()) {
+        if (!conversationId || this.callStarting() || this.readOnly()) {
             return;
         }
         this.callStarting.set(true);
@@ -591,7 +623,7 @@ export class ChatComponent implements OnInit {
     /** A direct conversation's header opens the partner's page. */
     openPartner(): void {
         const partnerId = this.partnerId();
-        if (partnerId && !this.isEventGroup()) {
+        if (partnerId && !this.isEventGroup() && !this.readOnly()) {
             this.router.navigate(['/friends', partnerId]);
         }
     }

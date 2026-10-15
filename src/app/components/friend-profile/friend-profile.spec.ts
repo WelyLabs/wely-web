@@ -16,6 +16,8 @@ import { EventService, FeedEvent, FriendOverview } from '../../services/event.se
 import { ChatService } from '../../services/chat.service';
 import { AvatarService } from '../../services/avatar.service';
 import { SocialPerson } from '../../models/friendship.model';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../testing/deleted-users.stub';
 
 vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
 vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
@@ -34,6 +36,7 @@ describe('FriendProfileComponent', () => {
   let events: Record<string, ReturnType<typeof vi.fn>>;
   let chat: { getConversation: ReturnType<typeof vi.fn> };
   let dialog: { open: ReturnType<typeof vi.fn> };
+  let deletedUsers: ReturnType<typeof deletedUsersStub>;
 
   const person = (overrides: Partial<SocialPerson> = {}): SocialPerson => ({
     userId: 'lea', userName: 'lea', hashtag: 6000, relationStatus: 'FRIENDS', closeness: 'CLOSE', proposal: null,
@@ -104,6 +107,7 @@ describe('FriendProfileComponent', () => {
     };
     chat = { getConversation: vi.fn().mockReturnValue(of({ id: 'conv-1' })) };
     dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(true) }) };
+    deletedUsers = deletedUsersStub(['gone']);
 
     await TestBed.configureTestingModule({
       imports: [FriendProfileComponent, NoopAnimationsModule],
@@ -115,7 +119,8 @@ describe('FriendProfileComponent', () => {
         { provide: UserService, useValue: users },
         { provide: EventService, useValue: events },
         { provide: ChatService, useValue: chat },
-        { provide: AvatarService, useValue: { url: () => signal(null) } }
+        { provide: AvatarService, useValue: { url: () => signal(null) } },
+        { provide: DeletedUsersService, useValue: deletedUsers }
       ]
     }).overrideComponent(FriendProfileComponent, {
       set: { providers: [{ provide: MatDialog, useValue: dialog }] }
@@ -386,6 +391,58 @@ describe('FriendProfileComponent', () => {
 
       expect(component.page().state).toBe('notFound');
       expect(text()).toContain('Personne introuvable');
+    });
+
+    it('fetch_shouldShowTheDeletedState_whenThePersonIs404AndConfirmedDeleted', async () => {
+      params.next(convertToParamMap({ userId: 'gone' }));
+      social['getPerson'].mockReturnValue(throwError(() => httpError(404)));
+      await create();
+
+      expect(deletedUsers.check).toHaveBeenCalledWith('gone');
+      expect(component.page().state).toBe('deleted');
+    });
+
+    it('fetch_shouldShowNotFound_whenThePersonIs404AndNotDeleted', async () => {
+      social['getPerson'].mockReturnValue(throwError(() => httpError(404)));
+      await create();
+
+      expect(deletedUsers.check).toHaveBeenCalledWith('lea');
+      expect(component.page().state).toBe('notFound');
+    });
+
+    it('fetch_shouldShowNotFound_whenTheDeletionCheckFails', async () => {
+      social['getPerson'].mockReturnValue(throwError(() => httpError(404)));
+      deletedUsers.check.mockReturnValue(throwError(() => httpError(503)));
+      await create();
+
+      expect(component.page().state).toBe('notFound');
+    });
+
+    it('fetch_shouldNotAskWelyUsers_whenTheIdIsNotAUserId', async () => {
+      social['getPerson'].mockReturnValue(throwError(() => httpError(400)));
+      await create();
+
+      expect(deletedUsers.check).not.toHaveBeenCalled();
+      expect(component.page().state).toBe('notFound');
+    });
+
+    it('fetch_shouldShowTheDeletedState_whenTheFriendProfileAnswers410', async () => {
+      // wely-social has not processed USER_DELETED yet, wely-users already answers 410.
+      users.getFriendProfile.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 410, error: { code: 'USR-BUS-012' } })));
+      await create();
+
+      expect(component.page().state).toBe('deleted');
+    });
+
+    it('template_shouldShowTheDeletedCard', async () => {
+      params.next(convertToParamMap({ userId: 'gone' }));
+      social['getPerson'].mockReturnValue(throwError(() => httpError(404)));
+      await create();
+
+      const card = fixture.nativeElement.querySelector('.state-card') as HTMLElement;
+      expect(card.querySelector('h1')?.textContent).toBe('Compte supprimé');
+      expect(card.textContent).toContain('Cette personne a supprimé son compte Wely.');
+      expect(card.querySelector('a')?.getAttribute('href')).toBe('/friends');
     });
 
     it('template_shouldOfferToRetry_onAnotherError', async () => {

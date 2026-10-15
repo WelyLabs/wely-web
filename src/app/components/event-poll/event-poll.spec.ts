@@ -94,6 +94,19 @@ describe('EventPollComponent', () => {
         expect(rows()[0].querySelector('.voter.maybe')?.getAttribute('title')).toBe('Name me (peut-être)');
     });
 
+    it('template_shouldShowANeutralAvatar_forADeletedVoter', () => {
+        create();
+        fixture.componentRef.setInput('voterOf', (id: string): Voter => id === 'me'
+            ? { id, name: 'Utilisateur supprimé', initials: '', deleted: true }
+            : voterOf(id));
+        fixture.detectChanges();
+
+        const deleted = Array.from(el().querySelectorAll<HTMLElement>('.voter'))
+            .find(voter => voter.getAttribute('title')?.startsWith('Utilisateur supprimé'))!;
+        expect(deleted.querySelector('mat-icon')?.textContent).toBe('person');
+        expect(deleted.style.background).toBe('rgb(138, 138, 147)');
+    });
+
     it('template_shouldHighlightTheLeadingSlot', () => {
         create();
 

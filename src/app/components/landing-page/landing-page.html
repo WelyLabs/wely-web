@@ -9,6 +9,22 @@
         <button type="button" class="btn btn-ghost" (click)="launchApp()">Se connecter</button>
     </nav>
 
+    @if (accountDeleted()) {
+        <div class="deletion-notice" role="status">
+            <mat-icon aria-hidden="true">check_circle</mat-icon>
+            <div class="deletion-text">
+                <strong>Ton compte a été supprimé.</strong>
+                <p>
+                    Ton profil et tes données personnelles sont effacés. Tes messages et ta participation aux
+                    événements passés restent visibles sous « Utilisateur supprimé ». Merci d'avoir utilisé Wely.
+                </p>
+            </div>
+            <button type="button" class="deletion-close" aria-label="Fermer" (click)="dismissDeletionNotice()">
+                <mat-icon aria-hidden="true">close</mat-icon>
+            </button>
+        </div>
+    }
+
     <header class="hero">
         <div class="hero-copy">
             <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Démo en libre accès</span>

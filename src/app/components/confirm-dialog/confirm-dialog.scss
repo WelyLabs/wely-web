@@ -52,6 +52,45 @@
         padding: 0 8px;
     }
 
+    .details {
+        margin: 0 0 16px;
+        padding: 0 8px 0 28px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.45;
+
+        li + li {
+            margin-top: 6px;
+        }
+    }
+
+    .phrase-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 0 8px;
+
+        label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        input {
+            height: 44px;
+            padding: 0 12px;
+            border: 1.5px solid color-mix(in srgb, var(--text-primary) 15%, transparent);
+            border-radius: 12px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font: inherit;
+
+            &:focus-visible {
+                outline: 2px solid var(--danger);
+                outline-offset: 1px;
+            }
+        }
+    }
+
     mat-dialog-actions {
         padding: 16px 8px !important;
         gap: 12px;

@@ -24,6 +24,8 @@ import { Conversation, ConversationType, Message, MessageType } from '../../mode
 import { User } from '../../models/user.model';
 import { MatDialog } from '@angular/material/dialog';
 import { EventCoverDialogComponent } from '../event-cover-dialog/event-cover-dialog';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../testing/deleted-users.stub';
 
 // ChatService is only provided as a token here, but importing it loads rsocket-js: replaced by the
 // shared stub, as in every spec that pulls the service in, so no file gets the real module first.
@@ -111,6 +113,7 @@ describe('EventDetailsComponent', () => {
     const me = new BehaviorSubject<User | null>({ id: 'me' } as User);
     let schedule: { getConflicts: ReturnType<typeof vi.fn> };
     let calls: ReturnType<typeof callServiceStub>;
+    let deletedUsers: ReturnType<typeof deletedUsersStub>;
     let chatService: {
         getEventConversation: ReturnType<typeof vi.fn>;
         sendMessage: ReturnType<typeof vi.fn>;
@@ -157,6 +160,8 @@ describe('EventDetailsComponent', () => {
         notifications = { showInfo: vi.fn() };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
         calls = callServiceStub();
+        // « gone » deleted their account: wely-social no longer lists them.
+        deletedUsers = deletedUsersStub(['gone']);
         schedule = { getConflicts: vi.fn().mockReturnValue(of([])) };
         pollStream = { follow: vi.fn().mockReturnValue(NEVER) };
         router = { navigate: vi.fn() };
@@ -193,6 +198,7 @@ describe('EventDetailsComponent', () => {
                 { provide: MatDialog, useValue: dialog },
                 { provide: NotificationService, useValue: notifications },
                 { provide: PollStreamService, useValue: pollStream },
+                { provide: DeletedUsersService, useValue: deletedUsers },
                 { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'e1' : 'feed' } } } }
             ]
         });
@@ -645,6 +651,120 @@ describe('EventDetailsComponent', () => {
             expect(navigation.back).toHaveBeenCalledWith('/calendar');
         });
 
+        it('askHowToLeave_shouldConfirmDeletion_whenEveryOtherParticipantIsDeleted', () => {
+            asOrganizer(['me', 'gone']);
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledTimes(1);
+            expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.anything());
+        });
+
+        it('askSuccessor_shouldNotOfferADeletedParticipant', () => {
+            asOrganizer(['me', 'f1', 'gone']);
+            dialogAnswers(undefined);
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(HandOverDialogComponent, expect.objectContaining({
+                data: { people: [{ id: 'f1', name: 'Léo Martin' }] }
+            }));
+        });
+
+        it('leave_shouldSendDeleteIfLast_whenOnlyDeletedParticipantsRemain', () => {
+            asOrganizer(['me', 'gone']);
+            dialogAnswers(true);
+            eventService.leave.mockReturnValue(of({ deleted: true, event: null }));
+            create();
+
+            component.leave();
+
+            expect(eventService.leave).toHaveBeenCalledWith('e1', { deleteIfLast: true });
+            expect(navigation.back).toHaveBeenCalledWith('/calendar');
+        });
+
+        it('askHowToLeave_shouldCheckTheParticipantsTheDirectoryCannotName_beforeChoosing', () => {
+            // Deleted moments ago: the cache does not know yet, wely-users does.
+            asOrganizer(['me', 'late']);
+            deletedUsers.deletedAmong.mockReturnValue(of(new Set(['late'])));
+            create();
+
+            component.leave();
+
+            expect(deletedUsers.deletedAmong).toHaveBeenCalledWith(['late']);
+            expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.anything());
+        });
+
+        it('askHowToLeave_shouldNotOfferADeletedParticipant_thatAStaleDirectoryStillNames', () => {
+            // The page was loaded before Inès deleted her account: its directory still names her.
+            asOrganizer(['me', 'f1', 'u2']);
+            deletedUsers.deletedIds.set(new Set(['gone', 'u2']));
+            dialogAnswers(undefined);
+            create();
+
+            component.leave();
+
+            expect(deletedUsers.deletedAmong).toHaveBeenCalledWith(['f1', 'u2']);
+            expect(dialog.open).toHaveBeenCalledWith(HandOverDialogComponent, expect.objectContaining({
+                data: { people: [{ id: 'f1', name: 'Léo Martin' }] }
+            }));
+        });
+
+        it('askHowToLeave_shouldHoldTheButton_whileTheCheckIsPending', () => {
+            asOrganizer(['me', 'f1']);
+            const answer = new Subject<ReadonlySet<string>>();
+            deletedUsers.deletedAmong.mockReturnValue(answer);
+            dialogAnswers(undefined);
+            create();
+
+            component.leave();
+            component.leave();
+
+            expect(component.busy()).toBe(true);
+            expect(deletedUsers.deletedAmong).toHaveBeenCalledTimes(1);
+            expect(dialog.open).not.toHaveBeenCalled();
+            answer.next(new Set());
+            expect(component.busy()).toBe(false);
+            expect(dialog.open).toHaveBeenCalledTimes(1);
+        });
+
+        it('onLeaveRefused_shouldNotOfferTheRefusedDeletedSuccessorAgain', () => {
+            // Inès deletes her account while the organizer chooses; the event keeps her id, wely-events refuses her.
+            asOrganizer(['me', 'f1', 'u2']);
+            dialogAnswers('u2', 'f1');
+            eventService.leave
+                .mockImplementationOnce(() => {
+                    deletedUsers.deletedIds.set(new Set(['gone', 'u2']));
+                    return refusal('EVT-BUS-021', 400);
+                })
+                .mockReturnValue(of({ deleted: false, event: event({ organizerId: 'f1' }) }));
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledTimes(2);
+            expect(dialog.open.mock.calls[0][1].data).toEqual({
+                people: [{ id: 'f1', name: 'Léo Martin' }, { id: 'u2', name: 'Inès Bernard' }]
+            });
+            expect(dialog.open.mock.calls[1][1].data).toEqual({ people: [{ id: 'f1', name: 'Léo Martin' }] });
+            expect(eventService.leave.mock.calls).toEqual([['e1', { newOrganizerId: 'u2' }], ['e1', { newOrganizerId: 'f1' }]]);
+            expect(component.event()?.organizerId).toBe('f1');
+        });
+
+        it('askHowToLeave_shouldStillOfferTheUnnamedParticipants_whenTheCheckFails', () => {
+            asOrganizer(['me', 'late']);
+            deletedUsers.deletedAmong.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+            create();
+
+            component.leave();
+
+            expect(dialog.open).toHaveBeenCalledWith(HandOverDialogComponent, expect.objectContaining({
+                data: { people: [{ id: 'late', name: 'Quelqu’un' }] }
+            }));
+        });
+
         it('leave_shouldStayAndReleaseTheButton_whenItFailsOtherwise', () => {
             eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'] })));
             eventService.leave.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
@@ -695,6 +815,80 @@ describe('EventDetailsComponent', () => {
         expect(component.expenseMembers().map(member => member.id)).toEqual(['org', 'me', 'u2']);
         expect(component.expenseMembers()[1].name).toBe('Toi');
         expect(fixture.nativeElement.querySelector('app-event-expenses')).not.toBeNull();
+    });
+
+    describe('deleted participants', () => {
+        it('people_shouldNameAConfirmedDeletedParticipantWithTheDeletedLabel', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'gone'] })));
+            create();
+
+            const gone = component.people().find(person => person.id === 'gone');
+            expect(gone).toMatchObject({ name: 'Utilisateur supprimé', deleted: true });
+            expect(fixture.nativeElement.textContent).toContain('Utilisateur supprimé');
+        });
+
+        it('people_shouldKeepQuelquun_forAnUnresolvedLiveId', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'stranger'] })));
+            create();
+
+            expect(component.people().find(person => person.id === 'stranger')).toMatchObject({ name: 'Quelqu’un', deleted: false });
+        });
+
+        it('people_shouldNotAskAboutDeletion_beforeTheDirectoryIsLoaded', () => {
+            socialService.searchUsers.mockReturnValue(NEVER);
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'gone'] })));
+            create();
+
+            expect(component.people().find(person => person.id === 'gone')?.deleted).toBe(false);
+            expect(deletedUsers.isDeleted).not.toHaveBeenCalled();
+        });
+
+        it('people_shouldNotAskAboutDeletion_forSomeoneTheDirectoryNames', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u2'] })));
+            create();
+
+            expect(deletedUsers.isDeleted).not.toHaveBeenCalledWith('u2');
+        });
+
+        it('people_shouldGiveADeletedParticipantANeutralAvatarWithoutInitials', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'gone'] })));
+            create();
+
+            const gone = component.people().find(person => person.id === 'gone')!;
+            expect(gone.initials).toBe('');
+            expect(gone.picture).toBeUndefined();
+            const row = Array.from(fixture.nativeElement.querySelectorAll('.person-row') as NodeListOf<HTMLElement>)
+                .find(candidate => candidate.textContent?.includes('Utilisateur supprimé'))!;
+            expect(row.querySelector('.avatar mat-icon')?.textContent).toBe('person');
+            // Nobody to befriend.
+            expect(row.querySelector('.small-outline-button')).toBeNull();
+        });
+
+        it('threadPreview_shouldLeaveTheAuthorToTheBubble_whenTheSenderNameIsNull', () => {
+            chatService.getEventConversation.mockReturnValue(of(group([chatMessage({ senderId: 'gone', senderName: null })])));
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+            create();
+
+            expect(component.threadPreview()[0].senderName).toBeUndefined();
+            expect(fixture.nativeElement.querySelector('app-chat-bubble .author')?.textContent).toBe('Utilisateur supprimé');
+        });
+
+        it('expenseMembers_shouldCarryTheDeletedFlag', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'gone'] })));
+            create();
+
+            expect(component.expenseMembers().find(member => member.id === 'gone')).toMatchObject({
+                name: 'Utilisateur supprimé', initials: '', deleted: true
+            });
+            expect(component.expenseMembers().find(member => member.id === 'me')?.deleted).toBe(false);
+        });
+
+        it('strangers_shouldLeaveOutDeletedParticipants', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me', 'u2', 'gone'] })));
+            create();
+
+            expect(component.strangers().map(person => person.id)).toEqual(['u2']);
+        });
     });
 
     it('addFriend_shouldSendTheTagWithTheEventThenRefreshTheStatuses', () => {

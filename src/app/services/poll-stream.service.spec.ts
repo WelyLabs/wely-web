@@ -100,6 +100,18 @@ describe('PollStreamService', () => {
         expect((failure as PollStreamError).status).toBe(403);
     });
 
+    it('follow_shouldError_withoutReconnecting_whenTheViewersAccountIsDeleted', async () => {
+        vi.useFakeTimers();
+        fetchMock.mockResolvedValue(statusResponse(410));
+        let failure: unknown;
+
+        subscription = service.follow('e1').subscribe({ error: error => (failure = error) });
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect((failure as PollStreamError).status).toBe(410);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
     it('follow_shouldReconnectWithBackoff_andAFreshToken_whenTheStreamEnds', async () => {
         vi.useFakeTimers();
         getToken.mockResolvedValueOnce('token-1').mockResolvedValueOnce('token-2');

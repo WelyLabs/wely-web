@@ -5,6 +5,10 @@
     @if (!message().isMe) {
       @if (picture(); as src) {
         <img class="avatar" [src]="src" alt="" aria-hidden="true">
+      } @else if (deletedSender()) {
+        <span class="avatar deleted" [style.background]="color()" aria-hidden="true">
+          <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
+        </span>
       } @else {
         <span class="avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
       }

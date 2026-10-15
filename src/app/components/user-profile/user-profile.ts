@@ -8,6 +8,8 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoggerService } from '../../core/logging/logger.service';
 import { ProfileAbout, UserService } from '../../services/user.service';
 import { AvatarService } from '../../services/avatar.service';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../core/ui/deleted-user';
 import { EventService, FeedEvent, ProfileSummary } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { EditProfileDialogComponent } from '../edit-profile-dialog/edit-profile-dialog.component';
@@ -36,6 +38,8 @@ export interface CircleMember {
   outingsTogether: number;
   /** Width of their bar, relative to the most frequent companion. */
   share: number;
+  /** A companion wely-users confirms deleted their account. */
+  deleted: boolean;
 }
 
 function plural(count: number, word: string): string {
@@ -61,6 +65,7 @@ export class UserProfileComponent implements OnInit {
   private readonly eventService = inject(EventService);
   private readonly socialService = inject(SocialService);
   readonly avatars = inject(AvatarService);
+  private readonly deletedUsers = inject(DeletedUsersService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -81,6 +86,9 @@ export class UserProfileComponent implements OnInit {
   });
   /** Everyone's username, by id: the circle names people who are not always friends. */
   private readonly names = signal<ReadonlyMap<string, string>>(new Map());
+  /** The directory answered, or failed: only then is an unknown id worth asking about. */
+  private readonly namesReady = signal(false);
+  readonly deletedIcon = DELETED_USER_ICON;
 
   readonly now = new Date();
   readonly formatCents = formatCents;
@@ -114,15 +122,18 @@ export class UserProfileComponent implements OnInit {
     }
     const most = Math.max(1, ...summary.circle.map(companion => companion.outingsTogether));
     return summary.circle.map(companion => {
-      const name = this.names().get(companion.userId) ?? 'Quelqu’un';
+      const known = this.names().get(companion.userId);
+      const deleted = !known && this.namesReady() && this.deletedUsers.isDeleted(companion.userId)();
+      const name = known ?? (deleted ? DELETED_USER_LABEL : 'Quelqu’un');
       return {
         id: companion.userId,
         name,
-        initials: initialsOf(name),
-        color: avatarColor(companion.userId),
-        picture: this.avatars.url(companion.userId)(),
+        initials: deleted ? '' : initialsOf(name),
+        color: deleted ? DELETED_USER_AVATAR_COLOR : avatarColor(companion.userId),
+        picture: deleted ? null : this.avatars.url(companion.userId)(),
         outingsTogether: companion.outingsTogether,
-        share: Math.round(100 * companion.outingsTogether / most)
+        share: Math.round(100 * companion.outingsTogether / most),
+        deleted
       };
     });
   });
@@ -156,8 +167,14 @@ export class UserProfileComponent implements OnInit {
       error: (error: unknown) => this.logger.error('UserProfileComponent', 'Could not count friends', error)
     });
     this.socialService.searchUsers().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: users => this.names.set(new Map(users.map(user => [user.userId, user.userName]))),
-      error: (error: unknown) => this.logger.error('UserProfileComponent', 'Could not load the directory', error)
+      next: users => {
+        this.names.set(new Map(users.map(user => [user.userId, user.userName])));
+        this.namesReady.set(true);
+      },
+      error: (error: unknown) => {
+        this.namesReady.set(true);
+        this.logger.error('UserProfileComponent', 'Could not load the directory', error);
+      }
     });
   }
 

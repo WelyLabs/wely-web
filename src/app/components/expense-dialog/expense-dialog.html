@@ -25,7 +25,7 @@
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Payé par</mat-label>
       <mat-select [value]="paidBy()" (valueChange)="paidBy.set($event)">
-        @for (member of data.members; track member.id) {
+        @for (member of payers; track member.id) {
           <mat-option [value]="member.id">{{ member.name }}</mat-option>
         }
       </mat-select>
@@ -42,14 +42,17 @@
     </div>
 
     <ul class="people">
-      @for (member of data.members; track member.id) {
+      @for (member of members; track member.id) {
         @let included = this.included().has(member.id);
         <li [class.excluded]="!included">
           <label class="person">
             <input type="checkbox" [checked]="included" (change)="toggle(member.id)">
-            <span class="avatar" [style.background]="avatarColor(member.id)" aria-hidden="true">
+            <span class="avatar" [style.background]="member.deleted ? deletedAvatarColor : avatarColor(member.id)"
+              aria-hidden="true">
               @if (member.picture) {
                 <img [src]="member.picture" alt="">
+              } @else if (member.deleted) {
+                <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
               } @else {
                 {{ member.initials }}
               }

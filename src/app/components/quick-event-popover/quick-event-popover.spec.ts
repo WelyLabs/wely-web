@@ -481,7 +481,7 @@ describe('QuickEventPopoverComponent', () => {
                 { start: new Date('2025-06-03T18:30:00Z'), end: new Date('2025-06-03T20:30:00Z') }
             ];
             const open = (candidateSlots: { start: Date; end: Date }[]) => {
-                fixture.componentRef.setInput('data', { ...request(), title: 'Sortie avec lea', startDate: slots[0].start,
+                fixture.componentRef.setInput('data', { ...request(), title: 'Sortie', startDate: slots[0].start,
                     endDate: slots[0].end, candidateSlots });
                 fixture.detectChanges();
             };
@@ -492,7 +492,7 @@ describe('QuickEventPopoverComponent', () => {
                 expect(component.pollMode()).toBe(true);
                 expect(component.candidates()).toEqual(slots);
                 expect(component.selectedSlot()).toBe(0);
-                expect(component.draft().title).toBe('Sortie avec lea');
+                expect(component.draft().title).toBe('Sortie');
                 expect(fixture.nativeElement.querySelectorAll('.slot-item').length).toBe(2);
             });
 

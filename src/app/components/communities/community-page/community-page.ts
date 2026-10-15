@@ -21,6 +21,8 @@ import { EventService, FeedEvent, PollAnswer } from '../../../services/event.ser
 import { UserService } from '../../../services/user.service';
 import { NotificationService } from '../../../services/notification.service';
 import { avatarColor, initialsOf } from '../../../core/ui/avatar';
+import { DELETED_USER_LABEL } from '../../../core/ui/deleted-user';
+import { DeletedUsersService } from '../../../services/deleted-users.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../confirm-dialog/confirm-dialog';
 import { CommunityFormDialogComponent } from '../community-form-dialog/community-form-dialog';
 import { CommunityEventDialogComponent } from '../community-event-dialog/community-event-dialog';
@@ -52,6 +54,7 @@ export class CommunityPageComponent {
   private readonly events = inject(EventService);
   private readonly users = inject(UserService);
   private readonly notifications = inject(NotificationService);
+  private readonly deletedUsers = inject(DeletedUsersService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -61,6 +64,8 @@ export class CommunityPageComponent {
   readonly answers = ANSWERS;
   readonly community = signal<Community | null>(null);
   readonly members = signal<CommunityMember[]>([]);
+  /** The member list answered, or failed: only then is an unknown id worth asking about. */
+  private readonly membersReady = signal(false);
   readonly communityEvents = signal<FeedEvent[]>([]);
   readonly invitations = signal<CommunityInvitation[]>([]);
   readonly tab = signal<Tab>('events');
@@ -101,11 +106,16 @@ export class CommunityPageComponent {
     }
   }
 
+  /** A member's name; someone no longer a member is named as a deleted account once wely-users confirms it. */
   nameOf(userId: string): string {
     if (userId === this.me()) {
       return 'Vous';
     }
-    return this.names().get(userId) ?? 'Ancien membre';
+    const name = this.names().get(userId);
+    if (name !== undefined) {
+      return name;
+    }
+    return this.membersReady() && this.deletedUsers.isDeleted(userId)() ? DELETED_USER_LABEL : 'Ancien membre';
   }
 
   myAnswer(event: FeedEvent): PollAnswer | null {
@@ -339,6 +349,7 @@ export class CommunityPageComponent {
     this.notFound.set(false);
     this.community.set(null);
     this.members.set([]);
+    this.membersReady.set(false);
     this.communityEvents.set([]);
     this.invitations.set([]);
     this.tab.set('events');
@@ -371,8 +382,14 @@ export class CommunityPageComponent {
       return;
     }
     this.communities.members(community.communityId).subscribe({
-      next: (list) => this.members.set(list),
-      error: () => this.members.set([]),
+      next: (list) => {
+        this.members.set(list);
+        this.membersReady.set(true);
+      },
+      error: () => {
+        this.members.set([]);
+        this.membersReady.set(true);
+      },
     });
   }
 

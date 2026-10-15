@@ -1430,9 +1430,16 @@ describe('CalendarComponent', () => {
 
             expect(component.isPopoverVisible()).toBe(true);
             expect(component.popoverData()).toEqual(expect.objectContaining({
-                title: 'Sortie avec lea', startDate: slots[0].start, endDate: slots[0].end, candidateSlots: slots
+                title: 'Sortie', startDate: slots[0].start, endDate: slots[0].end, candidateSlots: slots
             }));
             expect(fixture.nativeElement.querySelectorAll('.slot-item').length).toBe(2);
+        });
+
+        it('ngOnInit_shouldNeverCopyTheFriendsNameIntoTheTitle', () => {
+            // The title is copied into the chat group, notifications and Kafka: a name would outlive the account.
+            openWith({ navigationId: 3, proposeSlots: slots, proposeWith: 'lea' });
+
+            expect(component.popoverData().title).not.toContain('lea');
         });
 
         it('ngOnInit_shouldReadTheProposalOnlyOnce', () => {
@@ -1446,7 +1453,7 @@ describe('CalendarComponent', () => {
             openWith({ proposeSlots: [], proposeWith: 'lea' });
 
             expect(component.isPopoverVisible()).toBe(true);
-            expect(component.popoverData().title).toBe('Sortie avec lea');
+            expect(component.popoverData().title).toBe('Sortie');
             expect(component.popoverData().candidateSlots).toBeUndefined();
         });
 

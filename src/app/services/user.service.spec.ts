@@ -157,4 +157,40 @@ describe('UserService', () => {
 
         expect(status).toBe(403);
     });
+
+    it('getDeletionEligibility_shouldReadWhetherTheAccountMayBeDeleted', async () => {
+        const result = firstValueFrom(service.getDeletionEligibility());
+
+        const call = httpMock.expectOne(`${apiUrl}/profile/deletion`);
+        expect(call.request.method).toBe('GET');
+        call.flush({ allowed: false });
+
+        expect(await result).toEqual({ allowed: false });
+    });
+
+    it('getDeletionEligibility_shouldReportTheFailure', async () => {
+        const result = firstValueFrom(service.getDeletionEligibility());
+
+        httpMock.expectOne(`${apiUrl}/profile/deletion`).flush(null, { status: 503, statusText: 'Unavailable' });
+
+        await expect(result).rejects.toMatchObject({ status: 503 });
+    });
+
+    it('deleteAccount_shouldSendDeleteToTheProfile', async () => {
+        const result = firstValueFrom(service.deleteAccount(), { defaultValue: undefined });
+
+        const call = httpMock.expectOne(`${apiUrl}/profile`);
+        expect(call.request.method).toBe('DELETE');
+        call.flush(null, { status: 202, statusText: 'Accepted' });
+
+        await expect(result).resolves.toBeNull();
+    });
+
+    it('deleteAccount_shouldReportA403WithItsCode', async () => {
+        const result = firstValueFrom(service.deleteAccount());
+
+        httpMock.expectOne(`${apiUrl}/profile`).flush({ code: 'USR-BUS-010' }, { status: 403, statusText: 'Forbidden' });
+
+        await expect(result).rejects.toMatchObject({ status: 403, error: { code: 'USR-BUS-010' } });
+    });
 });

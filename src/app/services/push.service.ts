@@ -195,6 +195,20 @@ export class PushService {
     }
   }
 
+  /** Closes the notifications the worker shows on this device, best effort: their previews name people. */
+  async clearShownNotifications(): Promise<void> {
+    if (!this.supported) {
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/');
+      const shown = await registration?.getNotifications?.();
+      shown?.forEach(notification => notification.close());
+    } catch (error) {
+      this.logger.warn(SCOPE, 'Could not close the notifications shown on this device', error);
+    }
+  }
+
   private async loadPublicKey(): Promise<string> {
     const known = this.publicKey();
     if (known !== null) {

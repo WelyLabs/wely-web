@@ -62,4 +62,6 @@ export interface ExpenseMember {
   name: string;
   initials: string;
   picture?: string;
+  /** A deleted account, shown with a neutral avatar. */
+  deleted?: boolean;
 }

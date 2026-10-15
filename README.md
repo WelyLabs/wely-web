@@ -41,6 +41,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 | **Appels** | Audio et vidéo depuis une conversation, ou avec tous les participants d'un événement (12 au plus) : sonnerie chiptune originale, micro et caméra coupables, caméra avant/arrière, la personne qui parle mise en avant |
 | **Notifications** | Messages, appels, dates fixées, demandes d'ami : un toast dans l'app (Server-Sent Events), la cloche et sa page `/notifications` groupée par jour, et des notifications système (Web Push) quand l'app est fermée ; chaque catégorie se coupe dans les préférences |
 | **Profil** | Consultation et édition, recadrage d'avatar |
+| **Account** | Account deletion from the preferences, after a fresh sign-in; the demo account cannot be deleted |
 
 ---
 
@@ -52,9 +53,12 @@ src/app/
 │   ├── auth/                    AuthService · keycloak-init.factory · config
 │   ├── guards/                  authGuard
 │   ├── interceptors/            SessionInterceptor
+│   ├── storage/                 the app's wely.* keys in web storage
 │   └── sse/                     flux SSE lu avec fetch, reconnexion
 ├── services/                    un service par domaine d'API
 │   ├── user.service.ts          profil, token d'accès
+│   ├── account-deletion.service.ts   account deletion flow
+│   ├── deleted-users.service.ts      which user ids are deleted accounts
 │   ├── social.service.ts        amis, demandes
 │   ├── event.service.ts         événements, abonnements
 │   ├── chat.service.ts          REST + RSocket
@@ -117,6 +121,20 @@ this.refreshTimer = setTimeout(() => this.executeTokenUpdate(), Math.max(delay, 
 Chaque rafraîchissement replanifie le suivant. L'utilisateur ne subit ni coupure ni requête rejouée.
 
 `SessionInterceptor` reste en filet de sécurité : il intercepte les 401 et les `invalid_grant` — token révoqué côté Keycloak, session expirée en arrière-plan — et redirige vers le login.
+
+### Account deletion
+
+The *Compte* card on `/preferences` asks wely-users whether the account may be deleted (`GET /user-service/profile/deletion`); the demo account sees the action disabled and is never sent to Keycloak.
+
+1. A destructive dialog lists the consequences and asks for the handle `name#1234`, typed back.
+2. `AccountDeletionService` stores the request (time and `businessId`) in `sessionStorage`, then `AuthService.reauthenticate()` calls `keycloak.login({ prompt: 'login' })`: Keycloak skips SSO and asks for the password again, so the new token carries a fresh `auth_time`.
+3. Back on `/preferences?account=delete` with a request under ten minutes old for the same account, the page offers the final step. wely-users checks `auth_time` itself (five minutes at most) and answers `403 USR-BUS-010` otherwise.
+4. *Supprimer définitivement* unsubscribes Web Push and closes the notifications shown on the device while the identity is still valid, then sends `DELETE /user-service/profile`.
+5. On `202`, `AuthService.leaveAfterAccountDeletion()` stops the token refresh, removes every `wely.*` key from both web storages, clears the token and replaces the page with `/?account=deleted`. That landing skips the silent SSO check: the Keycloak session lives a few more seconds, and its code exchange would fail.
+
+If the `DELETE` fails with a network error, a `5xx` or `403 USR-BUS-010`, the app at once asks `GET /user-service/profile/deletion`: a `410 USR-BUS-012` there means the deletion went through. A `410 USR-BUS-012` on the caller's own profile endpoints, or a `410` on the notification stream, sends the account's other devices to the same landing.
+
+Elsewhere, a deleted account reads *Utilisateur supprimé* with a neutral avatar: `DeletedUsersService` asks wely-users (`POST /user-service/users/deleted`, batched, cached for the session) about the ids a screen's directory cannot name; a failed request is sent again a minute later on its own, up to three attempts, so a screen already open still turns the label on. A private conversation with a deleted account stays readable but becomes read-only, from wely-chat's `readOnly` flag.
 
 ### Le claim `businessId`
 

@@ -13,6 +13,8 @@ import { EventService, FeedEvent, ProfileSummary } from '../../services/event.se
 import { SocialService } from '../../services/social.service';
 import { AvatarService } from '../../services/avatar.service';
 import { MapLoader } from '../../services/map-loader';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../testing/deleted-users.stub';
 
 // Reaches ChatService through the components it loads: rsocket-js is replaced by the shared stub, so this
 // file never loads the real module first for the specs that share its chunk.
@@ -27,6 +29,7 @@ describe('UserProfileComponent', () => {
     let userSubject: BehaviorSubject<User | null>;
     let eventServiceMock: { getMySummary: ReturnType<typeof vi.fn> };
     let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn>; searchUsers: ReturnType<typeof vi.fn> };
+    let deletedUsers: ReturnType<typeof deletedUsersStub>;
 
     const feedEvent = (id: string, start: string): FeedEvent => ({
         id, title: `Event ${id}`, organizerId: 'me', startDate: new Date(start), endDate: new Date(start),
@@ -56,6 +59,8 @@ describe('UserProfileComponent', () => {
         };
 
         eventServiceMock = { getMySummary: vi.fn().mockReturnValue(of(summary())) };
+        // « gone » deleted their account: the directory no longer lists them.
+        deletedUsers = deletedUsersStub(['gone']);
         socialServiceMock = {
             listFriendships: vi.fn().mockReturnValue(of([{ userId: 'lea' }, { userId: 'bob' }, { userId: 'zoe' }])),
             searchUsers: vi.fn().mockReturnValue(of([{ userId: 'lea', userName: 'lea' }, { userId: 'bob', userName: 'bob' }]))
@@ -67,7 +72,8 @@ describe('UserProfileComponent', () => {
                 provideRouter([]),
                 { provide: EventService, useValue: eventServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
-                { provide: AvatarService, useValue: { url: () => signal(null) } },
+                { provide: AvatarService, useValue: { url: vi.fn(() => signal(null)) } },
+                { provide: DeletedUsersService, useValue: deletedUsers },
                 { provide: MapLoader, useValue: { load: vi.fn().mockRejectedValue(new Error('no map in tests')) } }
             ]
         }).overrideComponent(UserProfileComponent, {
@@ -265,5 +271,48 @@ describe('UserProfileComponent', () => {
 
         const links = [...fixture.nativeElement.querySelectorAll('.circle-link')].map((link: HTMLAnchorElement) => link.getAttribute('href'));
         expect(links).toEqual(['/friends/lea', '/friends/bob']);
+    });
+
+    describe('deleted companions', () => {
+        const withGone = summary({ circle: [{ userId: 'lea', outingsTogether: 12 }, { userId: 'gone', outingsTogether: 6 }] });
+
+        function recreate(): void {
+            fixture = TestBed.createComponent(UserProfileComponent);
+            component = fixture.componentInstance;
+            fixture.detectChanges();
+        }
+
+        it('circle_shouldNameADeletedCompanionWithTheDeletedLabel', () => {
+            eventServiceMock.getMySummary.mockReturnValue(of(withGone));
+            recreate();
+
+            expect(component.circle().map(member => [member.name, member.deleted])).toEqual([['lea', false], ['Utilisateur supprimé', true]]);
+        });
+
+        it('circle_shouldNotAskAboutDeletion_beforeTheDirectoryIsLoaded', () => {
+            eventServiceMock.getMySummary.mockReturnValue(of(withGone));
+            socialServiceMock.searchUsers.mockReturnValue(new Subject());
+            deletedUsers.isDeleted.mockClear();
+            recreate();
+
+            expect(component.circle()[1]).toMatchObject({ name: 'Quelqu’un', deleted: false });
+            expect(deletedUsers.isDeleted).not.toHaveBeenCalled();
+        });
+
+        it('circle_shouldGiveADeletedCompanionANeutralAvatar', async () => {
+            eventServiceMock.getMySummary.mockReturnValue(of(withGone));
+            const avatars = TestBed.inject(AvatarService) as unknown as { url: ReturnType<typeof vi.fn> };
+            avatars.url.mockClear();
+            recreate();
+            await fixture.whenStable();
+            fixture.detectChanges();
+
+            expect(component.circle()[1]).toMatchObject({ initials: '', picture: null, color: '#8a8a93' });
+            expect(avatars.url).not.toHaveBeenCalledWith('gone');
+            const links = [...fixture.nativeElement.querySelectorAll('.circle-link')] as HTMLElement[];
+            expect(links[1].querySelector('mat-icon')?.textContent).toBe('person');
+            // Their page says the account is gone.
+            expect(links[1].getAttribute('href')).toBe('/friends/gone');
+        });
     });
 });

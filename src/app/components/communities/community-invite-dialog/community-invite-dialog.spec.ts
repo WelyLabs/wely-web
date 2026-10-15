@@ -9,6 +9,11 @@ import { SocialService } from '../../../services/social.service';
 import { ChatService } from '../../../services/chat.service';
 import { Community } from '../../../models/community.model';
 
+// Reaches ChatService through the invite dialog: rsocket-js is replaced by the shared stub, so this file never
+// loads the real module first for the specs that share its chunk.
+vi.mock('rsocket-core', () => import('../../../../testing/rsocket-core.stub'));
+vi.mock('rsocket-websocket-client', () => import('../../../../testing/rsocket-websocket-client.stub'));
+
 const community = { communityId: 'c1', name: 'Les copains' } as Community;
 const friend = (userName: string) => ({ userId: userName, userName, hashtag: 1 });
 

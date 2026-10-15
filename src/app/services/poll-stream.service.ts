@@ -6,10 +6,10 @@ import { LoggerService } from '../core/logging/logger.service';
 import { SseStreamError, sseStream } from '../core/sse/sse-stream';
 import { Poll, PollPayload, toPoll } from './event.service';
 
-/** Statuses a retry cannot fix: the event is gone or not visible. */
-const FINAL_STATUSES = [403, 404];
+/** Statuses a retry cannot fix: the event is gone or not visible, or the viewer's account was deleted. */
+const FINAL_STATUSES = [403, 404, 410];
 
-/** The stream was refused for good (403 or 404). */
+/** The stream was refused for good (403, 404 or 410). */
 export class PollStreamError extends Error {
   constructor(readonly status: number) {
     super(`Poll stream refused with HTTP ${status}`);

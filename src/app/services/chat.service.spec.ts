@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { firstValueFrom } from 'rxjs';
 import { toArray } from 'rxjs/operators';
 import { rsocketStub } from '../../testing/rsocket-core.stub';
-import { ChatService, PendingMessage, upsertById } from './chat.service';
+import { ChatService, PendingMessage, chatErrorCode, upsertById } from './chat.service';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 import { Message, MessageType } from '../models/chat.model';
@@ -252,6 +252,61 @@ describe('ChatService', () => {
     service.ngOnDestroy();
 
     expect(rsocketStub.closeCalls).toBeGreaterThan(0);
+  });
+
+  it('initializeStream_shouldStopRetrying_whenTheAccountIsDeleted', () => {
+    vi.useFakeTimers();
+    service.initializeStream();
+    expect(rsocketStub.streamSubscribers).toHaveLength(1);
+
+    rsocketStub.streamSubscribers[0].onError?.(new Error('This account has been deleted.'));
+    vi.advanceTimersByTime(60_000);
+
+    expect(rsocketStub.streamSubscribers).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  it('initializeStream_shouldRetry_afterAnotherFailure', () => {
+    vi.useFakeTimers();
+    service.initializeStream();
+
+    rsocketStub.streamSubscribers[0].onError?.(new Error('connection lost'));
+    vi.advanceTimersByTime(1_000);
+
+    expect(rsocketStub.streamSubscribers).toHaveLength(2);
+    vi.useRealTimers();
+  });
+
+  it('openStream_shouldStopRetrying_whenTheAccountIsDeleted', () => {
+    vi.useFakeTimers();
+    let failure: unknown;
+    service.openStream('call.events').subscribe({ error: error => failure = error });
+
+    rsocketStub.streamSubscribers[0].onError?.(new Error('This account has been deleted.'));
+    vi.advanceTimersByTime(60_000);
+
+    expect(chatErrorCode(failure)).toBe('CHT-BUS-011');
+    expect(rsocketStub.streamSubscribers).toHaveLength(1);
+    vi.useRealTimers();
+  });
+});
+
+describe('chatErrorCode', () => {
+  it('chatErrorCode_shouldReadTheCodeOfARestProblem', () => {
+    expect(chatErrorCode(new HttpErrorResponse({ status: 409, error: { code: 'CHT-BUS-012' } }))).toBe('CHT-BUS-012');
+    expect(chatErrorCode(new HttpErrorResponse({ status: 502, error: null }))).toBeNull();
+  });
+
+  it('chatErrorCode_shouldMapTheKnownRsocketDetails_toTheirCodes', () => {
+    expect(chatErrorCode(new Error('This account has been deleted.'))).toBe('CHT-BUS-011');
+    expect(chatErrorCode(new Error('The other participant deleted their account: this conversation can be read, not written to.')))
+      .toBe('CHT-BUS-012');
+  });
+
+  it('chatErrorCode_shouldFindACodeInTheMessage_orNone', () => {
+    expect(chatErrorCode(new Error('CHT-BUS-003 refused'))).toBe('CHT-BUS-003');
+    expect(chatErrorCode(new Error('connection lost'))).toBeNull();
+    expect(chatErrorCode('nope')).toBeNull();
   });
 });
 

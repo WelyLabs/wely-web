@@ -49,9 +49,12 @@
             <li [class.settlement]="expense.kind === 'SETTLEMENT'">
               <button type="button" class="row" (click)="edit(expense)" [disabled]="!canEdit(expense)"
                 [attr.aria-label]="canEdit(expense) ? 'Modifier ' + expense.title : null">
-                <span class="avatar small" [style.background]="avatarColor(payer.id)" aria-hidden="true">
+                <span class="avatar small" [style.background]="payer.deleted ? deletedAvatarColor : avatarColor(payer.id)"
+                  aria-hidden="true">
                   @if (payer.picture) {
                     <img [src]="payer.picture" alt="">
+                  } @else if (payer.deleted) {
+                    <mat-icon class="deleted-user-icon">{{ deletedIcon }}</mat-icon>
                   } @else {
                     {{ payer.initials }}
                   }

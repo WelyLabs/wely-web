@@ -239,4 +239,46 @@ describe('SharedChatComponent', () => {
 
         expect(sent).toEqual([]);
     });
+
+    describe('read-only', () => {
+        beforeEach(() => {
+            fixture.componentRef.setInput('readOnly', true);
+            fixture.componentRef.setInput('readOnlyNotice', 'Ce compte a été supprimé.');
+            fixture.detectChanges();
+        });
+
+        it('template_shouldReplaceTheComposerWithTheNotice_whenReadOnly', () => {
+            const notice = fixture.nativeElement.querySelector('.read-only-notice') as HTMLElement;
+
+            expect(notice.getAttribute('role')).toBe('note');
+            expect(notice.textContent).toContain('Ce compte a été supprimé.');
+            expect(fixture.nativeElement.querySelector('#chat-message-input')).toBeNull();
+            expect(fixture.nativeElement.querySelector('.chat-empty-state')?.textContent).toContain('Aucun message.');
+        });
+
+        it('sendMessage_shouldNotEmit_whenReadOnly', () => {
+            const emitSpy = vi.spyOn(component.send, 'emit');
+            component.newMessage.set('Hello');
+
+            component.sendMessage();
+
+            expect(emitSpy).not.toHaveBeenCalled();
+        });
+
+        it('onPhotoPicked_shouldNotEmit_whenReadOnly', () => {
+            const sent: File[] = [];
+            component.sendPhoto.subscribe(file => sent.push(file));
+            const field = { files: [new File(['x'], 'a.jpg')], value: 'C:/fakepath/a.jpg' } as unknown as HTMLInputElement;
+
+            component.onPhotoPicked({ target: field } as unknown as Event);
+
+            expect(sent).toEqual([]);
+            expect(field.value).toBe('');
+        });
+    });
+
+    it('template_shouldShowTheComposer_whenNotReadOnly', () => {
+        expect(fixture.nativeElement.querySelector('#chat-message-input')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.read-only-notice')).toBeNull();
+    });
 });

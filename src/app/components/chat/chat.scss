@@ -117,6 +117,11 @@
                 height: 100%;
                 object-fit: cover;
             }
+
+            // A deleted partner: the neutral grey set inline, without the brand glow.
+            &.deleted {
+                box-shadow: none;
+            }
         }
 
         .text-info {

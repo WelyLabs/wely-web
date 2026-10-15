@@ -77,4 +77,52 @@
       <p class="error" role="alert">{{ prefsError() }}</p>
     }
   </section>
+
+  <section class="card account-card" aria-labelledby="account-title" data-setting="account-deletion" #accountCard>
+    <h2 id="account-title">Compte</h2>
+    <p class="card-hint" id="account-hint">
+      Supprimer ton compte efface ton profil et tes données personnelles. Tes messages restent visibles par
+      ceux à qui tu les as envoyés, sous « Utilisateur supprimé ».
+    </p>
+
+    @if (deletionStep() === 'start') {
+      <button type="button" class="danger-button" aria-describedby="account-hint"
+        [disabled]="!canRequestDeletion()" (click)="requestDeletion()">
+        <mat-icon aria-hidden="true">delete_forever</mat-icon>
+        Supprimer mon compte
+      </button>
+    }
+    @if (deletionAllowed() === false) {
+      <p class="account-note">Le compte de démonstration ne peut pas être supprimé.</p>
+    }
+    @if (deletionUnavailable()) {
+      <p class="account-note">La suppression du compte est indisponible pour le moment.</p>
+    }
+    @if (reverifyNeeded() && deletionStep() === 'start') {
+      <div class="final-step">
+        <p>Ta confirmation d'identité a expiré. Reconnecte-toi pour terminer la suppression.</p>
+        <div class="final-actions">
+          <button type="button" class="danger-button" (click)="reverify()">Me reconnecter</button>
+          <button type="button" class="text-button" (click)="cancelDeletion()">Annuler</button>
+        </div>
+      </div>
+    }
+    @if (deletionStep() !== 'start') {
+      <div class="final-step">
+        <h3>Dernière étape</h3>
+        <p>Ton identité est confirmée. La suppression est immédiate et définitive.</p>
+        <div class="final-actions">
+          <button type="button" class="danger-button solid" [disabled]="deletionStep() === 'deleting'"
+            (click)="confirmDeletion()">
+            {{ deletionStep() === 'deleting' ? 'Suppression…' : 'Supprimer définitivement' }}
+          </button>
+          <button type="button" class="text-button" [disabled]="deletionStep() === 'deleting'"
+            (click)="cancelDeletion()">Annuler</button>
+        </div>
+      </div>
+    }
+    @if (deletionError()) {
+      <p class="error" role="alert">{{ deletionError() }}</p>
+    }
+  </section>
 </div>

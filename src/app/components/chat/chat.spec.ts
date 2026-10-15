@@ -21,6 +21,8 @@ import { MEDIA_PAGE_SIZE } from './chat';
 import { PhotoResizer } from '../../core/ui/photo-resize';
 import { PhotoViewerData } from '../photo-viewer/photo-viewer';
 import { HttpErrorResponse } from '@angular/common/http';
+import { DeletedUsersService } from '../../services/deleted-users.service';
+import { deletedUsersStub } from '../../../testing/deleted-users.stub';
 
 // The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
 // the module rather than redefining an object, so the service and the test work on the same
@@ -42,6 +44,7 @@ describe('ChatComponent', () => {
     let dialogMock: { open: ReturnType<typeof vi.fn> };
     let callServiceMock: ReturnType<typeof callServiceStub>;
     let centerMock: ReturnType<typeof notificationCenterStub>;
+    let deletedUsersMock: ReturnType<typeof deletedUsersStub>;
 
     const mockUser = { id: 'me', userName: 'Me' };
     const mockConv: Conversation = {
@@ -56,6 +59,7 @@ describe('ChatComponent', () => {
     beforeEach(async () => {
         callServiceMock = callServiceStub();
         centerMock = notificationCenterStub();
+        deletedUsersMock = deletedUsersStub(['gone']);
         paramMapSubject = new BehaviorSubject(convertToParamMap({ convId: 'conv1' }));
         chatMessagesSubject = new Subject();
 
@@ -103,6 +107,7 @@ describe('ChatComponent', () => {
                 // The friend has a picture; nobody else does.
                 { provide: AvatarService, useValue: { url: (id: string | null) => signal(id === 'friend' ? '/pics/friend.jpg' : null) } },
                 { provide: Router, useValue: routerMock },
+                { provide: DeletedUsersService, useValue: deletedUsersMock },
                 {
                     provide: ActivatedRoute,
                     useValue: { paramMap: paramMapSubject.asObservable() }
@@ -557,6 +562,19 @@ describe('ChatComponent', () => {
             expect(data.removeError?.(new Error('502'))).toBeNull();
         });
 
+        it('openPhotoFromThread_shouldNotAskAboutDeletion_forASenderTheChatCanName', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({
+                ...eventGroup('olivia'), messages: [{ ...stored, id: 'p2', senderId: 'olivia', senderName: 'Olivia' }]
+            }));
+            component.loadConversationById('conv1');
+            deletedUsersMock.isDeleted.mockClear();
+
+            component.openPhotoFromThread(component.chatMessages()[0]);
+
+            expect((dialogMock.open.mock.calls[0][1].data as PhotoViewerData).title).toBe('Olivia');
+            expect(deletedUsersMock.isDeleted).not.toHaveBeenCalled();
+        });
+
         it('openPhotoFromThread_shouldIgnoreAPhotoStillSending', () => {
             component.openPhotoFromThread({ id: 'local', text: '', time: '', isMe: true, pending: true,
                 photo: { url: 'blob:x', width: 1, height: 1, removed: false } });
@@ -699,6 +717,163 @@ describe('ChatComponent', () => {
 
         it('followLiveCall_shouldAskOnce_whichCallGoesOnInTheConversation', () => {
             expect(callServiceMock.liveCall).toHaveBeenCalledWith('conv1');
+        });
+    });
+
+    describe('deleted partner', () => {
+        const readOnlyConv: Conversation = { ...mockConv, participantIds: ['me', 'gone'], readOnly: true };
+        const fromGone = {
+            id: 'm-gone', content: 'À samedi', senderId: 'gone', senderName: null, receiverId: 'me', conversationId: 'conv1',
+            timestamp: '2026-10-13T20:00:00Z', type: MessageType.TEXT, reactions: {},
+            photo: { width: 1600, height: 1200, url: 'https://media/g.jpg', removed: false }
+        };
+        const readOnlyRefusal = new Error('The other participant deleted their account: this conversation can be read, not written to.');
+        const settle = async () => {
+            await new Promise(resolve => setTimeout(resolve));
+            fixture.detectChanges();
+        };
+
+        /** Opens the conversation fresh, as wely-chat serves it once the partner deleted their account. */
+        async function openReadOnly(): Promise<void> {
+            fixture.destroy();
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...readOnlyConv, messages: [fromGone] }));
+            chatServiceMock.getPresence.mockClear();
+            fixture = TestBed.createComponent(ChatComponent);
+            component = fixture.componentInstance;
+            fixture.detectChanges();
+            await settle();
+        }
+
+        it('readOnly_shouldBeTrue_forADirectConversationTheServerMarksReadOnly', async () => {
+            expect(component.readOnly()).toBe(false);
+
+            await openReadOnly();
+
+            expect(component.readOnly()).toBe(true);
+        });
+
+        it('readOnly_shouldBeFalse_forAnEventGroup', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({ ...readOnlyConv, type: ConversationType.EVENT, title: 'Soirée' }));
+
+            component.loadConversationById('conv1');
+
+            expect(component.readOnly()).toBe(false);
+        });
+
+        it('conversationTitle_shouldBeTheDeletedLabel_forAReadOnlyDirectConversation', async () => {
+            await openReadOnly();
+
+            expect(component.conversationTitle()).toBe('Utilisateur supprimé');
+            expect(component.partnerPicture()).toBeNull();
+            expect(fixture.nativeElement.querySelector('.avatar-sm.deleted mat-icon')?.textContent).toBe('person');
+        });
+
+        it('template_shouldHideCallButtonsAndTheComposer_whenReadOnly', async () => {
+            await openReadOnly();
+
+            const element: HTMLElement = fixture.nativeElement;
+            expect(element.querySelectorAll('.call-button').length).toBe(0);
+            expect(element.querySelector('.join-call')).toBeNull();
+            expect(element.querySelector('#chat-message-input')).toBeNull();
+            expect(element.querySelector('.photo-btn')).toBeNull();
+            expect(element.querySelector('.read-only-notice')?.textContent).toContain('Ce compte a été supprimé.');
+            expect((element.querySelector('.user-info') as HTMLButtonElement).disabled).toBe(true);
+        });
+
+        it('onSendMessage_shouldNotSend_whenReadOnly', async () => {
+            await openReadOnly();
+
+            component.onSendMessage('hello?');
+
+            expect(chatServiceMock.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('onSendPhoto_shouldNotSend_whenReadOnly', async () => {
+            await openReadOnly();
+
+            await component.onSendPhoto(new File(['raw'], 'a.jpg'));
+
+            expect(chatPhotosMock.send).not.toHaveBeenCalled();
+        });
+
+        it('startCall_shouldNotStart_whenReadOnly', async () => {
+            await openReadOnly();
+
+            await component.startCall('AUDIO');
+
+            expect(callServiceMock.start).not.toHaveBeenCalled();
+        });
+
+        it('openPartner_shouldDoNothing_whenReadOnly', async () => {
+            await openReadOnly();
+
+            component.openPartner();
+
+            expect(routerMock.navigate).not.toHaveBeenCalledWith(['/friends', expect.anything()]);
+        });
+
+        it('partnerPresence_shouldNotBePolled_whenReadOnly', async () => {
+            await openReadOnly();
+
+            expect(chatServiceMock.getPresence).not.toHaveBeenCalled();
+            expect(component.presenceText()).toBeNull();
+        });
+
+        it('openPhotoFromThread_shouldTitleTheViewerWithTheDeletedLabel_forADeletedSender', async () => {
+            await openReadOnly();
+
+            component.openPhotoFromThread(component.chatMessages()[0]);
+
+            expect((dialogMock.open.mock.calls[0][1].data as PhotoViewerData).title).toBe('Utilisateur supprimé');
+        });
+
+        it('openPhotoFromThread_shouldTitleAnEventGroupPhoto_byAConfirmedDeletedMember', () => {
+            chatServiceMock.getConversationById.mockReturnValue(of({
+                ...mockConv, type: ConversationType.EVENT, participantIds: ['me', 'friend'], messages: [fromGone]
+            }));
+            component.loadConversationById('conv1');
+
+            component.openPhotoFromThread(component.chatMessages()[0]);
+
+            expect((dialogMock.open.mock.calls[0][1].data as PhotoViewerData).title).toBe('Utilisateur supprimé');
+        });
+
+        it('handleConversationResponse_shouldTolerateANullSenderName', async () => {
+            await openReadOnly();
+
+            const [entry] = component.chatMessages();
+            expect(entry.senderName).toBeUndefined();
+            expect(entry.senderId).toBe('gone');
+            expect(fixture.nativeElement.querySelector('.author')?.textContent).toBe('Utilisateur supprimé');
+        });
+
+        it('onSendMessage_shouldSwitchToReadOnly_whenTheServerAnswersChtBus012', () => {
+            chatServiceMock.sendMessage.mockReturnValue(throwError(() => readOnlyRefusal));
+
+            component.onSendMessage('still there?');
+            fixture.detectChanges();
+
+            expect(component.readOnly()).toBe(true);
+            expect(component.error()).toBeNull();
+            expect(fixture.nativeElement.querySelector('.read-only-notice')).not.toBeNull();
+        });
+
+        it('onSendMessage_shouldReportOtherFailures', () => {
+            chatServiceMock.sendMessage.mockReturnValue(throwError(() => new Error('delivery refused')));
+
+            component.onSendMessage('still there?');
+
+            expect(component.readOnly()).toBe(false);
+            expect(component.error()).toBe("Erreur lors de l'envoi du message");
+        });
+
+        it('onSendPhoto_shouldSwitchToReadOnly_whenTheServerAnswersChtBus012', async () => {
+            chatPhotosMock.send.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { code: 'CHT-BUS-012' } })));
+
+            await component.onSendPhoto(new File(['raw'], 'a.jpg'));
+
+            expect(component.readOnly()).toBe(true);
+            expect(component.chatMessages().at(-1)?.failed).toBe(true);
         });
     });
 });

@@ -7,6 +7,7 @@ import { filter, switchMap } from 'rxjs';
 import { EventService, FeedEvent, Poll, PollAnswer, PollSlot } from '../../services/event.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { avatarColor } from '../../core/ui/avatar';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON } from '../../core/ui/deleted-user';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 
@@ -16,6 +17,8 @@ export interface Voter {
   name: string;
   initials: string;
   picture?: string;
+  /** A closed poll keeps the ballots of a deleted account, shown neutral. */
+  deleted?: boolean;
 }
 
 /** The answers offered on each slot, in the order shown. */
@@ -86,6 +89,8 @@ export class EventPollComponent {
   readonly fixed = output<FeedEvent>();
 
   readonly choices = ANSWER_CHOICES;
+  readonly deletedAvatarColor = DELETED_USER_AVATAR_COLOR;
+  readonly deletedIcon = DELETED_USER_ICON;
   /** The poll shown: the event's, or the viewer's vote before the server confirmed it. */
   readonly poll = linkedSignal(() => this.event().poll ?? null);
   readonly error = signal<string | null>(null);

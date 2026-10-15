@@ -15,6 +15,7 @@ import { LoggerService } from '../../core/logging/logger.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { centsToInput, formatCents, parseEuros } from '../../core/ui/money';
 import { avatarColor } from '../../core/ui/avatar';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON } from '../../core/ui/deleted-user';
 import { PhotoResizer } from '../../core/ui/photo-resize';
 import { eventMediaError } from '../../core/ui/event-media-errors';
 
@@ -101,13 +102,19 @@ export class ExpenseDialogComponent {
     { value: 'EXACT', label: 'Montants' }
   ];
 
+  /** Who the expense can be for: a deleted account only when the expense already counts them. */
+  readonly members = this.data.members.filter(member => !member.deleted
+    || (this.data.expense?.shares ?? []).some(share => share.userId === member.id));
+  /** Who can have paid: a deleted account only when the expense already says they did. */
+  readonly payers = this.data.members.filter(member => !member.deleted || member.id === this.data.expense?.paidBy);
+
   readonly title = signal(this.data.expense?.title ?? '');
   readonly amountText = signal(this.data.expense ? centsToInput(this.data.expense.amountCents) : '');
   readonly paidBy = signal(this.data.expense?.paidBy ?? this.data.meId);
   readonly split = signal<SplitMode>(this.data.expense?.split ?? 'EQUAL');
-  /** Who the expense is for; everyone by default. */
+  /** Who the expense is for; everyone still holding an account by default. */
   readonly included = signal<ReadonlySet<string>>(new Set(
-    this.data.expense ? this.data.expense.shares.map(share => share.userId) : this.data.members.map(member => member.id)));
+    this.data.expense ? this.data.expense.shares.map(share => share.userId) : this.members.map(member => member.id)));
   /** Weight per person in SHARES mode. */
   readonly weights = signal<Readonly<Record<string, number>>>(this.initialValues('SHARES', 1));
   /** Typed amount per person in EXACT mode. */
@@ -133,7 +140,7 @@ export class ExpenseDialogComponent {
 
   readonly amountCents = computed(() => parseEuros(this.amountText()));
 
-  readonly shares = computed<ExpenseShare[]>(() => this.data.members
+  readonly shares = computed<ExpenseShare[]>(() => this.members
     .filter(member => this.included().has(member.id))
     .map(member => ({
       userId: member.id,
@@ -174,6 +181,8 @@ export class ExpenseDialogComponent {
 
   readonly formatCents = formatCents;
   readonly avatarColor = avatarColor;
+  readonly deletedAvatarColor = DELETED_USER_AVATAR_COLOR;
+  readonly deletedIcon = DELETED_USER_ICON;
 
   toggle(memberId: string): void {
     this.included.update(current => {

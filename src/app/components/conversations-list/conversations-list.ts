@@ -15,6 +15,7 @@ import { catchError, forkJoin, map, of } from 'rxjs';
 import { ConversationSummary, ConversationType, isSystemMessage } from '../../models/chat.model';
 import { UserService } from '../../services/user.service';
 import { AvatarService } from '../../services/avatar.service';
+import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../core/ui/deleted-user';
 
 /** One row of the list: the conversation, and who it is with. */
 export interface ConversationRow {
@@ -22,6 +23,8 @@ export interface ConversationRow {
     name: string;
     avatarUrl: string | null;
     online: boolean;
+    /** A private conversation whose partner deleted their account. */
+    deleted: boolean;
 }
 
 /**
@@ -57,16 +60,20 @@ export class ConversationsListComponent implements OnInit {
      */
     readonly rows = computed<ConversationRow[]>(() => this.conversations().map(conversation => {
         const partnerId = this.partnerOf(conversation);
+        const deleted = isDeletedPartner(conversation);
         const friend = partnerId ? this.friends().get(partnerId) : undefined;
         const lastFromPartner = conversation.lastMessage && conversation.lastMessage.senderId === partnerId
             ? conversation.lastMessage.senderName : undefined;
         return {
             conversation,
-            name: conversation.title || friend?.userName || lastFromPartner || 'Conversation',
-            avatarUrl: partnerId ? this.avatars.url(partnerId)() : null,
-            online: !!partnerId && this.onlinePartners().has(partnerId)
+            name: conversation.title || friend?.userName || (deleted ? DELETED_USER_LABEL : undefined) || lastFromPartner || 'Conversation',
+            avatarUrl: partnerId && !deleted ? this.avatars.url(partnerId)() : null,
+            online: !deleted && !!partnerId && this.onlinePartners().has(partnerId),
+            deleted
         };
     }));
+    readonly deletedAvatarColor = DELETED_USER_AVATAR_COLOR;
+    readonly deletedIcon = DELETED_USER_ICON;
     readonly isLoading = signal(true);
     readonly error = signal<string | null>(null);
 
@@ -134,9 +141,11 @@ export class ConversationsListComponent implements OnInit {
         return conversation.participantIds?.find(id => id !== this.currentUserId) ?? null;
     }
 
-    /** One presence read per partner; one that cannot be read simply shows no dot. */
+    /** One presence read per partner, none for a deleted one; one that cannot be read simply shows no dot. */
     private loadPresence(conversations: ConversationSummary[]): void {
-        const partners = [...new Set(conversations.flatMap(conversation => this.partnerOf(conversation) ?? []))];
+        const partners = [...new Set(conversations
+            .filter(conversation => !isDeletedPartner(conversation))
+            .flatMap(conversation => this.partnerOf(conversation) ?? []))];
         if (partners.length === 0) {
             return;
         }
@@ -150,4 +159,9 @@ export class ConversationsListComponent implements OnInit {
     getAvatarInitial(title: string | undefined): string {
         return (title && title.length > 0) ? title.charAt(0).toUpperCase() : '?';
     }
+}
+
+/** wely-chat marks a private conversation read-only once the other participant deleted their account. */
+function isDeletedPartner(conversation: ConversationSummary): boolean {
+    return conversation.type !== ConversationType.EVENT && conversation.readOnly === true;
 }

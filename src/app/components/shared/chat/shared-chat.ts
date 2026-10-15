@@ -38,6 +38,9 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
     readonly openPhoto = output<ChatMessage>();
     /** Whether this conversation takes photos; the event page's read-only preview does not. */
     readonly photos = input(false);
+    /** Readable, not writable: the composer gives way to the notice. */
+    readonly readOnly = input(false);
+    readonly readOnlyNotice = input('');
 
     private readonly scrollContainer = viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
     private readonly topSentinel = viewChild<ElementRef<HTMLElement>>('topSentinel');
@@ -176,7 +179,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
 
     sendMessage(): void {
         const text = this.newMessage().trim();
-        if (!text) {
+        if (!text || this.readOnly()) {
             return;
         }
 
@@ -190,7 +193,7 @@ export class SharedChatComponent implements AfterViewChecked, OnChanges, AfterVi
         const field = event.target as HTMLInputElement;
         const file = field.files?.[0];
         field.value = '';
-        if (file) {
+        if (file && !this.readOnly()) {
             this.sendPhoto.emit(file);
             this.shouldScrollToBottom = true;
         }

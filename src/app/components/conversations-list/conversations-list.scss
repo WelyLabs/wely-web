@@ -143,6 +143,11 @@
             object-fit: cover;
             border-radius: inherit;
         }
+
+        // A deleted partner: the neutral grey set inline, without the brand glow.
+        &.deleted {
+            box-shadow: none;
+        }
     }
 
     .status-indicator {

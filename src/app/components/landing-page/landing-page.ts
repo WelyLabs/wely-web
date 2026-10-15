@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { KeycloakService } from 'keycloak-angular';
+import { ACCOUNT_DELETED, ACCOUNT_QUERY_PARAM } from '../../models/account.model';
 
 /** One day column of the calendar preview in the hero. */
 export interface PreviewDay {
@@ -66,7 +67,11 @@ export function weekLabel(today: Date): string {
 /** Public home page: the only route reachable without a session. */
 export class LandingPageComponent {
     private readonly router = inject(Router);
+    private readonly route = inject(ActivatedRoute);
     private readonly keycloak = inject(KeycloakService);
+
+    /** Arrived here right after deleting the account: the page says it is done. */
+    readonly accountDeleted = signal(this.route.snapshot.queryParamMap.get(ACCOUNT_QUERY_PARAM) === ACCOUNT_DELETED);
 
     readonly repositoryUrl = 'https://github.com/WelyLabs/wely-platform';
 
@@ -121,6 +126,12 @@ export class LandingPageComponent {
                 redirectUri: window.location.origin + '/calendar'
             });
         }
+    }
+
+    /** Hides the confirmation and drops it from the address. */
+    dismissDeletionNotice(): void {
+        this.accountDeleted.set(false);
+        void this.router.navigate(['/'], { replaceUrl: true });
     }
 
     async signup(): Promise<void> {
