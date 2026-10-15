@@ -47,7 +47,7 @@
               </div>
               <div class="grid-card-content">
                 @if (organiserName(event.organizerId); as organiser) {
-                  <div class="organizer">{{ organiser }}</div>
+                  <div class="organizer">par {{ organiser }}</div>
                 }
                 <h2>{{ event.title }}</h2>
                 <div class="meta">
@@ -109,7 +109,7 @@
             </div>
             <div class="card-content">
               @if (organiserName(event.organizerId); as organiser) {
-                <div class="organizer">{{ organiser }}</div>
+                <div class="organizer">par {{ organiser }}</div>
               }
               <h2>{{ event.title }}</h2>
               <div class="location">
