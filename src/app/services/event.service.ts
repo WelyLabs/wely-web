@@ -4,8 +4,11 @@ import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Coordinates, MapArea } from '../models/place.model';
 
-/** Who may see an event besides those taking part: everyone, the organizer's friends, or nobody. */
-export type Visibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
+/**
+ * Who may see an event besides those taking part: everyone, the organizer's friends, nobody, or
+ * the members of the community it was published in (set by the backend, never chosen).
+ */
+export type Visibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE' | 'COMMUNITY';
 
 export interface EventCreateRequest {
   title: string;
@@ -19,6 +22,15 @@ export interface EventCreateRequest {
   visibility?: Visibility;
   /** 2 to 5 proposed slots: the event then opens as a date poll. */
   candidateSlots?: { start: Date; end: Date }[];
+  /** Publishes the event in this community, for its members only. */
+  communityId?: string;
+}
+
+/** Member ids by answer to a community event; everyone taking part is a yes, the organizer first. */
+export interface EventResponses {
+  yes: string[];
+  maybe: string[];
+  no: string[];
 }
 
 /** One voter's answer for one proposed slot. */
@@ -66,6 +78,10 @@ export interface FeedEvent {
   visibility?: Visibility;
   /** The date poll, when the event was created with several candidate slots. */
   poll?: Poll | null;
+  /** The community the event was published in. */
+  communityId?: string | null;
+  /** Who answered what, for a community event only. */
+  responses?: EventResponses | null;
 }
 
 /**
@@ -259,6 +275,25 @@ export class EventService {
     return this.http.get<EventPayload>(`${this.apiUrl}/${id}`).pipe(
       map((event) => this.toFeedEvent(event)),
     );
+  }
+
+  /** Deletes the event: its organizer, or an admin of the community it was published in. */
+  deleteEvent(eventId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${eventId}`).pipe(tap(() => this.refreshEvents()));
+  }
+
+  /** A community's upcoming events, soonest first; members only. */
+  getCommunityEvents(communityId: string): Observable<FeedEvent[]> {
+    return this.http
+      .get<EventPayload[]>(`${this.apiUrl}/community/${communityId}`)
+      .pipe(map((events) => events.map((event) => this.toFeedEvent(event))));
+  }
+
+  /** A member's answer to a community event; YES takes part, MAYBE and NO do not. */
+  respond(eventId: string, answer: PollAnswer): Observable<FeedEvent> {
+    return this.http
+      .put<EventPayload>(`${this.apiUrl}/${eventId}/response`, { answer })
+      .pipe(map((event) => this.toFeedEvent(event)));
   }
 
   getParticipants(id: string): Observable<EventParticipants> {

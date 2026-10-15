@@ -1,0 +1,32 @@
+<div class="page">
+  <div class="card">
+    @if (loading()) {
+      <div class="loader-ring"></div>
+    } @else if (invitation(); as invitation) {
+      @if (invitation.expired) {
+        <mat-icon class="icon expired">schedule</mat-icon>
+        <h1>Invitation expirée</h1>
+        <p>
+          L'invitation de {{ invitation.inviterName }} à rejoindre « {{ invitation.communityName }} » était valable
+          3 jours et a expiré le {{ invitation.expiresAt | date: "d MMMM 'à' HH:mm" }}.
+        </p>
+        <p class="muted">Demandez-lui de vous en envoyer une nouvelle.</p>
+        <a mat-stroked-button routerLink="/conversations">Ouvrir mes messages</a>
+      } @else {
+        <mat-icon class="icon">{{ invitation.visibility === 'PRIVATE' ? 'lock' : 'groups' }}</mat-icon>
+        <h1>{{ invitation.communityName }}</h1>
+        <p><strong>{{ invitation.inviterName }}</strong> vous invite à rejoindre cette communauté
+          {{ invitation.visibility === 'PRIVATE' ? 'privée' : 'publique' }}.</p>
+        <p class="muted">Invitation valable jusqu'au {{ invitation.expiresAt | date: "d MMMM 'à' HH:mm" }}.</p>
+        <button mat-flat-button class="accept" [disabled]="accepting()" (click)="accept()">
+          <mat-icon>group_add</mat-icon>Rejoindre la communauté
+        </button>
+      }
+    } @else {
+      <mat-icon class="icon expired">link_off</mat-icon>
+      <h1>Invitation indisponible</h1>
+      <p>{{ problem() }}</p>
+      <a mat-stroked-button routerLink="/communities">Voir les communautés</a>
+    }
+  </div>
+</div>

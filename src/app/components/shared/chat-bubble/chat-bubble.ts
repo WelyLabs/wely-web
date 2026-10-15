@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 
 import { avatarColor, initialsOf } from '../../../core/ui/avatar';
 import { AvatarService } from '../../../services/avatar.service';
+import { invitationPath, invitationTokenIn } from '../../../models/community.model';
 
 /** What a bubble shows: one message, from the viewer or from someone else. */
 export interface ChatBubbleMessage {
@@ -31,7 +33,7 @@ export interface ChatBubbleMessage {
 @Component({
   selector: 'app-chat-bubble',
   standalone: true,
-  imports: [DatePipe, MatIconModule],
+  imports: [DatePipe, MatIconModule, RouterLink],
   templateUrl: './chat-bubble.html',
   styleUrl: './chat-bubble.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -47,6 +49,19 @@ export class ChatBubbleComponent {
   readonly initials = computed(() => initialsOf(this.author()));
   readonly color = computed(() => avatarColor(this.message().senderId ?? this.author()));
   /** The author's photo; the coloured initials stand in until it arrives, or when there is none. */
+  /**
+   * A community invitation the message links to: shown as a card with a button rather than a bare
+   * link, with the words that came before the link.
+   */
+  readonly invitation = computed(() => {
+    const text = this.message().text;
+    const token = invitationTokenIn(text);
+    if (!token) {
+      return null;
+    }
+    const intro = text.slice(0, text.search(/https?:\/\/|\/communities\/invite\//)).replace(/\s*:\s*$/, '').trim();
+    return { link: invitationPath(token), intro };
+  });
   readonly picture = computed(() =>
     this.message().isMe || this.message().system ? null : this.avatars.url(this.message().senderId)());
 }

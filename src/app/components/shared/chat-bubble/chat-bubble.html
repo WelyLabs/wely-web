@@ -28,7 +28,15 @@
           </div>
         }
       }
-      @if (message().text) {
+      @if (invitation(); as invite) {
+        <div class="invitation">
+          <span class="invitation-head"><mat-icon>groups</mat-icon>Invitation à une communauté</span>
+          @if (invite.intro) {
+            <p>{{ invite.intro }}</p>
+          }
+          <a class="invitation-cta" [routerLink]="invite.link">Voir l'invitation</a>
+        </div>
+      } @else if (message().text) {
         <p>{{ message().text }}</p>
       }
       <span class="time">

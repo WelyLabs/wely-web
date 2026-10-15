@@ -118,3 +118,42 @@
     font-weight: 600;
     color: var(--text-secondary);
 }
+
+/* A community invitation: a small card inside the bubble, its link turned into a button. */
+.invitation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.invitation-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.85;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.invitation-cta {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--brand-blue);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}

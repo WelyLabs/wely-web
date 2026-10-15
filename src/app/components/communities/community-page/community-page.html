@@ -1,0 +1,232 @@
+<div class="page">
+  <a class="back" routerLink="/communities"><mat-icon>arrow_back</mat-icon>Communautés</a>
+
+  @if (loading()) {
+    <div class="state"><div class="loader-ring"></div></div>
+  } @else if (notFound() || !community()) {
+    <div class="state">
+      <mat-icon>visibility_off</mat-icon>
+      <h3>Communauté introuvable</h3>
+      <p>Elle n'existe pas, a été supprimée, ou elle est privée et vous n'en êtes pas membre.</p>
+    </div>
+  } @else {
+    @let c = community()!;
+    <section class="hero">
+      <span class="badge-avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+      <div class="hero-text">
+        <h1>{{ c.name }}</h1>
+        <p class="meta">
+          <mat-icon>{{ c.visibility === 'PRIVATE' ? 'lock' : 'public' }}</mat-icon>
+          {{ c.visibility === 'PRIVATE' ? 'Communauté privée' : 'Communauté publique' }}
+          · {{ c.memberCount }} membre{{ c.memberCount > 1 ? 's' : '' }}
+          @if (c.role === 'ADMIN') { · <strong>Vous êtes administrateur</strong> }
+        </p>
+        @if (c.description) {
+          <p class="description">{{ c.description }}</p>
+        }
+        @if (c.interests.length) {
+          <div class="interests">
+            @for (interest of c.interests; track interest) {
+              <span class="chip">#{{ interest }}</span>
+            }
+          </div>
+        }
+        @if (c.friendMembers.length) {
+          <div class="friends">
+            <div class="stack">
+              @for (friend of c.friendMembers; track friend.userId) {
+                <span class="mini-avatar" [style.background]="memberColor(friend.userId)" [title]="friend.userName">
+                  {{ memberInitials(friend.userName) }}
+                </span>
+              }
+            </div>
+            <span>{{ c.friendMemberCount }} ami{{ c.friendMemberCount > 1 ? 's' : '' }} membre{{ c.friendMemberCount > 1 ? 's' : '' }}</span>
+          </div>
+        }
+      </div>
+      <div class="hero-actions">
+        @if (!c.role) {
+          <button mat-flat-button class="join" [disabled]="busy()" (click)="join()">
+            <mat-icon>group_add</mat-icon>Rejoindre
+          </button>
+        } @else {
+          @if (c.role === 'ADMIN') {
+            <button mat-flat-button (click)="invite()"><mat-icon>person_add</mat-icon>Inviter</button>
+          }
+          <button mat-stroked-button [matMenuTriggerFor]="menu" aria-label="Plus d'actions">
+            <mat-icon>more_horiz</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            @if (c.role === 'ADMIN') {
+              <button mat-menu-item (click)="edit()"><mat-icon>edit</mat-icon>Modifier</button>
+              <button mat-menu-item (click)="remove()"><mat-icon>delete</mat-icon>Supprimer la communauté</button>
+            }
+            <button mat-menu-item (click)="leave()"><mat-icon>logout</mat-icon>Quitter la communauté</button>
+          </mat-menu>
+        }
+      </div>
+    </section>
+
+    @if (!c.role) {
+      <div class="state locked">
+        <mat-icon>lock_open</mat-icon>
+        <h3>Réservé aux membres</h3>
+        <p>Rejoignez « {{ c.name }} » pour voir ses événements et ses membres. L'adhésion est immédiate.</p>
+      </div>
+    } @else {
+      <div class="tabs-segment" role="tablist">
+        <button role="tab" [class.active]="tab() === 'events'" [attr.aria-selected]="tab() === 'events'" (click)="select('events')">
+          Événements <span class="count">{{ communityEvents().length }}</span>
+        </button>
+        <button role="tab" [class.active]="tab() === 'members'" [attr.aria-selected]="tab() === 'members'" (click)="select('members')">
+          Membres <span class="count">{{ c.memberCount }}</span>
+        </button>
+        @if (isAdmin()) {
+          <button role="tab" [class.active]="tab() === 'invitations'" [attr.aria-selected]="tab() === 'invitations'"
+            (click)="select('invitations')">
+            Invitations
+          </button>
+        }
+      </div>
+
+      @switch (tab()) {
+        @case ('events') {
+          <div class="section-head">
+            <h2>Prochains événements</h2>
+            <button mat-flat-button (click)="newEvent()"><mat-icon>add</mat-icon>Nouvel événement</button>
+          </div>
+          @if (communityEvents().length === 0) {
+            <div class="state small">
+              <mat-icon>event_available</mat-icon>
+              <p>Aucun événement prévu. Proposez la première sortie !</p>
+            </div>
+          }
+          <div class="events">
+            @for (event of communityEvents(); track event.id) {
+              @let mine = myAnswer(event);
+              <article class="event-card">
+                <div class="date-block">
+                  <span class="day">{{ event.startDate | date: 'd' }}</span>
+                  <span class="month">{{ event.startDate | date: 'MMM' }}</span>
+                </div>
+                <div class="event-body">
+                  <a class="event-title" [routerLink]="['/event', event.id]">{{ event.title }}</a>
+                  <p class="event-meta">
+                    <mat-icon>schedule</mat-icon>{{ event.startDate | date: 'EEEE d MMMM, HH:mm' }}
+                    @if (event.endDate) { – {{ event.endDate | date: 'HH:mm' }} }
+                  </p>
+                  <p class="event-meta"><mat-icon>place</mat-icon>{{ event.location }}</p>
+                  <p class="event-meta"><mat-icon>person</mat-icon>Proposé par {{ nameOf(event.organizerId) }}</p>
+                  @if (event.description) {
+                    <p class="event-description">{{ event.description }}</p>
+                  }
+
+                  <div class="rsvp" role="group" aria-label="Votre réponse">
+                    @for (answer of answers; track answer.value) {
+                      <button type="button" class="rsvp-btn {{ answer.value | lowercase }}" [class.selected]="mine === answer.value"
+                        [attr.aria-pressed]="mine === answer.value" (click)="respond(event, answer.value)">
+                        <mat-icon>{{ answer.icon }}</mat-icon>
+                        {{ answer.label }}
+                        <span class="n">{{ countOf(event, answer.value) }}</span>
+                      </button>
+                    }
+                  </div>
+                  <button type="button" class="link" (click)="toggleResponses(event)">
+                    {{ expanded() === event.id ? 'Masquer les réponses' : 'Voir qui vient' }}
+                  </button>
+                  @if (expanded() === event.id) {
+                    <div class="responses">
+                      @for (answer of answers; track answer.value) {
+                        <div>
+                          <strong>{{ answer.label }}</strong>
+                          @let ids = idsOf(event, answer.value);
+                          @if (ids.length) {
+                            <span>
+                              @for (id of ids; track id; let last = $last) {
+                                {{ nameOf(id) }}{{ last ? '' : ', ' }}
+                              }
+                            </span>
+                          } @else {
+                            <span class="muted">Personne</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (canDelete(event)) {
+                  <button mat-icon-button class="delete" (click)="deleteEvent(event)" aria-label="Supprimer l'événement">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
+              </article>
+            }
+          </div>
+        }
+        @case ('members') {
+          <ul class="members">
+            @for (member of members(); track member.userId) {
+              <li>
+                <span class="mini-avatar big" [style.background]="memberColor(member.userId)">{{ memberInitials(member.userName) }}</span>
+                <div class="member-text">
+                  <strong>{{ member.userName }}<span class="tag">#{{ member.hashtag }}</span></strong>
+                  <small>Membre depuis le {{ member.joinedAt | date: 'd MMMM y' }}</small>
+                </div>
+                @if (member.role === 'ADMIN') {
+                  <span class="role-pill">Admin</span>
+                }
+                @if (isAdmin()) {
+                  <button mat-icon-button [matMenuTriggerFor]="memberMenu" [attr.aria-label]="'Gérer ' + member.userName">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #memberMenu="matMenu">
+                    @if (member.role === 'MEMBER') {
+                      <button mat-menu-item (click)="setRole(member, 'ADMIN')"><mat-icon>shield</mat-icon>Nommer administrateur</button>
+                    } @else {
+                      <button mat-menu-item (click)="setRole(member, 'MEMBER')"><mat-icon>remove_moderator</mat-icon>Retirer le rôle d'admin</button>
+                    }
+                    @if (member.userId !== me()) {
+                      <button mat-menu-item (click)="removeMember(member)"><mat-icon>person_remove</mat-icon>Retirer de la communauté</button>
+                    }
+                  </mat-menu>
+                }
+              </li>
+            }
+          </ul>
+        }
+        @case ('invitations') {
+          <div class="section-head">
+            <h2>Invitations en attente</h2>
+            <button mat-flat-button (click)="invite()"><mat-icon>person_add</mat-icon>Inviter un ami</button>
+          </div>
+          <p class="hint">Une invitation est envoyée par message à un ami, valable 3 jours, pour lui seul, et utilisable une fois.
+            Réinviter quelqu'un remplace son invitation par une nouvelle.</p>
+          @if (invitations().length === 0) {
+            <div class="state small"><mat-icon>mail_outline</mat-icon><p>Aucune invitation en attente.</p></div>
+          }
+          <ul class="members">
+            @for (invitation of invitations(); track invitation.token) {
+              <li>
+                <span class="mini-avatar big" [style.background]="memberColor(invitation.inviteeId)">
+                  {{ memberInitials(invitation.inviteeName ?? '?') }}
+                </span>
+                <div class="member-text">
+                  <strong>{{ invitation.inviteeName }}</strong>
+                  <small>
+                    Invité par {{ invitation.inviterName }} ·
+                    @if (invitation.expired) {
+                      <span class="expired">expirée le {{ invitation.expiresAt | date: 'd MMM, HH:mm' }}</span>
+                    } @else {
+                      expire le {{ invitation.expiresAt | date: 'd MMM, HH:mm' }}
+                    }
+                  </small>
+                </div>
+                <button mat-stroked-button (click)="revoke(invitation)">Révoquer</button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    }
+  }
+</div>

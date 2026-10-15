@@ -1,0 +1,42 @@
+<h2 mat-dialog-title>Nouvel événement</h2>
+<mat-dialog-content>
+  <p class="intro">Dans « {{ community.name }} » : seuls ses membres le verront et pourront répondre.</p>
+  <form class="form" id="community-event-form" (ngSubmit)="save()">
+    <label class="field">
+      <span>Titre</span>
+      <input name="title" required placeholder="Ex. : Balade en anciennes au bord du lac"
+        [ngModel]="title()" (ngModelChange)="title.set($event)">
+    </label>
+    <div class="row">
+      <label class="field">
+        <span>Date</span>
+        <input name="day" type="date" required [ngModel]="day()" (ngModelChange)="day.set($event)">
+      </label>
+      <label class="field">
+        <span>Début</span>
+        <input name="start" type="time" required [ngModel]="startTime()" (ngModelChange)="startTime.set($event)">
+      </label>
+      <label class="field">
+        <span>Fin</span>
+        <input name="end" type="time" required [ngModel]="endTime()" (ngModelChange)="endTime.set($event)">
+      </label>
+    </div>
+    <label class="field">
+      <span>Lieu</span>
+      <input name="location" required placeholder="Adresse ou lieu de rendez-vous"
+        [ngModel]="location()" (ngModelChange)="location.set($event)">
+    </label>
+    <label class="field">
+      <span>Description</span>
+      <textarea name="description" rows="3" placeholder="Programme, ce qu'il faut apporter…"
+        [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+    </label>
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">Annuler</button>
+  <button mat-flat-button type="submit" form="community-event-form" [disabled]="!valid() || saving()">Publier</button>
+</mat-dialog-actions>

@@ -490,4 +490,40 @@ describe('EventService', () => {
 
         expect(status).toBe(403);
     });
+
+    describe('communities', () => {
+        it('lists a community\'s events with their dates and answers', () => {
+            const responses = { yes: ['org1'], maybe: ['lea'], no: [] };
+            let events: FeedEvent[] = [];
+            service.getCommunityEvents('c1').subscribe(list => events = list);
+
+            httpMock.expectOne(`${apiUrl}/community/c1`).flush([payload({ communityId: 'c1', responses })]);
+
+            expect(events[0].startDate).toEqual(new Date('2026-03-14T09:30:00Z'));
+            expect(events[0].communityId).toBe('c1');
+            expect(events[0].responses).toEqual(responses);
+        });
+
+        it('sends an answer and returns the event as it stands', () => {
+            let event: FeedEvent | undefined;
+            service.respond('1', 'MAYBE').subscribe(updated => event = updated);
+
+            const req = httpMock.expectOne(`${apiUrl}/1/response`);
+            expect(req.request.method).toBe('PUT');
+            expect(req.request.body).toEqual({ answer: 'MAYBE' });
+            req.flush(payload());
+
+            expect(event?.id).toBe('1');
+        });
+
+        it('deletes an event, then refreshes the lists', () => {
+            service.deleteEvent('1').subscribe();
+
+            const req = httpMock.expectOne(`${apiUrl}/1`);
+            expect(req.request.method).toBe('DELETE');
+            req.flush(null);
+            httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        });
+    });
 });

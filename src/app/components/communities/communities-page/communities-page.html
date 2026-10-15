@@ -1,0 +1,75 @@
+<div class="page">
+  <header class="header">
+    <div class="title-group">
+      <h1>Communautés</h1>
+      <p class="subtitle">Rassemblez-vous autour de ce qui vous passionne</p>
+    </div>
+    <button mat-flat-button class="create-btn" (click)="create()">
+      <mat-icon>add</mat-icon>
+      <span>Créer une communauté</span>
+    </button>
+  </header>
+
+  <div class="tabs-segment" role="tablist">
+    <button role="tab" [attr.aria-selected]="tab() === 'mine'" [class.active]="tab() === 'mine'" (click)="select('mine')">
+      Mes communautés
+    </button>
+    <button role="tab" [attr.aria-selected]="tab() === 'discover'" [class.active]="tab() === 'discover'"
+      (click)="select('discover')">
+      Découvrir
+    </button>
+  </div>
+
+  @if (tab() === 'discover') {
+    <div class="filters">
+      <div class="search">
+        <mat-icon>search</mat-icon>
+        <label class="visually-hidden" for="community-search">Rechercher une communauté</label>
+        <input id="community-search" type="text" placeholder="Rechercher par nom ou description…"
+          [ngModel]="query()" (ngModelChange)="onQuery($event)">
+      </div>
+      @if (interests().length) {
+        <div class="interest-chips" aria-label="Filtrer par centre d'intérêt">
+          @for (tag of interests(); track tag) {
+            <button type="button" class="chip" [class.selected]="tag === interest()"
+              [attr.aria-pressed]="tag === interest()" (click)="toggleInterest(tag)">
+              #{{ tag }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (error()) {
+    <div class="state">
+      <mat-icon>error_outline</mat-icon>
+      <p>Impossible de charger les communautés.</p>
+      <button mat-stroked-button (click)="retry()">Réessayer</button>
+    </div>
+  } @else if (loading() && (tab() === 'mine' ? mine() : discovered()).length === 0) {
+    <div class="state"><div class="loader-ring"></div></div>
+  } @else {
+    @let list = tab() === 'mine' ? mine() : discovered();
+    @if (list.length) {
+      <div class="grid">
+        @for (community of list; track community.communityId) {
+          <app-community-card [community]="community" />
+        }
+      </div>
+    } @else if (tab() === 'mine') {
+      <div class="state empty">
+        <mat-icon>groups</mat-icon>
+        <h3>Aucune communauté pour l'instant</h3>
+        <p>Découvrez les communautés publiques ou créez la vôtre.</p>
+        <button mat-flat-button (click)="select('discover')">Découvrir</button>
+      </div>
+    } @else {
+      <div class="state empty">
+        <mat-icon>travel_explore</mat-icon>
+        <h3>Aucune communauté trouvée</h3>
+        <p>Essayez un autre mot-clé, ou créez-la !</p>
+      </div>
+    }
+  }
+</div>

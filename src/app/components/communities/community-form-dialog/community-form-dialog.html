@@ -1,0 +1,61 @@
+<h2 mat-dialog-title>{{ editing ? 'Modifier la communauté' : 'Nouvelle communauté' }}</h2>
+<mat-dialog-content>
+  <form class="form" (ngSubmit)="save()" id="community-form">
+    <label class="field">
+      <span>Nom</span>
+      <input name="name" type="text" required [maxLength]="limits.nameMax" placeholder="Ex. : Club des passionnés d'automobile"
+        [ngModel]="name()" (ngModelChange)="name.set($event)">
+    </label>
+
+    <label class="field">
+      <span>Objectif / description <em>({{ description().length }}/{{ limits.descriptionMax }})</em></span>
+      <textarea name="description" rows="4" [maxLength]="limits.descriptionMax"
+        placeholder="De quoi parle votre communauté ? Qui peut la rejoindre ?"
+        [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+    </label>
+
+    <div class="field">
+      <span>Centres d'intérêt <em>({{ interests().length }}/{{ limits.interestsMax }})</em></span>
+      <div class="interests">
+        @for (interest of interests(); track interest) {
+          <span class="chip">#{{ interest }}
+            <button type="button" (click)="removeInterest(interest)" [attr.aria-label]="'Retirer ' + interest">
+              <mat-icon>close</mat-icon>
+            </button>
+          </span>
+        }
+        @if (interests().length < limits.interestsMax) {
+          <input name="interest" type="text" placeholder="auto, rando, jeux… puis Entrée" [maxLength]="limits.interestMax"
+            [ngModel]="interestDraft()" (ngModelChange)="interestDraft.set($event)"
+            (keydown.enter)="addInterest($event)" (keydown.,)="addInterest($event)">
+        }
+      </div>
+    </div>
+
+    <div class="field">
+      <span>Visibilité</span>
+      <div class="visibility">
+        <button type="button" [class.selected]="visibility() === 'PUBLIC'" (click)="visibility.set('PUBLIC')">
+          <mat-icon>public</mat-icon>
+          <strong>Publique</strong>
+          <small>Visible dans « Découvrir », tout le monde peut la rejoindre.</small>
+        </button>
+        <button type="button" [class.selected]="visibility() === 'PRIVATE'" (click)="visibility.set('PRIVATE')">
+          <mat-icon>lock</mat-icon>
+          <strong>Privée</strong>
+          <small>Invisible aux non-membres, on la rejoint sur invitation.</small>
+        </button>
+      </div>
+    </div>
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">Annuler</button>
+  <button mat-flat-button type="submit" form="community-form" [disabled]="!valid() || saving()">
+    {{ editing ? 'Enregistrer' : 'Créer' }}
+  </button>
+</mat-dialog-actions>

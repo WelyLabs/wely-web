@@ -12,6 +12,10 @@
           <span class="label">{{ item.label }}</span>
         </a>
       }
+      <a routerLink="/communities" routerLinkActive="active" class="nav-item">
+        <mat-icon>groups</mat-icon>
+        <span class="label">Communautés</span>
+      </a>
       <a routerLink="/notifications" routerLinkActive="active" class="nav-item notifications-item">
         <mat-icon>notifications</mat-icon>
         <span class="label">Notifications</span>
@@ -136,6 +140,11 @@
             @if (unreadBadge(); as badge) {
               <span class="badge">{{ badge }}</span>
             }
+          </button>
+          <!-- No room for Communities in the bottom bar: it lives here on a phone. -->
+          <button class="menu-item" routerLink="/communities" (click)="closeMobileMenu()">
+            <mat-icon>groups</mat-icon>
+            <span>Communautés</span>
           </button>
           <button class="menu-item" routerLink="/profile" (click)="closeMobileMenu()">
             <mat-icon>person</mat-icon>

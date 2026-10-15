@@ -42,6 +42,19 @@ export const routes: Routes = [
                 path: 'notifications',
                 loadComponent: () => import('./components/notifications/notifications').then(m => m.NotificationsPageComponent)
             },
+            {
+                path: 'communities',
+                loadComponent: () => import('./components/communities/communities-page/communities-page').then(m => m.CommunitiesPageComponent)
+            },
+            // Before ':id', which would otherwise read "invite" as a community's id.
+            {
+                path: 'communities/invite/:token',
+                loadComponent: () => import('./components/communities/community-invitation/community-invitation').then(m => m.CommunityInvitationComponent)
+            },
+            {
+                path: 'communities/:id',
+                loadComponent: () => import('./components/communities/community-page/community-page').then(m => m.CommunityPageComponent)
+            },
             { path: 'chat/:convId', loadComponent: () => import('./components/chat/chat').then(m => m.ChatComponent) },
             { path: 'call/:callId', loadComponent: () => import('./components/call/call-screen/call-screen').then(m => m.CallScreenComponent) }
         ]

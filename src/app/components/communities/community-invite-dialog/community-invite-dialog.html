@@ -1,0 +1,39 @@
+<h2 mat-dialog-title>Inviter des amis</h2>
+<mat-dialog-content>
+  <p class="intro">Chaque ami reçoit l'invitation par message. Elle est valable 3 jours et pour lui seul.</p>
+  <input class="search" type="text" placeholder="Rechercher un ami…" aria-label="Rechercher un ami"
+    [ngModel]="query()" (ngModelChange)="query.set($event)">
+  @if (loading()) {
+    <p class="muted">Chargement…</p>
+  } @else if (shown().length === 0) {
+    <p class="muted">Aucun ami à inviter{{ query() ? ' pour cette recherche' : '' }}.</p>
+  }
+  <ul class="list">
+    @for (friend of shown(); track friend.userId) {
+      @let state = stateOf(friend.userId);
+      <li>
+        <span class="avatar" [style.background]="color(friend.userId)">{{ initials(friend.userName) }}</span>
+        <div class="who">
+          <strong>{{ friend.userName }}</strong><small>#{{ friend.hashtag }}</small>
+          @if (state === 'failed' && errors()[friend.userId]) {
+            <small class="error">{{ errors()[friend.userId] }}</small>
+          }
+        </div>
+        @switch (state) {
+          @case ('sent') {
+            <span class="sent"><mat-icon>check</mat-icon>Envoyée</span>
+          }
+          @case ('sending') {
+            <button mat-stroked-button disabled>Envoi…</button>
+          }
+          @default {
+            <button mat-stroked-button (click)="invite(friend)">{{ state === 'failed' ? 'Réessayer' : 'Inviter' }}</button>
+          }
+        }
+      </li>
+    }
+  </ul>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-flat-button (click)="close()">Terminé</button>
+</mat-dialog-actions>

@@ -185,6 +185,15 @@ describe('MainLayoutComponent', () => {
             .toContain('Notifications');
     });
 
+    it('template_shouldOpenTheCommunitiesFromTheSidenavAndTheMobileMenu', () => {
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.nav-list [routerlink="/communities"]')?.textContent)
+            .toContain('Communautés');
+        expect(fixture.nativeElement.querySelector('.mobile-menu-items [routerlink="/communities"]')?.textContent)
+            .toContain('Communautés');
+    });
+
     it('should toggle sidenav', () => {
         fixture.detectChanges();
         const toggleSpy = vi.spyOn(component.sidenav()!, 'toggle');

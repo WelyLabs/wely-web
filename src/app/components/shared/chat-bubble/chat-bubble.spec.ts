@@ -5,6 +5,7 @@ import { ChatBubbleComponent, ChatBubbleMessage } from './chat-bubble';
 import { avatarColor } from '../../../core/ui/avatar';
 import { AvatarService } from '../../../services/avatar.service';
 import { signal } from '@angular/core';
+import { provideRouter } from '@angular/router';
 
 describe('ChatBubbleComponent', () => {
   let fixture: ComponentFixture<ChatBubbleComponent>;
@@ -19,7 +20,7 @@ describe('ChatBubbleComponent', () => {
     // Lea has a picture; nobody else does.
     TestBed.configureTestingModule({
       imports: [ChatBubbleComponent],
-      providers: [{ provide: AvatarService, useValue: { url: (id?: string | null) => signal(id === 'lea' ? '/pics/lea.jpg' : null) } }]
+      providers: [provideRouter([]), { provide: AvatarService, useValue: { url: (id?: string | null) => signal(id === 'lea' ? '/pics/lea.jpg' : null) } }]
     });
     fixture = TestBed.createComponent(ChatBubbleComponent);
   });
@@ -119,5 +120,30 @@ describe('ChatBubbleComponent', () => {
     expect(element.querySelector('button.photo')).toBeNull();
     tile.click();
     expect(opened).toBe(false);
+  });
+
+  it('template_shouldShowACommunityInvitationAsACard_withTheWordsBeforeTheLink', () => {
+    const element = render({ text: "Je t'invite à rejoindre la communauté « Club » sur Wely (valable 3 jours) : "
+        + 'http://localhost/communities/invite/AbCdEfGhIjKlMnOpQrSt', time: '2026-10-12T19:05:00', isMe: false,
+      senderName: 'lea', senderId: 'lea' });
+
+    expect(element.querySelector('.invitation-head')?.textContent).toContain('Invitation à une communauté');
+    expect(element.querySelector('.invitation p')?.textContent).toBe("Je t'invite à rejoindre la communauté « Club » sur Wely (valable 3 jours)");
+    expect(element.querySelector('.invitation-cta')?.getAttribute('href')).toBe('/communities/invite/AbCdEfGhIjKlMnOpQrSt');
+    expect(element.textContent).not.toContain('http://localhost');
+  });
+
+  it('template_shouldShowABareInvitationLink_asACardWithoutWords', () => {
+    const element = render({ text: '/communities/invite/AbCdEfGhIjKlMnOpQrSt', time: '2026-10-12T19:05:00', isMe: true });
+
+    expect(element.querySelector('.invitation-cta')).toBeTruthy();
+    expect(element.querySelector('.invitation p')).toBeNull();
+    expect(fixture.componentInstance.invitation()?.intro).toBe('');
+  });
+
+  it('invitation_shouldBeNull_forAnOrdinaryMessage', () => {
+    render({ text: 'On se voit samedi ?', time: '2026-10-12T19:05:00', isMe: true });
+
+    expect(fixture.componentInstance.invitation()).toBeNull();
   });
 });

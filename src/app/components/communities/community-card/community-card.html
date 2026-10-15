@@ -1,0 +1,31 @@
+<a class="card" [routerLink]="['/communities', community().communityId]">
+  <div class="top">
+    <span class="badge-avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+    <div class="titles">
+      <h3>{{ community().name }}</h3>
+      <span class="meta">
+        <mat-icon>{{ community().visibility === 'PRIVATE' ? 'lock' : 'public' }}</mat-icon>
+        {{ community().visibility === 'PRIVATE' ? 'Privée' : 'Publique' }}
+        · {{ community().memberCount }} membre{{ community().memberCount > 1 ? 's' : '' }}
+      </span>
+    </div>
+    @if (community().role === 'ADMIN') {
+      <span class="role-pill">Admin</span>
+    } @else if (community().role === 'MEMBER') {
+      <span class="role-pill member">Membre</span>
+    }
+  </div>
+  @if (community().description) {
+    <p class="description">{{ community().description }}</p>
+  }
+  @if (community().interests.length) {
+    <div class="interests">
+      @for (interest of community().interests; track interest) {
+        <span class="chip">#{{ interest }}</span>
+      }
+    </div>
+  }
+  @if (friendsLabel(); as friends) {
+    <p class="friends"><mat-icon>group</mat-icon>{{ friends }}</p>
+  }
+</a>

@@ -14,6 +14,9 @@ import { UserProfileComponent } from './components/user-profile/user-profile';
 import { ConversationsListComponent } from './components/conversations-list/conversations-list';
 import { ChatComponent } from './components/chat/chat';
 import { PreferencesComponent } from './components/preferences/preferences';
+import { CommunitiesPageComponent } from './components/communities/communities-page/communities-page';
+import { CommunityInvitationComponent } from './components/communities/community-invitation/community-invitation';
+import { CommunityPageComponent } from './components/communities/community-page/community-page';
 import { NotificationsPageComponent } from './components/notifications/notifications';
 
 // Reaches ChatService through the components it loads: rsocket-js is replaced by the shared stub, so this
@@ -51,12 +54,22 @@ describe('routes', () => {
         ['preferences', PreferencesComponent],
         ['conversations', ConversationsListComponent],
         ['chat/:convId', ChatComponent],
-        ['notifications', NotificationsPageComponent]
+        ['notifications', NotificationsPageComponent],
+        ['communities', CommunitiesPageComponent],
+        ['communities/invite/:token', CommunityInvitationComponent],
+        ['communities/:id', CommunityPageComponent]
     ] as [string, Type<unknown>][])('routes_shouldLoad %s on demand', async (path, component) => {
         const route = child(path);
 
         expect(route.component).toBeUndefined();
         expect(await load(route)).toBe(component);
+    });
+
+    it('routes_shouldMatchAnInvitationBeforeACommunity', () => {
+        // ':id' would otherwise read "invite" as a community's id.
+        const paths = shell.children!.map(route => route.path);
+
+        expect(paths.indexOf('communities/invite/:token')).toBeLessThan(paths.indexOf('communities/:id'));
     });
 
     it('routes_shouldSendTheOldEventLinksToTheEventPage', () => {
