@@ -34,6 +34,12 @@
             align-items: center;
             gap: 8px;
 
+            .logo-mark {
+                width: 32px;
+                height: 32px;
+                flex-shrink: 0;
+            }
+
             .highlight {
                 background: var(--accent-gradient);
                 -webkit-background-clip: text;

@@ -9,7 +9,8 @@
 'use strict';
 
 const ICON = '/icons/icon-192.png';
-const BADGE = '/icons/icon-192.png';
+// Android draws the badge from its alpha only: the white mark alone, on transparent.
+const BADGE = '/icons/badge-96.png';
 
 /** The payload, or null when it is missing or not JSON. */
 function readPayload(data) {

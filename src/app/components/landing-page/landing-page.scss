@@ -24,11 +24,20 @@ $ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.8px;
 
-    &.small { font-size: 18px; }
+    .logo-mark { width: 30px; height: 30px; flex-shrink: 0; }
+
+    &.small {
+        font-size: 18px;
+
+        .logo-mark { width: 24px; height: 24px; }
+    }
 }
 
 .highlight,

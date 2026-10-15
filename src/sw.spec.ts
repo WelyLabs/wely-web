@@ -82,7 +82,7 @@ describe('sw.js', () => {
             tag: 'conv-1',
             renotify: true,
             icon: '/icons/icon-192.png',
-            badge: '/icons/icon-192.png',
+            badge: '/icons/badge-96.png',
             data: { link: '/chat/conv-1' },
             requireInteraction: false
         });
