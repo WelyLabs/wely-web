@@ -507,7 +507,9 @@ export class EventDetailsComponent implements OnInit {
     }).afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(updated => {
-        if (updated) {
+        // Editing always passes an eventId, so the dialog uploads and returns the event; the Blob
+        // branch is only for event creation, which goes through the quick-event popover instead.
+        if (updated && !(updated instanceof Blob)) {
           this.event.set(updated);
         }
       });

@@ -171,6 +171,73 @@
             }
         }
 
+        &.cover-group {
+            align-items: flex-start;
+
+            > mat-icon {
+                margin-top: 6px;
+            }
+
+            .cover-add {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 10px;
+                border: 1px dashed color-mix(in srgb, var(--text-primary) 20%, transparent);
+                border-radius: 8px;
+                background: transparent;
+                font-size: 13px;
+                color: var(--text-secondary);
+                cursor: pointer;
+
+                mat-icon {
+                    font-size: 16px;
+                    width: 16px;
+                    height: 16px;
+                    color: var(--text-tertiary);
+                }
+
+                &:hover {
+                    border-color: var(--primary-blue);
+                    color: var(--primary-blue);
+
+                    mat-icon {
+                        color: var(--primary-blue);
+                    }
+                }
+            }
+
+            .cover-preview {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                min-width: 0;
+
+                img {
+                    width: 100%;
+                    max-width: 320px;
+                    aspect-ratio: 16 / 9;
+                    object-fit: cover;
+                    border-radius: 8px;
+                }
+
+                .cover-actions {
+                    display: flex;
+                    gap: 12px;
+                }
+            }
+
+            .text-button {
+                border: none;
+                background: transparent;
+                padding: 0;
+                font-size: 13px;
+                color: var(--primary-blue);
+                cursor: pointer;
+            }
+        }
+
         &.visibility-group {
             flex-direction: column;
             align-items: flex-start;

@@ -16,15 +16,20 @@ export const COVER_WIDTH = 1600;
 export const COVER_ASPECT_RATIO = 16 / 9;
 
 export interface EventCoverDialogData {
-  eventId: string;
+  /**
+   * The event the cover belongs to: set when editing, so the cropped picture is uploaded right
+   * away. Left out while creating an event, which does not exist yet: the dialog then only crops
+   * and hands the picture back, for the caller to upload once the event is saved.
+   */
+  eventId?: string;
   /** The picture picked on the event page. */
   file: File;
 }
 
-/** Closes with the event as stored once its cover is set. */
-export type EventCoverDialogResult = FeedEvent | undefined;
+/** Closes with the stored event when it uploaded the cover, or the cropped Blob when it only cropped. */
+export type EventCoverDialogResult = FeedEvent | Blob | undefined;
 
-/** Crops a picture to 16:9 and uploads it as the event's cover. */
+/** Crops a picture to 16:9 and uploads it as the event's cover, or hands the crop back when creating. */
 @Component({
   selector: 'app-event-cover-dialog',
   standalone: true,
@@ -81,9 +86,15 @@ export class EventCoverDialogComponent {
     if (!blob || this.saving()) {
       return;
     }
+    const eventId = this.data.eventId;
+    if (!eventId) {
+      // Creating an event: it has no id yet, so hand the crop back for the caller to upload.
+      this.dialogRef.close(blob);
+      return;
+    }
     this.saving.set(true);
     this.errorMessage.set('');
-    this.eventService.uploadCover(this.data.eventId, blob)
+    this.eventService.uploadCover(eventId, blob)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: event => {

@@ -1161,12 +1161,22 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.selectedDate.set(null);
   }
 
-  submitEvent(data: EventCreateRequest) {
+  submitEvent(data: EventCreateRequest, cover: Blob | null = null) {
     if (!data.title || !data.startDate || this.savingEvent()) return;
 
     this.savingEvent.set(true);
     this.createError.set(null);
-    this.eventService.createEvent(data).subscribe({
+    this.eventService.createEvent(data).pipe(
+      // The cover is a separate call keyed by the new event's id, so it can only run once the
+      // event exists. If it fails, the event is still created: keep it and log, rather than
+      // failing the whole creation over a cover the organizer can still add from the event page.
+      switchMap(created => cover
+        ? this.eventService.uploadCover(created.id, cover).pipe(catchError((err: unknown) => {
+            this.logger.error('CalendarComponent', 'Event created but its cover could not be uploaded:', err);
+            return of(created);
+          }))
+        : of(created))
+    ).subscribe({
       next: created => {
         this.savingEvent.set(false);
         this.isPopoverVisible.set(false);

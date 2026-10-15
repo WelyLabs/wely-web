@@ -157,6 +157,27 @@
                     <textarea id="quick-event-notes" [ngModel]="draft().description"
                         (ngModelChange)="update('description', $event)" placeholder="Ajouter des notes"></textarea>
                 </div>
+
+                <!-- The cover: cropped to 16:9 in the shared dialog, uploaded once the event exists. -->
+                <div class="form-group cover-group">
+                    <mat-icon>image</mat-icon>
+                    @if (cover(); as picked) {
+                        <div class="cover-preview">
+                            <img [src]="picked.url" alt="Aperçu de la couverture">
+                            <div class="cover-actions">
+                                <button type="button" class="text-button" (click)="coverInput.click()">Changer</button>
+                                <button type="button" class="text-button" (click)="removeCover()">Retirer</button>
+                            </div>
+                        </div>
+                    } @else {
+                        <button type="button" class="cover-add" (click)="coverInput.click()">
+                            <mat-icon>add_photo_alternate</mat-icon>Ajouter une couverture
+                        </button>
+                    }
+                    <label class="visually-hidden" for="quick-event-cover">Ajouter une couverture</label>
+                    <input id="quick-event-cover" type="file" accept="image/*" class="visually-hidden" tabindex="-1"
+                        #coverInput (change)="pickCover($event)">
+                </div>
             }
         </section>
     </div>

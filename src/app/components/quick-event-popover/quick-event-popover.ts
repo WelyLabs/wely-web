@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, linkedSignal, output, viewChild } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, linkedSignal, output, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { MatDialog } from '@angular/material/dialog';
 import { catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,12 +11,26 @@ import { EventCreateRequest, FeedEvent, Visibility } from '../../services/event.
 import { ScheduleService } from '../../services/schedule.service';
 import { rangeLabel } from '../../core/ui/schedule-labels';
 import { LocationPickerComponent } from '../location-picker/location-picker';
+import { EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult } from '../event-cover-dialog/event-cover-dialog';
 import { Place } from '../../models/place.model';
 
 /** A proposed date of a poll. */
 export interface ProposedSlot {
     start: Date;
     end: Date;
+}
+
+/** What the form hands to the parent on save: the event to create, and its cover if one was added. */
+export interface EventSubmission {
+    request: EventCreateRequest;
+    /** The cover, cropped to 16:9, to attach once the event exists; null when none was added. */
+    cover: Blob | null;
+}
+
+/** The chosen cover: the cropped Blob to upload, and a local URL to preview it before it is. */
+interface PickedCover {
+    blob: Blob;
+    url: string;
 }
 
 /** The visibility choices, in the order shown. */
@@ -96,7 +111,7 @@ export class QuickEventPopoverComponent {
     /** While the event is being created: the button waits instead of sending it twice. */
     readonly saving = input(false);
 
-    readonly save = output<EventCreateRequest>();
+    readonly save = output<EventSubmission>();
     // Named dismissed rather than cancel: cancel is a native DOM event, and an output
     // shadowing one is ambiguous at the call site.
     readonly dismissed = output<void>();
@@ -135,6 +150,12 @@ export class QuickEventPopoverComponent {
 
     private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
 
+    private readonly dialog = inject(MatDialog);
+    private readonly destroyRef = inject(DestroyRef);
+
+    /** The cover chosen for the event, with a local URL to preview it; null until one is picked. */
+    readonly cover = signal<PickedCover | null>(null);
+
     constructor() {
         afterNextRender(() => {
             // Straight to the title with a mouse; on a touch screen that would throw the keyboard
@@ -143,6 +164,49 @@ export class QuickEventPopoverComponent {
                 this.titleInput()?.nativeElement.focus();
             }
         });
+        // The preview URL is held by the browser until revoked: let it go when the form closes.
+        this.destroyRef.onDestroy(() => this.revokeCover());
+    }
+
+    /** The organizer picked a picture: crop it to 16:9 in the shared dialog, then keep it to preview. */
+    pickCover(event: Event): void {
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0];
+        if (input) {
+            input.value = '';
+        }
+        if (!file) {
+            return;
+        }
+        this.dialog.open<EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult>(EventCoverDialogComponent, {
+            // No eventId: the event is not created yet, so the dialog hands the cropped Blob back.
+            data: { file },
+            width: '640px',
+            maxWidth: '95vw'
+        }).afterClosed()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(result => {
+                if (result instanceof Blob) {
+                    this.setCover(result);
+                }
+            });
+    }
+
+    removeCover(): void {
+        this.revokeCover();
+        this.cover.set(null);
+    }
+
+    private setCover(blob: Blob): void {
+        this.revokeCover();
+        this.cover.set({ blob, url: URL.createObjectURL(blob) });
+    }
+
+    private revokeCover(): void {
+        const current = this.cover();
+        if (current) {
+            URL.revokeObjectURL(current.url);
+        }
     }
 
     readonly spansSeveralDays = computed(() => {
@@ -347,13 +411,17 @@ export class QuickEventPopoverComponent {
             return;
         }
         const draft = this.draft();
+        const cover = this.cover()?.blob ?? null;
         if (!this.pollMode()) {
-            this.save.emit(draft);
+            this.save.emit({ request: draft, cover });
             return;
         }
         // The event stands on its earliest slot until the date is fixed, as the server does.
         const candidateSlots = [...this.candidates()].sort((a, b) => a.start.getTime() - b.start.getTime());
-        this.save.emit({ ...draft, startDate: candidateSlots[0].start, endDate: candidateSlots[0].end, candidateSlots });
+        this.save.emit({
+            request: { ...draft, startDate: candidateSlots[0].start, endDate: candidateSlots[0].end, candidateSlots },
+            cover
+        });
     }
 
     onCancel(): void {

@@ -36,6 +36,7 @@ describe('CalendarComponent', () => {
             refreshEvents: vi.fn(),
             subscribedEvents$: of(mockEvents),
             createEvent: vi.fn().mockReturnValue(of(mockEvents[0])),
+            uploadCover: vi.fn().mockReturnValue(of(mockEvents[0])),
             getFriendCalendar: vi.fn().mockReturnValue(of([])),
             findFreeSlots: vi.fn().mockReturnValue(of([])),
             getMyPolls: vi.fn().mockReturnValue(of([]))
@@ -1067,6 +1068,29 @@ describe('CalendarComponent', () => {
             component.submitEvent(data);
 
             expect(eventServiceMock.createEvent).toHaveBeenCalledTimes(1);
+        });
+
+        it('submitEvent_shouldUploadTheCover_afterCreatingTheEvent', () => {
+            const cover = new Blob(['jpeg'], { type: 'image/jpeg' });
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data, cover);
+
+            expect(eventServiceMock.createEvent).toHaveBeenCalledWith(data);
+            expect(eventServiceMock.uploadCover).toHaveBeenCalledWith('101', cover);
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé', 'Voir', expect.any(Function));
+        });
+
+        it('submitEvent_shouldStillAnnounceTheEvent_whenTheCoverUploadFails', () => {
+            (eventServiceMock.uploadCover as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() => new Error('cover')));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent(data, new Blob(['x']));
+
+            // The event exists even if its cover did not upload: it is announced, not failed.
+            expect(component.isPopoverVisible()).toBe(false);
+            expect(component.createError()).toBeNull();
+            expect(notificationsMock.showAction).toHaveBeenCalledWith('Événement créé', 'Voir', expect.any(Function));
         });
 
         it('startCreatingEvent_shouldClearAnEarlierError', () => {

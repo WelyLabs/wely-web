@@ -255,7 +255,7 @@
   }
   @if (isPopoverVisible()) {
     <app-quick-event-popover [data]="popoverData()" [error]="createError()"
-      [saving]="savingEvent()" (save)="submitEvent($event)"
+      [saving]="savingEvent()" (save)="submitEvent($event.request, $event.cover)"
       (dismissed)="cancelCreatingEvent()">
     </app-quick-event-popover>
   }

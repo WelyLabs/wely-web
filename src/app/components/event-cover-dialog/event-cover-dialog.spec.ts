@@ -39,13 +39,13 @@ describe('EventCoverDialogComponent', () => {
     return file;
   };
 
-  const create = (file: File = picture()) => {
+  const create = (file: File = picture(), forEvent = true) => {
     TestBed.configureTestingModule({
       imports: [EventCoverDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: EventService, useValue: eventService },
         { provide: MatDialogRef, useValue: dialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: { eventId: 'ev-1', file } }
+        { provide: MAT_DIALOG_DATA, useValue: { eventId: forEvent ? 'ev-1' : undefined, file } }
       ]
     });
     TestBed.overrideComponent(EventCoverDialogComponent, {
@@ -102,6 +102,18 @@ describe('EventCoverDialogComponent', () => {
 
     expect(eventService.uploadCover).toHaveBeenCalledWith('ev-1', blob);
     expect(dialogRef.close).toHaveBeenCalledWith(stored);
+  });
+
+  it('save_shouldHandTheCropBack_whenCreatingWithoutAnEventId', () => {
+    create(picture(), false);
+    const blob = new Blob(['jpeg'], { type: 'image/jpeg' });
+    cropper()?.imageCropped.emit({ blob } as ImageCroppedEvent);
+
+    component.save();
+
+    // No event to upload to yet: the dialog closes with the cropped Blob for the caller to upload.
+    expect(eventService.uploadCover).not.toHaveBeenCalled();
+    expect(dialogRef.close).toHaveBeenCalledWith(blob);
   });
 
   it('save_shouldExplainARefusal_andStayOpen', () => {

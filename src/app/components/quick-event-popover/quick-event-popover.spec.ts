@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { QuickEventPopoverComponent, toDateValue, toTimeValue, withDate, withTime } from './quick-event-popover';
+import { EventSubmission, QuickEventPopoverComponent, toDateValue, toTimeValue, withDate, withTime } from './quick-event-popover';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { EventCreateRequest, FeedEvent } from '../../services/event.service';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
+import { EventCoverDialogComponent } from '../event-cover-dialog/event-cover-dialog';
 import { EventService } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { ScheduleService } from '../../services/schedule.service';
@@ -17,6 +19,8 @@ describe('QuickEventPopoverComponent', () => {
     const startDate = new Date('2025-06-01T10:00:00Z');
     const endDate = new Date('2025-06-01T11:00:00Z');
 
+    let dialogOpen: ReturnType<typeof vi.fn>;
+
     const request = (): EventCreateRequest => ({
         title: '',
         location: '',
@@ -26,12 +30,14 @@ describe('QuickEventPopoverComponent', () => {
     });
 
     beforeEach(async () => {
+        dialogOpen = vi.fn().mockReturnValue({ afterClosed: () => of(undefined) });
         await TestBed.configureTestingModule({
             imports: [QuickEventPopoverComponent, NoopAnimationsModule],
             providers: [
                 { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
                 { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
-                { provide: ScheduleService, useValue: { checkConflicts: vi.fn().mockReturnValue(of([])) } }
+                { provide: ScheduleService, useValue: { checkConflicts: vi.fn().mockReturnValue(of([])) } },
+                { provide: MatDialog, useValue: { open: dialogOpen } }
             ]
         }).compileComponents();
 
@@ -79,15 +85,16 @@ describe('QuickEventPopoverComponent', () => {
     });
 
     it('should emit the draft on save', () => {
-        const emitted: EventCreateRequest[] = [];
+        const emitted: EventSubmission[] = [];
         component.save.subscribe(value => emitted.push(value));
         component.update('title', 'Standup');
 
         component.onSave();
 
         expect(emitted).toHaveLength(1);
-        expect(emitted[0].title).toBe('Standup');
-        expect(emitted[0].startDate).toBe(startDate);
+        expect(emitted[0].request.title).toBe('Standup');
+        expect(emitted[0].request.startDate).toBe(startDate);
+        expect(emitted[0].cover).toBeNull();
     });
 
     it('should refuse to save an event with no title', () => {
@@ -106,6 +113,63 @@ describe('QuickEventPopoverComponent', () => {
         component.onCancel();
 
         expect(emit).toHaveBeenCalled();
+    });
+
+    describe('choosing a cover', () => {
+        const pick = (file: File) => ({ target: { files: [file], value: 'C:/cover.jpg' } }) as unknown as Event;
+        const file = new File(['x'], 'cover.jpg', { type: 'image/jpeg' });
+        const cropped = new Blob(['cropped'], { type: 'image/jpeg' });
+
+        beforeEach(() => {
+            // jsdom has no object-URL store: stand in for it so the preview URL can be made and freed.
+            URL.createObjectURL = vi.fn(() => 'blob:preview');
+            URL.revokeObjectURL = vi.fn();
+        });
+
+        it('pickCover_shouldOpenTheCropDialog_withNoEventIdSoItHandsTheCropBack', () => {
+            component.pickCover(pick(file));
+
+            expect(dialogOpen).toHaveBeenCalledWith(EventCoverDialogComponent, expect.objectContaining({ data: { file } }));
+        });
+
+        it('pickCover_shouldKeepTheCroppedCover_andPreviewIt', () => {
+            dialogOpen.mockReturnValue({ afterClosed: () => of(cropped) });
+
+            component.pickCover(pick(file));
+
+            expect(component.cover()?.blob).toBe(cropped);
+            expect(component.cover()?.url).toBe('blob:preview');
+        });
+
+        it('pickCover_shouldKeepNoCover_whenTheDialogIsCancelled', () => {
+            dialogOpen.mockReturnValue({ afterClosed: () => of(undefined) });
+
+            component.pickCover(pick(file));
+
+            expect(component.cover()).toBeNull();
+        });
+
+        it('onSave_shouldCarryTheChosenCover', () => {
+            dialogOpen.mockReturnValue({ afterClosed: () => of(cropped) });
+            const saved = vi.fn();
+            component.save.subscribe(saved);
+            component.update('title', 'Fête');
+            component.pickCover(pick(file));
+
+            component.onSave();
+
+            expect(saved).toHaveBeenCalledWith(expect.objectContaining({ cover: cropped }));
+        });
+
+        it('removeCover_shouldDropTheCover_andFreeItsPreview', () => {
+            dialogOpen.mockReturnValue({ afterClosed: () => of(cropped) });
+            component.pickCover(pick(file));
+
+            component.removeCover();
+
+            expect(component.cover()).toBeNull();
+            expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview');
+        });
     });
 
     describe('picking the location on a map', () => {
@@ -148,7 +212,9 @@ describe('QuickEventPopoverComponent', () => {
 
             component.onSave();
 
-            expect(saved).toHaveBeenCalledWith(expect.objectContaining({ coordinates: place.coordinates }));
+            expect(saved).toHaveBeenCalledWith(expect.objectContaining({
+            request: expect.objectContaining({ coordinates: place.coordinates })
+        }));
         });
 
     });
@@ -172,7 +238,7 @@ describe('QuickEventPopoverComponent', () => {
         });
 
         it('update_shouldCarryTheChosenVisibilityIntoTheSavedDraft', () => {
-            const emitted: EventCreateRequest[] = [];
+            const emitted: EventSubmission[] = [];
             component.save.subscribe(value => emitted.push(value));
             component.update('title', 'Secret');
 
@@ -180,7 +246,7 @@ describe('QuickEventPopoverComponent', () => {
             component.onSave();
 
             expect(component.visibility()).toBe('PRIVATE');
-            expect(emitted[0].visibility).toBe('PRIVATE');
+            expect(emitted[0].request.visibility).toBe('PRIVATE');
         });
 
         it('template_shouldMarkTheActiveChoice', () => {
@@ -451,7 +517,9 @@ describe('QuickEventPopoverComponent', () => {
 
                 component.onSave();
 
-                expect(emit).toHaveBeenCalledWith(expect.objectContaining({ candidateSlots: slots, startDate: slots[0].start }));
+                expect(emit).toHaveBeenCalledWith(expect.objectContaining({
+                    request: expect.objectContaining({ candidateSlots: slots, startDate: slots[0].start })
+                }));
             });
 
             it('onSave_shouldSendAPlainEvent_whenThePollWasTurnedOff', () => {
@@ -461,7 +529,7 @@ describe('QuickEventPopoverComponent', () => {
                 component.togglePollMode();
                 component.onSave();
 
-                expect(emit.mock.calls[0][0].candidateSlots).toBeUndefined();
+                expect(emit.mock.calls[0][0].request.candidateSlots).toBeUndefined();
             });
         });
 
@@ -582,18 +650,18 @@ describe('QuickEventPopoverComponent', () => {
         });
 
         it('onSave_shouldEmitTheSlotsEarliestFirst_andStartOnTheEarliest', () => {
-            const emitted: EventCreateRequest[] = [];
-            component.save.subscribe(request => emitted.push(request));
+            const emitted: EventSubmission[] = [];
+            component.save.subscribe(value => emitted.push(value));
             component.togglePollMode();
             component.candidates.update(slots => [...slots, { start: shifted(startDate, -1), end: shifted(endDate, -1) }]);
 
             component.onSave();
 
-            expect(emitted[0].candidateSlots).toEqual([
+            expect(emitted[0].request.candidateSlots).toEqual([
                 { start: shifted(startDate, -1), end: shifted(endDate, -1) },
                 { start: startDate, end: endDate }
             ]);
-            expect(emitted[0].startDate).toEqual(shifted(startDate, -1));
+            expect(emitted[0].request.startDate).toEqual(shifted(startDate, -1));
         });
 
         it('onSave_shouldRefuse_withFewerThanTwoSlots', () => {
@@ -618,12 +686,12 @@ describe('QuickEventPopoverComponent', () => {
         });
 
         it('onSave_shouldNotSendCandidateSlots_outsidePollMode', () => {
-            const emitted: EventCreateRequest[] = [];
-            component.save.subscribe(request => emitted.push(request));
+            const emitted: EventSubmission[] = [];
+            component.save.subscribe(value => emitted.push(value));
 
             component.onSave();
 
-            expect(emitted[0].candidateSlots).toBeUndefined();
+            expect(emitted[0].request.candidateSlots).toBeUndefined();
         });
 
         it('pollMode_shouldResetWhenANewSlotIsOpened', () => {
@@ -691,7 +759,8 @@ describe('QuickEventPopoverComponent on a wide screen', () => {
                 { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
                 { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
                 { provide: ScheduleService, useValue: { checkConflicts: vi.fn().mockReturnValue(of([])) } },
-                { provide: BreakpointObserver, useValue: { observe: () => of({ matches: true, breakpoints: {} }) } }
+                { provide: BreakpointObserver, useValue: { observe: () => of({ matches: true, breakpoints: {} }) } },
+                { provide: MatDialog, useValue: { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) } }
             ]
         }).compileComponents();
         const fixture = TestBed.createComponent(QuickEventPopoverComponent);
@@ -737,7 +806,8 @@ describe('QuickEventPopoverComponent schedule conflicts', () => {
             providers: [
                 { provide: EventService, useValue: { findFreeSlots: vi.fn().mockReturnValue(of([])) } },
                 { provide: SocialService, useValue: { listFriends: vi.fn().mockReturnValue(of([])) } },
-                { provide: ScheduleService, useValue: { checkConflicts } }
+                { provide: ScheduleService, useValue: { checkConflicts } },
+                { provide: MatDialog, useValue: { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) } }
             ]
         }).compileComponents();
         fixture = TestBed.createComponent(QuickEventPopoverComponent);
