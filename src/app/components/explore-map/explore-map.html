@@ -32,7 +32,7 @@
                     </div>
                     <div class="info">
                         @if (organiserName(event); as organiser) {
-                            <span class="organizer">{{ organiser }}</span>
+                            <span class="organizer">par {{ organiser }}</span>
                         }
                         <h3>{{ event.title }}</h3>
                         <span class="when">{{ event.startDate | date:'EEEE d MMMM, HH:mm' }}</span>

@@ -202,14 +202,9 @@
 
 .overline {
     align-self: flex-start;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    background: var(--accent-gradient);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
+    color: var(--primary-blue);
 }
 
 .hero-meta,
@@ -501,10 +496,8 @@
     align-items: center;
     gap: 10px;
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
 
     &::after {
         content: '';
