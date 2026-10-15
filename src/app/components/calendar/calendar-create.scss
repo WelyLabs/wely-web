@@ -32,6 +32,29 @@
     }
 }
 
+// Jumps the active view back to today. A quiet text button beside the nav arrows, in the
+// header pill's grey; hidden on a phone, where the one-line header has no room (swipe navigates).
+.today-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+        color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+        display: none;
+    }
+}
+
 .new-event-fab {
     display: none;
     position: fixed;

@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SocialService } from '../../services/social.service';
+import { UserService } from '../../services/user.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -58,7 +59,8 @@ describe('CalendarComponent', () => {
                 { provide: SocialService, useValue: socialServiceMock },
                 { provide: NotificationService, useValue: notificationsMock },
                 { provide: ScheduleService, useValue: scheduleMock },
-                { provide: Router, useValue: routerMock }
+                { provide: Router, useValue: routerMock },
+                { provide: UserService, useValue: { currentUser$: of(null) } }
             ]
         }).compileComponents();
 
@@ -114,6 +116,19 @@ describe('CalendarComponent', () => {
         const initialMonth = component.currentDate().getMonth();
         component.navigate(-1);
         expect(component.currentDate().getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
+    });
+
+    it('goToToday_shouldReturnToTheCurrentMonth', () => {
+        component.toggleView('month');
+        component.navigate(-3);
+        component.navigate(-2);
+
+        component.goToToday();
+
+        const now = new Date();
+        expect(component.currentDate().getMonth()).toBe(now.getMonth());
+        expect(component.currentDate().getFullYear()).toBe(now.getFullYear());
+        expect(component.selectedDate()).toBeNull();
     });
 
     it('should filter out unsubscribed events', () => {
@@ -1140,6 +1155,7 @@ describe('CalendarComponent', () => {
                     { provide: ScheduleService, useValue: scheduleMock },
                 { provide: ScheduleService, useValue: scheduleMock },
                     { provide: Router, useValue: routerMock },
+                    { provide: UserService, useValue: { currentUser$: of(null) } },
                     { provide: BreakpointObserver, useValue: { observe: () => of({ matches: on, breakpoints: {} }) } }
                 ]
             });
@@ -1292,6 +1308,22 @@ describe('CalendarComponent', () => {
             const events = toCalendarEvents([], [feedEvent({ poll: { ...openPoll(), status: 'CLOSED' } })]);
 
             expect(events).toEqual([]);
+        });
+
+        it('toCalendarEvents_shouldMarkAsMine_theEventsTheUserOrganizes', () => {
+            const events = toCalendarEvents([
+                feedEvent({ id: 'mine', poll: null, organizerId: 'me' }),
+                feedEvent({ id: 'friend', poll: null, organizerId: 'lea' })
+            ], [], 'me');
+
+            expect(events.find(event => event.id === 'mine')?.mine).toBe(true);
+            expect(events.find(event => event.id === 'friend')?.mine).toBe(false);
+        });
+
+        it('toCalendarEvents_shouldMarkNothingMine_whenTheUserIsUnknown', () => {
+            const events = toCalendarEvents([feedEvent({ id: 'f', poll: null, organizerId: 'me' })], []);
+
+            expect(events[0].mine).toBe(false);
         });
 
         it('ngOnInit_shouldMergeMyOpenPolls_intoTheEvents', () => {

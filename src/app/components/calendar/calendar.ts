@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarEntry } from '../../services/event.service';
+import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
 import { NotificationService } from '../../services/notification.service';
 import { ScheduleService } from '../../services/schedule.service';
@@ -84,29 +85,32 @@ export interface CalendarEvent {
   tentative?: boolean;
   /** For a tentative entry: which slot, so the event's several slots stay apart. */
   slotId?: string;
+  /** True when the signed-in user organizes this event, false when they only joined a friend's. */
+  mine?: boolean;
 }
 
 /** Fixed events as they are; each open poll as one tentative entry per proposed slot, polls deduplicated. */
-export function toCalendarEvents(subscribed: FeedEvent[], polls: FeedEvent[]): CalendarEvent[] {
+export function toCalendarEvents(subscribed: FeedEvent[], polls: FeedEvent[], myId: string | null = null): CalendarEvent[] {
   const isOpenPoll = (event: FeedEvent) => event.poll?.status === 'OPEN';
   const openPolls = new Map([...subscribed, ...polls].filter(isOpenPoll).map(event => [event.id, event]));
-  const fixed = subscribed.filter(event => !isOpenPoll(event)).map(event => toCalendarEvent(event, event.startDate, event.endDate));
+  const fixed = subscribed.filter(event => !isOpenPoll(event)).map(event => toCalendarEvent(event, event.startDate, event.endDate, myId));
   const tentative = [...openPolls.values()].flatMap(event => (event.poll?.slots ?? []).map(slot => ({
-    ...toCalendarEvent(event, slot.start, slot.end),
+    ...toCalendarEvent(event, slot.start, slot.end, myId),
     tentative: true,
     slotId: slot.id
   })));
   return [...fixed, ...tentative];
 }
 
-function toCalendarEvent(event: FeedEvent, start: Date, end: Date): CalendarEvent {
+function toCalendarEvent(event: FeedEvent, start: Date, end: Date, myId: string | null = null): CalendarEvent {
   return {
     id: event.id,
     title: event.title,
     time: formatTimeRange(start, end),
     description: event.description,
     startDate: new Date(start),
-    endDate: new Date(end)
+    endDate: new Date(end),
+    mine: myId !== null && event.organizerId === myId
   };
 }
 
@@ -197,6 +201,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly socialService = inject(SocialService);
   private readonly notifications = inject(NotificationService);
   private readonly schedule = inject(ScheduleService);
+  private readonly userService = inject(UserService);
+
+  /** Business id of the signed-in user: tells a month event apart as hosted vs joined. */
+  private myId: string | null = null;
 
   readonly currentDate = signal(new Date());
   readonly days = signal<CalendarDay[]>([]);
@@ -482,6 +490,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
       }
     });
 
+    // A month event is coloured by whether the user hosts it; recolour if the identity resolves
+    // after the events have loaded (currentUser$ is a BehaviorSubject, so this fires right away).
+    this.userService.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(user => {
+      this.myId = user?.id ?? null;
+      this.showEvents();
+    });
+
     // Started once, outside the subscription. It used to be created inside it, so every emission
     // of subscribedEvents$ started another interval and only the last handle was kept — the rest
     // ran until the tab closed, each one repainting the now-line every minute.
@@ -678,7 +693,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private pollFeed: FeedEvent[] = [];
 
   private showEvents(): void {
-    this.events.set(toCalendarEvents(this.subscribedFeed, this.pollFeed));
+    this.events.set(toCalendarEvents(this.subscribedFeed, this.pollFeed, this.myId));
     this.generateCalendar();
   }
 
@@ -862,6 +877,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     this.generateCalendar();
     if (this.viewMode() !== 'day') this.selectedDate.set(null);
+  }
+
+  /** Back to today in the active view: the month that holds it, its week, or the day itself. */
+  goToToday(): void {
+    const today = new Date();
+    if (this.viewMode() === 'month') {
+      this.currentDate.set(new Date(today.getFullYear(), today.getMonth(), 1));
+    } else {
+      this.currentDate.set(today);
+    }
+    this.generateCalendar();
+    this.selectedDate.set(this.viewMode() === 'day' ? today : null);
   }
 
   selectDate(day: CalendarDay) {

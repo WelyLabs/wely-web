@@ -19,6 +19,8 @@
   --primary-orange: var(--brand-orange);
   // Tints of the brand blue, for selected and hovered states.
   --brand-tint: color-mix(in srgb, var(--brand-blue) 10%, transparent);
+  // The orange counterpart, for a friend's event the user joined (month chips).
+  --brand-tint-orange: color-mix(in srgb, var(--brand-orange) 12%, transparent);
   --brand-tint-strong: color-mix(in srgb, var(--brand-blue) 20%, transparent);
   --brand-glow: color-mix(in srgb, var(--brand-blue) 30%, transparent);
   --brand-wash: color-mix(in srgb, var(--brand-blue) 5%, transparent);

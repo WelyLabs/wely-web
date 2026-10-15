@@ -46,6 +46,8 @@
           <option value="day">Jour</option>
         </select>
 
+        <button type="button" class="today-btn" (click)="goToToday()">Aujourd'hui</button>
+
         <div class="nav-buttons">
           <button (click)="navigate(-1)" aria-label="Précédent">
             <mat-icon>chevron_left</mat-icon>
@@ -95,7 +97,7 @@
                 <ul class="day-events">
                   @for (event of monthCellEvents(day.date); track event.slotId ?? event.id) {
                     <!-- A proposed slot of an open poll: « ? », in italics, not a firm event. -->
-                    <li class="day-event" [class.tentative]="event.tentative"
+                    <li class="day-event" [class.tentative]="event.tentative" [class.mine]="event.mine"
                       [title]="(event.tentative ? 'Date proposée : ' : '') + event.title">{{ event.tentative ? '? ' : '' }}{{ event.title }}</li>
                   }
                   @if (hiddenEventCount(day.date); as hidden) {

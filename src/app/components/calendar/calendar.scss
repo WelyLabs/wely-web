@@ -274,15 +274,22 @@
                         line-height: 1.3;
                         padding: 1px 5px;
                         border-radius: 4px;
-                        background: var(--success-tint);
-                        color: var(--success-ink);
+                        // Colour tells host from guest: orange for a friend's event joined,
+                        // blue (.mine) for one the user organizes. Not decoration.
+                        background: var(--brand-tint-orange);
+                        color: var(--orange-ink);
                         text-align: left;
-                        /* One line per event: a cell is not tall enough to wrap, and a wrapped
-                           title would push the next day's number out of alignment. */
+                        // One line per event: a cell is not tall enough to wrap, and a wrapped
+                        // title would push the next day's number out of alignment.
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                
+
+                        &.mine {
+                            background: var(--brand-tint);
+                            color: var(--blue-ink);
+                        }
+
                         &.more {
                             background: none;
                             color: var(--text-secondary);
@@ -294,9 +301,11 @@
 
             &.today {
                 .day-number {
-                    background: var(--now-red);
+                    // Brand blue, not a borrowed Apple red: today belongs to the identity.
+                    // Red stays for the live "now" line in the week and day views.
+                    background: var(--primary-blue);
                     color: white;
-                    box-shadow: 0 4px 12px var(--now-red-glow);
+                    box-shadow: 0 4px 12px var(--brand-glow);
                 }
             }
         }
