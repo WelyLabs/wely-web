@@ -1,5 +1,7 @@
 import { CallService } from '../../services/call.service';
 import { callServiceStub } from '../../../testing/call-service.stub';
+import { notificationCenterStub } from '../../../testing/notification-center.stub';
+import { NotificationCenterService } from '../../services/notification-center.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatComponent, presenceLabel } from './chat';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
@@ -39,6 +41,7 @@ describe('ChatComponent', () => {
     let chatPhotosMock: { send: ReturnType<typeof vi.fn>; page: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
     let dialogMock: { open: ReturnType<typeof vi.fn> };
     let callServiceMock: ReturnType<typeof callServiceStub>;
+    let centerMock: ReturnType<typeof notificationCenterStub>;
 
     const mockUser = { id: 'me', userName: 'Me' };
     const mockConv: Conversation = {
@@ -52,6 +55,7 @@ describe('ChatComponent', () => {
 
     beforeEach(async () => {
         callServiceMock = callServiceStub();
+        centerMock = notificationCenterStub();
         paramMapSubject = new BehaviorSubject(convertToParamMap({ convId: 'conv1' }));
         chatMessagesSubject = new Subject();
 
@@ -88,6 +92,7 @@ describe('ChatComponent', () => {
             providers: [
                 { provide: ChatService, useValue: chatServiceMock },
                 { provide: CallService, useValue: callServiceMock },
+                { provide: NotificationCenterService, useValue: centerMock },
                 { provide: UserService, useValue: userServiceMock },
                 { provide: NavigationService, useValue: navigationServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
@@ -118,6 +123,14 @@ describe('ChatComponent', () => {
         expect(chatServiceMock.getConversationById).toHaveBeenCalledWith('conv1');
         expect(component.conversation()?.id).toBe('conv1');
         expect(component.isLoading()).toBe(false);
+    });
+
+    it('ngOnInit_shouldMarkTheConversationsNotificationsRead', () => {
+        expect(centerMock.markGroupRead).toHaveBeenCalledWith('conv1');
+
+        paramMapSubject.next(convertToParamMap({ convId: 'conv2' }));
+
+        expect(centerMock.markGroupRead).toHaveBeenLastCalledWith('conv2');
     });
 
     it('openPartner_shouldOpenThePartnersPage_fromTheHeader', () => {

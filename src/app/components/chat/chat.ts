@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, distinctUntilChanged, filter, map, of, switchMap, timer } from 'rxjs';
 import { CallService } from '../../services/call.service';
+import { NotificationCenterService } from '../../services/notification-center.service';
 import { Call, CallMedia, isLive } from '../../models/call.model';
 import { LoggerService } from '../../core/logging/logger.service';
 
@@ -85,6 +86,7 @@ export class ChatComponent implements OnInit {
     private readonly dialog = inject(MatDialog);
     private readonly destroyRef = inject(DestroyRef);
     private readonly calls = inject(CallService);
+    private readonly notificationCenter = inject(NotificationCenterService);
 
     /** The call going on in this conversation, if any: the header offers to join it. */
     readonly liveCall = signal<Call | null>(null);
@@ -198,6 +200,8 @@ export class ChatComponent implements OnInit {
                 this.convId.set(convId);
 
                 if (convId) {
+                    // The conversation is on screen: its message notifications are seen.
+                    this.notificationCenter.markGroupRead(convId);
                     this.loadConversationById(convId);
                 } else {
                     this.error.set('Discussion non spécifiée');

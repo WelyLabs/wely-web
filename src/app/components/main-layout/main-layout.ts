@@ -16,7 +16,9 @@ import { CallOverlayComponent } from '../call/call-overlay/call-overlay';
 import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
 import { NotificationService } from '../../services/notification.service';
-import { Message } from '../../models/chat.model';
+import { NotificationCenterService } from '../../services/notification-center.service';
+import { PushService } from '../../services/push.service';
+import { badgeText, isSameScreen } from '../../models/notification.model';
 import { filter, map, startWith } from 'rxjs';
 import { NavigationEnd } from '@angular/router';
 import { AvatarService } from '../../services/avatar.service';
@@ -55,6 +57,8 @@ export class MainLayoutComponent implements OnInit {
   private readonly chatService = inject(ChatService);
   private readonly callService = inject(CallService);
   private readonly notificationService = inject(NotificationService);
+  private readonly notificationCenter = inject(NotificationCenterService);
+  private readonly push = inject(PushService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -104,6 +108,9 @@ export class MainLayoutComponent implements OnInit {
   /** Where each scrolled element was when the bar last decided, so small moves add up. */
   private readonly scrollAnchors = new WeakMap<Element, number>();
   private navSettlesAt = 0;
+
+  /** The bell's badge: unread notifications, capped at 99+. */
+  readonly unreadBadge = computed(() => badgeText(this.notificationCenter.unreadCount()));
 
   readonly showUserMenu = signal(false);
   readonly showMobileMenu = signal(false);
@@ -207,17 +214,23 @@ export class MainLayoutComponent implements OnInit {
     // Calls ring on any page.
     this.callService.listen();
 
-    this.chatService.messages$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((message: Message) => {
-        const isViewingThisConversation =
-          this.router.url.includes(`/chat/${message.conversationId}`);
+    // The notification center's live stream, and the service worker for pushes once enabled.
+    this.notificationCenter.start();
+    this.push.init();
 
-        // Only notify for someone else's new message, and only when that conversation is not
-        // already on screen: an update (a photo removed) is not news.
-        if (message.kind !== 'UPDATED' && message.senderId !== this.userProfile()?.id && !isViewingThisConversation) {
-          this.notificationService.showChatNotification(message);
+    this.notificationCenter.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(notification => {
+        // An incoming call already rings through the call overlay.
+        if (notification.type === 'CALL_INCOMING') {
+          return;
         }
+        // Already on that screen (the conversation is open): seen, no toast.
+        if (isSameScreen(this.router.url, notification.link)) {
+          this.notificationCenter.markRead([notification.id]);
+          return;
+        }
+        this.notificationService.showNotification(notification);
       });
   }
 

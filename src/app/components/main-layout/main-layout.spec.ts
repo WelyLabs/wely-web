@@ -1,5 +1,8 @@
 import { CallService } from '../../services/call.service';
 import { callServiceStub } from '../../../testing/call-service.stub';
+import { aNotification, notificationCenterStub } from '../../../testing/notification-center.stub';
+import { NotificationCenterService } from '../../services/notification-center.service';
+import { PushService } from '../../services/push.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MainLayoutComponent } from './main-layout';
 import { Router } from '@angular/router';
@@ -34,7 +37,8 @@ describe('MainLayoutComponent', () => {
     let loggerMock: { error: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn>; debug: ReturnType<typeof vi.fn> };
     let routerMock: any; // Router 'url' is read-only, we must use 'any' to override it in tests
     let userSubject: BehaviorSubject<User | null>;
-    let chatMessagesSubject: Subject<any>;
+    let center: ReturnType<typeof notificationCenterStub>;
+    let pushMock: { init: ReturnType<typeof vi.fn> };
     let breakpointSubject: Subject<any>;
     let routerEventsSubject: Subject<any>;
 
@@ -56,7 +60,8 @@ describe('MainLayoutComponent', () => {
             projects: [],
             stats: { projectsCompleted: 0, hoursLogged: 0, efficiency: 0 }
         });
-        chatMessagesSubject = new Subject();
+        center = notificationCenterStub();
+        pushMock = { init: vi.fn() };
         breakpointSubject = new Subject();
         routerEventsSubject = new Subject();
 
@@ -73,11 +78,10 @@ describe('MainLayoutComponent', () => {
             currentUser$: userSubject.asObservable()
         };
         chatServiceMock = {
-            initializeStream: vi.fn(),
-            messages$: chatMessagesSubject.asObservable()
+            initializeStream: vi.fn()
         };
         notificationServiceMock = {
-            showChatNotification: vi.fn()
+            showNotification: vi.fn()
         };
         loggerMock = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
         routerMock = {
@@ -102,6 +106,8 @@ describe('MainLayoutComponent', () => {
                     { provide: ChatService, useValue: chatServiceMock },
                     { provide: CallService, useValue: callServiceStub() },
                     { provide: NotificationService, useValue: notificationServiceMock },
+                    { provide: NotificationCenterService, useValue: center },
+                    { provide: PushService, useValue: pushMock },
                     { provide: Router, useValue: routerMock },
                     { provide: LoggerService, useValue: loggerMock }
                 ]
@@ -123,39 +129,60 @@ describe('MainLayoutComponent', () => {
         expect(component.userProfile()?.userName).toBe('Me');
     });
 
-    it('should show notification for incoming messages when not in that chat', () => {
+    it('ngOnInit_shouldStartTheNotificationCenter_andThePushWorker', () => {
         fixture.detectChanges();
-        const incomingMsg = {
-            senderId: 'friend',
-            conversationId: 'conv1',
-            content: 'hello'
-        };
-        chatMessagesSubject.next(incomingMsg);
-        expect(notificationServiceMock.showChatNotification).toHaveBeenCalledWith(incomingMsg);
+
+        expect(center.start).toHaveBeenCalled();
+        expect(pushMock.init).toHaveBeenCalled();
     });
 
-    it('should NOT show notification when viewing the same conversation', () => {
-        routerMock.url = '/chat/conv1';
+    it('events_shouldShowAToast_forANotificationAboutAnotherScreen', () => {
         fixture.detectChanges();
-        const incomingMsg = {
-            senderId: 'friend',
-            conversationId: 'conv1',
-            content: 'hello'
-        };
-        chatMessagesSubject.next(incomingMsg);
-        expect(notificationServiceMock.showChatNotification).not.toHaveBeenCalled();
+        const notification = aNotification({ link: '/chat/conv1' });
+
+        center.events$.next(notification);
+
+        expect(notificationServiceMock.showNotification).toHaveBeenCalledWith(notification);
     });
 
-    it('should NOT show notification for an update to a message, such as a photo removed', () => {
+    it('events_shouldMarkReadInsteadOfToasting_whenThatScreenIsOpen', () => {
+        routerMock.url = '/chat/conv1?focus=m1';
         fixture.detectChanges();
-        chatMessagesSubject.next({
-            senderId: 'friend',
-            conversationId: 'conv1',
-            content: '',
-            kind: 'UPDATED',
-            photo: { width: 0, height: 0, url: null, removed: true }
-        });
-        expect(notificationServiceMock.showChatNotification).not.toHaveBeenCalled();
+
+        center.events$.next(aNotification({ id: 'n9', link: '/chat/conv1' }));
+
+        expect(notificationServiceMock.showNotification).not.toHaveBeenCalled();
+        expect(center.markRead).toHaveBeenCalledWith(['n9']);
+    });
+
+    it('events_shouldNotToastAnIncomingCall_theCallOverlayRingsAlready', () => {
+        fixture.detectChanges();
+
+        center.events$.next(aNotification({ type: 'CALL_INCOMING', category: 'CALLS', link: '/call/c1' }));
+
+        expect(notificationServiceMock.showNotification).not.toHaveBeenCalled();
+        expect(center.markRead).not.toHaveBeenCalled();
+    });
+
+    it('unreadBadge_shouldShowTheCount_cappedAt99', () => {
+        fixture.detectChanges();
+        expect(component.unreadBadge()).toBeNull();
+        expect(fixture.nativeElement.querySelector('.notifications-item .badge')).toBeNull();
+
+        center.unreadCount.set(3);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.notifications-item .badge').textContent).toBe('3');
+
+        center.unreadCount.set(150);
+        expect(component.unreadBadge()).toBe('99+');
+    });
+
+    it('template_shouldOpenTheNotificationsFromTheSidenavAndTheMobileMenu', () => {
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.nav-list [routerlink="/notifications"]')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.mobile-menu-items [routerlink="/notifications"]')?.textContent)
+            .toContain('Notifications');
     });
 
     it('should toggle sidenav', () => {
@@ -318,6 +345,13 @@ describe('MainLayoutComponent', () => {
             expect(fixture.nativeElement.querySelector('.mobile-profile-trigger')).toBeNull();
             tab.click();
             expect(component.showMobileMenu()).toBe(true);
+        });
+
+        it('template_shouldPutTheUnreadCountOnTheProfileTab', () => {
+            center.unreadCount.set(4);
+            fixture.detectChanges();
+
+            expect(fixture.nativeElement.querySelector('.bottom-nav .me-item .badge').textContent).toBe('4');
         });
 
         it('onAnyScroll_shouldHideTheBar_whenAListScrollsDown', () => {

@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NotificationService } from './notification.service';
-import { MessageToastComponent } from '../components/shared/toast/message-toast';
-import { Message, MessageType } from '../models/chat.model';
+import { NotificationToastComponent } from '../components/shared/toast/notification-toast';
+import { aNotification } from '../../testing/notification-center.stub';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Subject } from 'rxjs';
 
@@ -30,27 +30,18 @@ describe('NotificationService', () => {
         expect(service).toBeTruthy();
     });
 
-    it('should open chat notification with correct config', () => {
-        const mockMessage: Message = {
-            id: '1',
-            senderId: 'user1',
-            senderName: 'User One',
-            receiverId: 'user2',
-            conversationId: 'conv1',
-            content: 'Hello',
-            type: MessageType.TEXT,
-            timestamp: new Date().toISOString(),
-            reactions: {}
-        };
+    it('showNotification_shouldOpenTheNotificationToast_atTheTop', () => {
+        const notification = aNotification();
 
-        service.showChatNotification(mockMessage);
+        service.showNotification(notification);
 
         expect(snackBarMock.openFromComponent).toHaveBeenCalledWith(
-            MessageToastComponent,
+            NotificationToastComponent,
             expect.objectContaining({
                 duration: 5000,
-                data: mockMessage,
-                panelClass: ['chat-notification-panel']
+                verticalPosition: 'top',
+                data: notification,
+                panelClass: ['notification-toast-panel']
             })
         );
     });

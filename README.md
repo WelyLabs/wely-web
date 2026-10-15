@@ -39,6 +39,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 | **Social** | Recherche d'utilisateurs, ajout par tag `Pseudo#1234`, demandes d'amis |
 | **Messagerie** | Conversations temps réel via RSocket, historique paginé |
 | **Appels** | Audio et vidéo depuis une conversation, ou avec tous les participants d'un événement (12 au plus) : sonnerie chiptune originale, micro et caméra coupables, caméra avant/arrière, la personne qui parle mise en avant |
+| **Notifications** | Messages, appels, dates fixées, demandes d'ami : un toast dans l'app (Server-Sent Events), la cloche et sa page `/notifications` groupée par jour, et des notifications système (Web Push) quand l'app est fermée ; chaque catégorie se coupe dans les préférences |
 | **Profil** | Consultation et édition, recadrage d'avatar |
 
 ---
@@ -50,19 +51,22 @@ src/app/
 ├── core/                        infrastructure transverse
 │   ├── auth/                    AuthService · keycloak-init.factory · config
 │   ├── guards/                  authGuard
-│   └── interceptors/            SessionInterceptor
+│   ├── interceptors/            SessionInterceptor
+│   └── sse/                     flux SSE lu avec fetch, reconnexion
 ├── services/                    un service par domaine d'API
 │   ├── user.service.ts          profil, token d'accès
 │   ├── social.service.ts        amis, demandes
 │   ├── event.service.ts         événements, abonnements
 │   ├── chat.service.ts          REST + RSocket
 │   ├── navigation.service.ts
-│   └── notification.service.ts
+│   ├── notification.service.ts  toasts et retours locaux
+│   ├── notification-center.service.ts   notifications, non-lues, SSE
+│   └── push.service.ts          Web Push de l'appareil
 ├── components/                  composants standalone
 │   ├── main-layout/             coquille applicative
 │   ├── calendar/  event-feed/  event-details/  quick-event-popover/
 │   ├── user-search/  user-card/  friends-list/  add-friend-dialog/
-│   ├── conversations-list/  chat/
+│   ├── conversations-list/  chat/  notifications/
 │   ├── user-profile/  edit-profile-dialog/  avatar-upload-dialog/
 │   └── shared/                  chat réutilisable, toast
 ├── models/                      interfaces TypeScript
@@ -85,6 +89,7 @@ src/app/
     { path: 'event/:type/:id', component: EventDetailsComponent },
     { path: 'profile',         component: UserProfileComponent },
     { path: 'conversations',   component: ConversationsListComponent },
+    { path: 'notifications',   component: NotificationsPageComponent },
     { path: 'chat/:convId',    component: ChatComponent },
     { path: 'call/:callId',    component: CallScreenComponent },
   ]
@@ -164,6 +169,26 @@ Le son et l'image ne passent pas par nos serveurs : le navigateur ouvre **une** 
 | `SpeakerDetector` | Qui parle, d'après le volume reçu : grande tuile et caméra en pleine résolution ; les autres reçoivent une couche *simulcast* plus petite à mesure que la grille se remplit |
 | `Ringtone` | La sonnerie : une mélodie originale en ondes carrées (Web Audio), sans fichier ; vibration quand le navigateur bloque le son |
 | `CallOverlayComponent` | Sur toutes les pages : le bandeau d'appel entrant, et la barre « Appel en cours · Revenir » |
+
+### Notifications
+
+wely-notifications (`/api/v1/notifications-service`) tient la liste. Deux canaux en partent :
+
+| Pièce | Rôle |
+|---|---|
+| `NotificationCenterService` | La liste (première page, puis « Voir plus »), le compteur de non-lues et le passage à lu, optimiste. Un flux SSE (`/notifications/stream`) lu avec `fetch`, comme le sondage, car `EventSource` ne sait pas envoyer le jeton ; reconnexion avec un délai qui double jusqu'à 30 s (`core/sse/sse-stream.ts`, partagé avec le sondage) |
+| `NotificationToastComponent` | Le toast d'une notification arrivée pendant que l'app est ouverte, sauf si l'écran concerné est déjà affiché (la conversation ouverte) et sauf l'appel entrant, qui sonne déjà |
+| `PushService` | Le Web Push de l'appareil : permission demandée au clic, abonnement avec la clé VAPID du serveur, puis `PUT /push/subscriptions` |
+| `public/sw.js` | Le service worker, en JS brut et sans cache : il affiche la notification système, sauf si un onglet Wely est visible, et au clic met l'onglet au premier plan et y fait naviguer l'app |
+
+Ouvrir une conversation marque ses notifications lues. La cloche est dans la barre latérale sur
+ordinateur ; sur téléphone, le compteur s'affiche sur l'onglet « Moi », dont le menu ouvre la page.
+
+**Sur iPhone**, Safari ne reçoit les notifications push que si Wely a été ajoutée à l'écran
+d'accueil (Partager → Sur l'écran d'accueil) et ouverte depuis là : les préférences l'expliquent
+plutôt que de proposer un interrupteur inopérant.
+
+nginx sert `sw.js` sans cache, pour qu'un correctif arrive au prochain chargement.
 
 ---
 

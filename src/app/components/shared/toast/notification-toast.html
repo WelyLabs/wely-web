@@ -1,0 +1,16 @@
+<div class="toast" role="button" tabindex="0" [attr.data-category]="data.category" (click)="open()"
+     (keydown.enter)="open()" (keydown.space)="open()">
+    <div class="toast-icon">
+        <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
+    </div>
+    <div class="toast-content">
+        <div class="toast-head">
+            <span class="title">{{ data.title }}</span>
+            <span class="time">{{ data.createdAt | date:'HH:mm' }}</span>
+        </div>
+        <div class="body">{{ data.body }}</div>
+    </div>
+    <button mat-icon-button class="close-btn" aria-label="Fermer" (click)="dismiss(); $event.stopPropagation()">
+        <mat-icon>close</mat-icon>
+    </button>
+</div>

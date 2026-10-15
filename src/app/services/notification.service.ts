@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
-import { MessageToastComponent } from '../components/shared/toast/message-toast';
-import { Message } from '../models/chat.model';
+import { NotificationToastComponent } from '../components/shared/toast/notification-toast';
+import { AppNotification } from '../models/notification.model';
 
 @Injectable({
     providedIn: 'root'
@@ -9,16 +9,17 @@ import { Message } from '../models/chat.model';
 export class NotificationService {
     private snackBar = inject(MatSnackBar);
 
-    showChatNotification(message: Message): void {
+    /** A notification from the notification center, while the app is open on another screen. */
+    showNotification(notification: AppNotification): void {
         const config: MatSnackBarConfig = {
             duration: 5000,
             horizontalPosition: 'right',
             verticalPosition: 'top',
-            panelClass: ['chat-notification-panel'],
-            data: message
+            panelClass: ['notification-toast-panel'],
+            data: notification
         };
 
-        this.snackBar.openFromComponent(MessageToastComponent, config);
+        this.snackBar.openFromComponent(NotificationToastComponent, config);
     }
 
     /** A short message with one action, which runs if the user takes it. */

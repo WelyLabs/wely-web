@@ -62,6 +62,7 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
 @include mat.menu-theme($calendar-app-theme);
 @include mat.sidenav-theme($calendar-app-theme);
 @include mat.slider-theme($calendar-app-theme);
+@include mat.slide-toggle-theme($calendar-app-theme);
 @include mat.snack-bar-theme($calendar-app-theme);
 @include mat.tabs-theme($calendar-app-theme);
 @include mat.toolbar-theme($calendar-app-theme);
@@ -90,6 +91,7 @@ html[data-theme='dark'] {
   @include mat.menu-color($calendar-app-dark-theme);
   @include mat.sidenav-color($calendar-app-dark-theme);
   @include mat.slider-color($calendar-app-dark-theme);
+  @include mat.slide-toggle-color($calendar-app-dark-theme);
   @include mat.snack-bar-color($calendar-app-dark-theme);
   @include mat.tabs-color($calendar-app-dark-theme);
   @include mat.toolbar-color($calendar-app-dark-theme);
@@ -376,8 +378,8 @@ mat-icon,
   margin-right: 8px;
 }
 
-/* Global SnackBar Overrides for Chat Notifications */
-.cdk-overlay-container .chat-notification-panel {
+/* The notification toast draws its own surface: the snack bar's is cleared. */
+.cdk-overlay-container .notification-toast-panel {
   &.mat-mdc-snack-bar-container {
     .mdc-snackbar__surface {
       background-color: transparent !important;

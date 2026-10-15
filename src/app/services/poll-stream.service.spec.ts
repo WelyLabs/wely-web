@@ -5,47 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { environment } from '../../environments/environment';
 import { LoggerService } from '../core/logging/logger.service';
 import { Poll } from './event.service';
-import { PollStreamError, PollStreamService, SseParser } from './poll-stream.service';
+import { PollStreamError, PollStreamService } from './poll-stream.service';
+import { statusResponse, streamResponse } from '../../testing/sse-response';
 
 const pollJson = (status: 'OPEN' | 'CLOSED', yes: string[] = []) => JSON.stringify({
     status,
     fixedSlotId: status === 'CLOSED' ? 's1' : null,
     slots: [{ id: 's1', start: '2026-11-02T18:00:00Z', end: '2026-11-02T20:00:00Z', yes, maybe: [], no: [] }]
-});
-
-/** A response whose body yields the given chunks, then ends (or stays open). jsdom has no ReadableStream. */
-function streamResponse(chunks: string[], keepOpen = false): Response {
-    const encoder = new TextEncoder();
-    const queue = chunks.map(chunk => encoder.encode(chunk));
-    const reader = {
-        read: () => queue.length > 0
-            ? Promise.resolve({ done: false, value: queue.shift() })
-            : keepOpen ? new Promise<never>(() => undefined) : Promise.resolve({ done: true, value: undefined }),
-        cancel: () => Promise.resolve()
-    };
-    const body = { getReader: () => reader } as unknown as ReadableStream<Uint8Array>;
-    return { ok: true, status: 200, body } as Response;
-}
-
-const statusResponse = (status: number) => ({ ok: false, status, body: null }) as Response;
-
-describe('SseParser', () => {
-    it('push_shouldJoinLinesSplitAcrossChunks', () => {
-        const parser = new SseParser();
-        expect(parser.push('event: po')).toEqual([]);
-        expect(parser.push('ll\ndata: {"a"')).toEqual([]);
-        expect(parser.push(':1}\n\n')).toEqual([{ event: 'poll', data: '{"a":1}' }]);
-    });
-
-    it('push_shouldJoinMultiLineDataWithNewlines', () => {
-        const parser = new SseParser();
-        expect(parser.push('data: one\r\ndata:two\r\n\r\n')).toEqual([{ event: 'message', data: 'one\ntwo' }]);
-    });
-
-    it('push_shouldIgnoreComments_andBlankLinesWithoutData', () => {
-        const parser = new SseParser();
-        expect(parser.push(': keep-alive\n\n\nretry: 10\n\n')).toEqual([]);
-    });
 });
 
 describe('PollStreamService', () => {

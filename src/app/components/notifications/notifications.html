@@ -1,0 +1,46 @@
+<div class="notifications-page">
+  <header class="page-header">
+    <h1>Notifications</h1>
+    @if (hasUnread()) {
+      <button type="button" class="mark-all" (click)="markAllRead()">
+        <mat-icon aria-hidden="true">done_all</mat-icon>
+        Tout marquer comme lu
+      </button>
+    }
+  </header>
+
+  @for (day of days(); track day.label) {
+    <section class="day" [attr.aria-label]="day.label">
+      <h2>{{ day.label }}</h2>
+      <ul>
+        @for (notification of day.items; track notification.id) {
+          <li>
+            <button type="button" class="item" [class.unread]="!notification.readAt"
+              [attr.data-category]="notification.category" (click)="open(notification)">
+              <span class="icon" aria-hidden="true"><mat-icon>{{ iconOf(notification) }}</mat-icon></span>
+              <span class="text">
+                <span class="title">{{ notification.title }}</span>
+                <span class="body">{{ notification.body }}</span>
+              </span>
+              <span class="time">{{ timeOf(notification) }}</span>
+              @if (!notification.readAt) {
+                <span class="dot"><span class="visually-hidden">Non lue</span></span>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  } @empty {
+    <div class="empty">
+      <mat-icon aria-hidden="true">notifications_none</mat-icon>
+      <p>Aucune notification pour l'instant</p>
+    </div>
+  }
+
+  @if (hasMore()) {
+    <button type="button" class="more" [disabled]="loading()" (click)="loadMore()">
+      {{ loading() ? 'Chargement…' : 'Voir plus' }}
+    </button>
+  }
+</div>

@@ -613,3 +613,31 @@
 .sidenav.hidden {
     display: none !important;
 }
+
+// Unread notifications: on the sidenav item, the « Moi » tab and its menu entry.
+.badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--danger);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-sizing: border-box;
+    margin-left: auto;
+}
+
+.bottom-nav .me-item {
+    position: relative;
+
+    .badge {
+        position: absolute;
+        top: -4px;
+        left: calc(50% + 6px);
+        margin: 0;
+        box-shadow: 0 0 0 2px var(--bg-card);
+    }
+}

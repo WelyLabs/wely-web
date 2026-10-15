@@ -1,4 +1,4 @@
-.message-toast-container {
+.toast {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -64,13 +64,13 @@
     min-width: 0;
 }
 
-.sender-info {
+.toast-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 8px;
 
-    .sender-name {
+    .title {
         font-weight: 700;
         font-size: 15px;
         color: var(--text-primary);
@@ -89,7 +89,7 @@
     }
 }
 
-.message-preview {
+.body {
     font-size: 14px;
     color: var(--text-secondary);
     line-height: 1.5;
@@ -129,30 +129,4 @@
 :host {
     display: block;
     pointer-events: auto;
-}
-
-// Dark mode support using app variables
-:host-context(.dark-theme) {
-    .message-toast-container {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #f8fafc;
-
-        .sender-name {
-            color: #f1f5f9;
-        }
-
-        .message-preview {
-            color: #94a3b8;
-        }
-
-        .time {
-            background: rgba(255, 255, 255, 0.1);
-            color: #cbd5e1;
-        }
-
-        .close-btn {
-            background: rgba(255, 255, 255, 0.05);
-        }
-    }
 }

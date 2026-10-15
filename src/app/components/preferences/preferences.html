@@ -36,4 +36,45 @@
       <p class="error" role="alert">{{ error() }}</p>
     }
   </section>
+
+  <section class="card" aria-labelledby="notifications-title">
+    <h2 id="notifications-title">Notifications</h2>
+    <p class="card-hint">Pour être prévenu même quand Wely est fermé.</p>
+
+    <div class="setting" data-setting="device">
+      <span class="setting-text">
+        <span class="setting-label" id="device-label">Notifications sur cet appareil</span>
+        <span class="setting-detail" id="device-hint">{{ deviceHint() }}</span>
+      </span>
+      <mat-slide-toggle aria-labelledby="device-label" aria-describedby="device-hint"
+        [checked]="pushState() === 'enabled'" [disabled]="!deviceToggleable() || pushBusy()"
+        (change)="toggleDevice($event)" />
+    </div>
+
+    @if (needsHomeScreen) {
+      <p class="ios-hint">
+        <mat-icon aria-hidden="true">ios_share</mat-icon>
+        Sur iPhone, ajoute Wely à l'écran d'accueil (Partager → Sur l'écran d'accueil) pour recevoir les notifications.
+      </p>
+    }
+    @if (deviceError()) {
+      <p class="error" role="alert">{{ deviceError() }}</p>
+    }
+
+    <h3 class="subheading">Me prévenir pour</h3>
+    @for (category of categories; track category.key) {
+      <div class="setting" [attr.data-setting]="category.key">
+        <span class="setting-text">
+          <span class="setting-label" [id]="'category-' + category.key">{{ category.label }}</span>
+          <span class="setting-detail">{{ category.detail }}</span>
+        </span>
+        <mat-slide-toggle [aria-labelledby]="'category-' + category.key"
+          [checked]="notificationPrefs()?.[category.key] ?? false"
+          [disabled]="!notificationPrefs() || prefsSaving()" (change)="setCategory(category.key, $event)" />
+      </div>
+    }
+    @if (prefsError()) {
+      <p class="error" role="alert">{{ prefsError() }}</p>
+    }
+  </section>
 </div>

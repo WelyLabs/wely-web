@@ -12,6 +12,13 @@
           <span class="label">{{ item.label }}</span>
         </a>
       }
+      <a routerLink="/notifications" routerLinkActive="active" class="nav-item notifications-item">
+        <mat-icon>notifications</mat-icon>
+        <span class="label">Notifications</span>
+        @if (unreadBadge(); as badge) {
+          <span class="badge" [attr.aria-label]="badge + ' non lues'">{{ badge }}</span>
+        }
+      </a>
     </div>
 
     <div class="user-profile" (mouseenter)="showUserMenu.set(true)" (mouseleave)="showUserMenu.set(false)">
@@ -84,6 +91,10 @@
               {{ userProfile()?.firstName?.[0] || 'U' }}
             }
           </span>
+          <!-- No room for a sixth tab: the unread count rides on « Moi », whose menu opens them. -->
+          @if (unreadBadge(); as badge) {
+            <span class="badge" [attr.aria-label]="badge + ' notifications non lues'">{{ badge }}</span>
+          }
           <span class="label">Moi</span>
         </button>
       </nav>
@@ -119,6 +130,13 @@
         </div>
 
         <div class="mobile-menu-items">
+          <button class="menu-item" routerLink="/notifications" (click)="closeMobileMenu()">
+            <mat-icon>notifications</mat-icon>
+            <span>Notifications</span>
+            @if (unreadBadge(); as badge) {
+              <span class="badge">{{ badge }}</span>
+            }
+          </button>
           <button class="menu-item" routerLink="/profile" (click)="closeMobileMenu()">
             <mat-icon>person</mat-icon>
             <span>Mon Profil</span>
