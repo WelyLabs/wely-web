@@ -11,16 +11,14 @@
 
     <header class="hero">
         <div class="hero-copy">
-            <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Projet open source · démo en libre accès</span>
-            <h1>Vos agendas, partagés avec <span class="gradient-text">ceux qui comptent.</span></h1>
+            <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Démo en libre accès</span>
+            <h1>Vos agendas, partagés avec ceux qui comptent.</h1>
             <p class="lead">
                 Créez un événement : vos amis le voient passer dans leur fil et le rejoignent en un clic.
                 Pour s'organiser, le chat est juste à côté, en temps réel.
             </p>
             <div class="actions">
-                <button type="button" class="btn btn-primary" (click)="launchApp()">
-                    Essayer la démo<mat-icon aria-hidden="true">arrow_forward</mat-icon>
-                </button>
+                <button type="button" class="btn btn-primary" (click)="launchApp()">Essayer la démo</button>
                 <button type="button" class="btn btn-secondary" (click)="signup()">Créer un compte</button>
             </div>
             <p class="demo-hint">
@@ -110,9 +108,7 @@
                 correspond à la forme de sa donnée, reliés par Kafka et déployés en GitOps sur un
                 Raspberry Pi.
             </p>
-            <a class="btn btn-secondary" [href]="repositoryUrl" target="_blank" rel="noopener">
-                Lire l'architecture<mat-icon aria-hidden="true">north_east</mat-icon>
-            </a>
+            <a class="btn btn-secondary" [href]="repositoryUrl" target="_blank" rel="noopener">Lire l'architecture</a>
         </div>
         <ul class="chips">
             @for (item of stack; track item) {

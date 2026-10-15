@@ -40,11 +40,10 @@ $ease: cubic-bezier(0.16, 1, 0.3, 1);
     }
 }
 
-.highlight,
-.gradient-text {
+.highlight {
     background: var(--accent-gradient);
     // Same gradient, interpolated in OKLCH: in sRGB its middle is a dull grey-mauve, which
-    // shows at headline size. The login screen does the same; the line above is the fallback.
+    // shows at logo size. The login screen does the same; the line above is the fallback.
     background: linear-gradient(135deg in oklch, var(--brand-blue) 0%, var(--brand-orange) 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -65,8 +64,6 @@ $ease: cubic-bezier(0.16, 1, 0.3, 1);
     text-decoration: none;
     cursor: pointer;
     transition: transform 0.2s $ease, background 0.2s ease, box-shadow 0.2s ease;
-
-    mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
     &:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 3px; }
 }
@@ -425,25 +422,27 @@ h1 {
     letter-spacing: -1.2px;
 }
 
-.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+// Three facets, not a sequence and not a card kit: a borderless row the way the app's own
+// grid is borderless, the columns told apart by a hairline rule rather than a box each.
+.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
 
 .feature {
-    padding: 28px;
-    border-radius: 24px;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-premium);
-    transition: transform 0.3s $ease, box-shadow 0.3s ease;
+    padding: 4px 32px;
 
-    @media (hover: hover) { &:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl); } }
+    &:not(:first-child) { border-left: 1px solid var(--border-default); }
 
+    // The icon in a brand tint, inked rather than filled with the gradient: the gradient
+    // stays the logo's and the product's, not decoration repeated on every tile.
     .icon {
         display: grid;
         place-items: center;
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        background: var(--accent-gradient);
-        color: #fff;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--brand-tint);
+        color: var(--primary-blue);
+
+        mat-icon { font-size: 22px; width: 22px; height: 22px; }
     }
 
     h3 { margin: 20px 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
@@ -530,7 +529,17 @@ h1 {
     .app-body { grid-template-columns: 1fr; }
     .sidebar { display: none; }
     .float { display: none; }
+
     .feature-grid { grid-template-columns: minmax(0, 1fr); }
+
+    .feature {
+        padding: 24px 0;
+
+        &:not(:first-child) {
+            border-left: none;
+            border-top: 1px solid var(--border-default);
+        }
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
