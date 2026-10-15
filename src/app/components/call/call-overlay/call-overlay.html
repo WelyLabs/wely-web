@@ -1,0 +1,41 @@
+@if (calls.incoming(); as call) {
+  <div class="incoming" role="alertdialog" aria-labelledby="incoming-caller" aria-describedby="incoming-kind">
+    <div class="caller">
+      @if (callerPicture(); as picture) {
+        <img class="avatar" [src]="picture" alt="" />
+      } @else {
+        <span class="avatar initials" [style.background]="color(call)">{{ callerInitials() }}</span>
+      }
+      <div>
+        <p id="incoming-caller" class="name">{{ callerName() }}</p>
+        <p id="incoming-kind" class="kind">{{ kindOf(call) }}</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="round decline" (click)="decline(call)" aria-label="Refuser">
+        <mat-icon>call_end</mat-icon>
+      </button>
+      @if (call.media === 'VIDEO') {
+        <button type="button" class="round audio-only" (click)="accept(call, false)" aria-label="Répondre sans caméra">
+          <mat-icon>call</mat-icon>
+        </button>
+      }
+      <button type="button" class="round accept" (click)="accept(call, call.media === 'VIDEO')"
+        [attr.aria-label]="call.media === 'VIDEO' ? 'Répondre en vidéo' : 'Répondre'">
+        <mat-icon>{{ call.media === 'VIDEO' ? 'videocam' : 'call' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+}
+
+@if (showReturnBar()) {
+  <div class="return-bar">
+    <button type="button" class="back" (click)="backToCall()">
+      <mat-icon>call</mat-icon>
+      <span>Appel en cours · Revenir</span>
+    </button>
+    <button type="button" class="hang-up" (click)="hangUp()" aria-label="Raccrocher">
+      <mat-icon>call_end</mat-icon>
+    </button>
+  </div>
+}

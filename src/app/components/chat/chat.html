@@ -30,6 +30,20 @@
         [attr.aria-pressed]="showMedia()" aria-label="Photos de la conversation">
         <mat-icon>photo_library</mat-icon>
       </button>
+      @if (liveCall(); as call) {
+        <button mat-flat-button class="join-call" (click)="startCall(call.media)" [disabled]="callStarting()">
+          <mat-icon>call</mat-icon>Rejoindre
+        </button>
+      } @else {
+        <button mat-icon-button class="call-button" (click)="startCall('AUDIO')" [disabled]="callStarting()"
+          [attr.aria-label]="isEventGroup() ? 'Appel audio de groupe' : 'Appel audio'">
+          <mat-icon>call</mat-icon>
+        </button>
+        <button mat-icon-button class="call-button" (click)="startCall('VIDEO')" [disabled]="callStarting()"
+          [attr.aria-label]="isEventGroup() ? 'Appel vidéo de groupe' : 'Appel vidéo'">
+          <mat-icon>videocam</mat-icon>
+        </button>
+      }
       @if (isEventGroup()) {
         <button mat-button class="event-link" (click)="openEvent()">
           <mat-icon>event</mat-icon>Voir l'événement

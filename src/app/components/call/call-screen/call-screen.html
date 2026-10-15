@@ -1,0 +1,60 @@
+<section class="call-screen" [class.phone]="onPhone()" aria-label="Appel en cours">
+  <header class="call-header">
+    <button type="button" class="round ghost" (click)="minimize()" aria-label="Revenir à l'application">
+      <mat-icon>expand_more</mat-icon>
+    </button>
+    <div class="heading">
+      <h1>{{ title() }}</h1>
+      <p class="status" aria-live="polite">{{ status() }}</p>
+    </div>
+  </header>
+
+  <div class="grid" [attr.data-count]="calls.participants().length">
+    @for (participant of calls.participants(); track participant.userId) {
+      <figure class="tile" [class.speaking]="participant.userId === calls.speakerId() && calls.participants().length > 1">
+        @if (participant.hasVideo) {
+          <!-- Muted: the sound comes from the audio element below, once. -->
+          <video [appMediaStream]="participant.stream" autoplay playsinline muted></video>
+        } @else {
+          <div class="portrait">
+            @if (pictureOf(participant.userId); as picture) {
+              <img [src]="picture" alt="" />
+            } @else {
+              <span class="initials" [style.background]="color(participant.userId)">{{ initials(participant.userId) }}</span>
+            }
+          </div>
+        }
+        <audio [appMediaStream]="participant.stream" autoplay></audio>
+        <figcaption>{{ nameOf(participant.userId) }}</figcaption>
+      </figure>
+    } @empty {
+      <div class="waiting">
+        <span class="pulse" aria-hidden="true"><mat-icon>{{ calls.call()?.media === 'VIDEO' ? 'videocam' : 'call' }}</mat-icon></span>
+        <p>{{ status() }}</p>
+      </div>
+    }
+  </div>
+
+  @if (calls.cameraOn()) {
+    <video class="self" [appMediaStream]="calls.localStream()" autoplay playsinline muted aria-label="Ta caméra"></video>
+  }
+
+  <footer class="controls">
+    <button type="button" class="round" [class.off]="calls.muted()" (click)="calls.toggleMute()"
+      [attr.aria-pressed]="calls.muted()" [attr.aria-label]="calls.muted() ? 'Réactiver le micro' : 'Couper le micro'">
+      <mat-icon>{{ calls.muted() ? 'mic_off' : 'mic' }}</mat-icon>
+    </button>
+    <button type="button" class="round" [class.off]="!calls.cameraOn()" (click)="calls.toggleCamera()"
+      [attr.aria-pressed]="calls.cameraOn()" [attr.aria-label]="calls.cameraOn() ? 'Couper la caméra' : 'Activer la caméra'">
+      <mat-icon>{{ calls.cameraOn() ? 'videocam' : 'videocam_off' }}</mat-icon>
+    </button>
+    @if (calls.cameraOn() && onPhone()) {
+      <button type="button" class="round" (click)="calls.flipCamera()" aria-label="Changer de caméra">
+        <mat-icon>flip_camera_ios</mat-icon>
+      </button>
+    }
+    <button type="button" class="round hang-up" (click)="hangUp()" aria-label="Raccrocher">
+      <mat-icon>call_end</mat-icon>
+    </button>
+  </footer>
+</section>

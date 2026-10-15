@@ -31,6 +31,8 @@ import { EventExpensesComponent } from '../event-expenses/event-expenses';
 import { ExpenseMember } from '../../models/expense.model';
 import { EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult } from '../event-cover-dialog/event-cover-dialog';
 import { eventMediaError } from '../../core/ui/event-media-errors';
+import { CallService } from '../../services/call.service';
+import { Call, CallMedia, isLive } from '../../models/call.model';
 
 /**
  * What the page is for, given who looks and when.
@@ -237,7 +239,11 @@ export class EventDetailsComponent implements OnInit {
   private readonly member$ = toObservable(this.member);
 
   /** The event's group conversation in wely-chat, once it exists. */
-  private readonly conversationId = signal<string | null>(null);
+  protected readonly conversationId = signal<string | null>(null);
+  private readonly calls = inject(CallService);
+  /** The group's call going on, if any; members are offered to join it. */
+  readonly liveCall = signal<Call | null>(null);
+  readonly callStarting = signal(false);
   readonly thread = signal<ThreadMessage[]>([]);
   readonly threadState = signal<ThreadState>('loading');
   /** The last few messages: a glimpse, the conversation itself is one tap away. */
@@ -278,6 +284,17 @@ export class EventDetailsComponent implements OnInit {
   });
 
   constructor() {
+    // The group's call: asked once the group is known, then kept up to date by the call events.
+    toObservable(this.conversationId).pipe(
+      distinctUntilChanged(),
+      switchMap(id => id ? this.calls.liveCall(id).pipe(catchError(() => of(null))) : of(null)),
+      takeUntilDestroyed(),
+    ).subscribe(call => this.liveCall.set(call));
+    this.calls.events$.pipe(
+      filter(event => event.call.conversationId === this.conversationId()),
+      takeUntilDestroyed(),
+    ).subscribe(event => this.liveCall.set(isLive(event.call) ? event.call : null));
+
     // Follows the open poll live; a closed one brings the event back with its fixed date.
     toObservable(this.openPollId).pipe(
       distinctUntilChanged(),
@@ -404,6 +421,20 @@ export class EventDetailsComponent implements OnInit {
   /** Back where the page was opened from: calendar, feed, map or a conversation. */
   goBack(): void {
     this.navigationService.back('/calendar');
+  }
+
+  /** Calls everyone in the event's group, or joins the call going on, then opens it. */
+  async startGroupCall(media: CallMedia): Promise<void> {
+    const conversationId = this.conversationId();
+    if (!conversationId || this.callStarting()) {
+      return;
+    }
+    this.callStarting.set(true);
+    const call = await this.calls.start(conversationId, media);
+    this.callStarting.set(false);
+    if (call) {
+      this.router.navigate(['/call', call.id]);
+    }
   }
 
   /** The group's conversation, in the chat: where it is read in full and written to. */

@@ -38,7 +38,8 @@ export const routes: Routes = [
                 path: 'conversations',
                 loadComponent: () => import('./components/conversations-list/conversations-list').then(m => m.ConversationsListComponent)
             },
-            { path: 'chat/:convId', loadComponent: () => import('./components/chat/chat').then(m => m.ChatComponent) }
+            { path: 'chat/:convId', loadComponent: () => import('./components/chat/chat').then(m => m.ChatComponent) },
+            { path: 'call/:callId', loadComponent: () => import('./components/call/call-screen/call-screen').then(m => m.CallScreenComponent) }
         ]
     }
 ];

@@ -64,6 +64,20 @@ describe('ChatService', () => {
     httpMock.verify();
   });
 
+  // --- other streams -------------------------------------------------------
+
+  it('openStream_shouldRelayAnotherRouteFrames_withBoundedDemand', () => {
+    const frames: unknown[] = [];
+    const subscription = service.openStream<{ type: string }>('call.events').subscribe(frame => frames.push(frame));
+
+    rsocketStub.emit({ type: 'RINGING' });
+    rsocketStub.emit(null);
+
+    expect(frames).toEqual([{ type: 'RINGING' }]);
+    expect(rsocketStub.requestedDemand).toContain(64);
+    subscription.unsubscribe();
+  });
+
   // --- lazy connection ---------------------------------------------------
 
   it('ne se connecte pas à la construction', () => {

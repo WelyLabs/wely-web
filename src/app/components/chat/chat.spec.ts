@@ -1,3 +1,5 @@
+import { CallService } from '../../services/call.service';
+import { callServiceStub } from '../../../testing/call-service.stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatComponent, presenceLabel } from './chat';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
@@ -36,6 +38,7 @@ describe('ChatComponent', () => {
     let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
     let chatPhotosMock: { send: ReturnType<typeof vi.fn>; page: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
     let dialogMock: { open: ReturnType<typeof vi.fn> };
+    let callServiceMock: ReturnType<typeof callServiceStub>;
 
     const mockUser = { id: 'me', userName: 'Me' };
     const mockConv: Conversation = {
@@ -48,6 +51,7 @@ describe('ChatComponent', () => {
     };
 
     beforeEach(async () => {
+        callServiceMock = callServiceStub();
         paramMapSubject = new BehaviorSubject(convertToParamMap({ convId: 'conv1' }));
         chatMessagesSubject = new Subject();
 
@@ -83,6 +87,7 @@ describe('ChatComponent', () => {
             imports: [ChatComponent, NoopAnimationsModule],
             providers: [
                 { provide: ChatService, useValue: chatServiceMock },
+                { provide: CallService, useValue: callServiceMock },
                 { provide: UserService, useValue: userServiceMock },
                 { provide: NavigationService, useValue: navigationServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
@@ -644,6 +649,43 @@ describe('ChatComponent', () => {
 
             expect(component.mediaState()).toBe('unavailable');
             expect(fixture.nativeElement.textContent).toContain('Les photos ne sont pas disponibles');
+        });
+    });
+    describe('calls', () => {
+        const call = (status: 'ACTIVE' | 'ENDED') => ({
+            id: 'call-1', conversationId: 'conv1', startedBy: 'friend', media: 'AUDIO' as const, status,
+            startedAt: '2026-10-15T18:00:00Z', endedAt: null, memberIds: ['user1', 'friend'], participants: [],
+        });
+
+        it('startCall_shouldCallTheConversation_thenOpenTheCall', async () => {
+            callServiceMock.start.mockResolvedValue(call('ACTIVE'));
+
+            await component.startCall('VIDEO');
+
+            expect(callServiceMock.start).toHaveBeenCalledWith('conv1', 'VIDEO');
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/call', 'call-1']);
+        });
+
+        it('startCall_shouldStayHere_whenTheCallCouldNotStart', async () => {
+            await component.startCall('AUDIO');
+
+            expect(routerMock.navigate).not.toHaveBeenCalledWith(['/call', expect.anything()]);
+            expect(component.callStarting()).toBe(false);
+        });
+
+        it('template_shouldOfferToJoin_whileACallGoesOnHere', () => {
+            callServiceMock.events$.next({ type: 'RINGING', actorId: 'friend', call: call('ACTIVE') });
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.join-call')).not.toBeNull();
+
+            callServiceMock.events$.next({ type: 'ENDED', actorId: 'friend', call: call('ENDED') });
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.join-call')).toBeNull();
+            expect(fixture.nativeElement.querySelectorAll('.call-button').length).toBe(2);
+        });
+
+        it('followLiveCall_shouldAskOnce_whichCallGoesOnInTheConversation', () => {
+            expect(callServiceMock.liveCall).toHaveBeenCalledWith('conv1');
         });
     });
 });

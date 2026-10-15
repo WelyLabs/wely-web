@@ -331,6 +331,51 @@ export class ChatService implements OnDestroy {
       });
   }
 
+  /**
+   * Another server-push stream on the same connection, such as `call.events`: the same token,
+   * reconnection and bounded demand as the chat stream. Never completes on its own; unsubscribe
+   * to cancel it.
+   */
+  openStream<T>(route: string): Observable<T> {
+    return this.connectedSocket().pipe(
+      switchMap(
+        (socket) =>
+          new Observable<T>((observer) => {
+            let pending = 0;
+            let upstream: { request(n: number): void; cancel(): void } | undefined;
+            socket.requestStream({ data: null, metadata: this.metadataFor(route) }).subscribe({
+              onSubscribe: (subscription) => {
+                upstream = subscription;
+                pending = STREAM_DEMAND;
+                subscription.request(STREAM_DEMAND);
+              },
+              onNext: (frame) => {
+                if (frame.data) {
+                  observer.next(frame.data as T);
+                }
+                pending -= 1;
+                if (pending <= STREAM_DEMAND / 2) {
+                  upstream?.request(STREAM_DEMAND);
+                  pending += STREAM_DEMAND;
+                }
+              },
+              onComplete: () => observer.complete(),
+              onError: (error: Error) => observer.error(error),
+            });
+            return () => upstream?.cancel();
+          }),
+      ),
+      retry({
+        delay: (error, attempt) => {
+          const wait = Math.min(1_000 * 2 ** (attempt - 1), 30_000);
+          this.logger.warn(SCOPE, `${route} failed, retrying in ${wait}ms`, error);
+          return timer(wait);
+        },
+      }),
+      takeUntil(this.destroy$),
+    );
+  }
+
   private subscription?: { request(n: number): void; cancel(): void };
   private pendingDemand = 0;
 

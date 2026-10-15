@@ -387,6 +387,14 @@
     white-space: pre-line;
 }
 
+// A call going on in the group: green, like the bar that brings a caller back to it.
+.light-button.call-live,
+.outline-button.call-live {
+    background: var(--success, #16a34a);
+    border-color: transparent;
+    color: white;
+}
+
 .status-row {
     display: flex;
     flex-wrap: wrap;

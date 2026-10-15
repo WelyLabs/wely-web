@@ -1,0 +1,232 @@
+// A dark, edge-to-edge surface like the photo viewer: faces and cameras read best on black.
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: block;
+}
+
+.call-screen {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: radial-gradient(120% 80% at 50% 0%, #1b2440 0%, #0b0f1a 60%);
+  color: #f5f7fb;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.call-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+
+  .heading {
+    min-width: 0;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .status {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// One person fills the screen; more share it in a grid that keeps tiles about 16:9.
+.grid {
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+  padding: 8px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+
+  &[data-count='1'] {
+    grid-template-columns: 1fr;
+  }
+
+  &[data-count='2'] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+}
+
+.phone .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  &[data-count='1'],
+  &[data-count='2'] {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tile {
+  position: relative;
+  margin: 0;
+  min-height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #151b2c;
+  box-shadow: 0 0 0 2px transparent;
+  transition: box-shadow 200ms ease;
+
+  &.speaking {
+    box-shadow: 0 0 0 3px var(--brand-orange);
+  }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  audio {
+    display: none;
+  }
+
+  figcaption {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 45%);
+    font-size: 0.85rem;
+  }
+}
+
+.portrait {
+  height: 100%;
+  display: grid;
+  place-items: center;
+
+  img,
+  .initials {
+    width: clamp(72px, 22vmin, 140px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .initials {
+    display: grid;
+    place-items: center;
+    font-size: clamp(1.6rem, 6vmin, 2.6rem);
+    font-weight: 600;
+    color: white;
+  }
+}
+
+.waiting {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  text-align: center;
+  opacity: 0.9;
+
+  p {
+    margin: 0;
+  }
+}
+
+// The waiting ring, in the brand gradient.
+.pulse {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-gradient);
+  animation: pulse 1.6s ease-out infinite;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgb(255 255 255 / 35%); }
+  100% { box-shadow: 0 0 0 28px rgb(255 255 255 / 0%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+
+// The user's own camera, mirrored like a mirror, in a corner above the controls.
+.self {
+  position: absolute;
+  right: 16px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  width: clamp(96px, 22vw, 200px);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 14px;
+  transform: scaleX(-1);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 45%);
+  background: #151b2c;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.round {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: inherit;
+  background: rgb(255 255 255 / 14%);
+  transition: background 150ms ease, transform 150ms ease;
+
+  &:hover {
+    background: rgb(255 255 255 / 22%);
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-orange);
+    outline-offset: 3px;
+  }
+
+  &.off {
+    background: #f5f7fb;
+    color: #0b0f1a;
+  }
+
+  &.ghost {
+    width: 40px;
+    height: 40px;
+    background: transparent;
+  }
+
+  &.hang-up {
+    background: var(--danger, #dc2626);
+    color: white;
+  }
+}

@@ -11,6 +11,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
+import { CallService } from '../../services/call.service';
+import { CallOverlayComponent } from '../call/call-overlay/call-overlay';
 import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
 import { NotificationService } from '../../services/notification.service';
@@ -33,6 +35,7 @@ const NAV_SETTLE_MS = 350;
   selector: 'app-main-layout',
   standalone: true,
   imports: [
+    CallOverlayComponent,
     RouterModule,
     MatSidenavModule,
     MatListModule,
@@ -50,6 +53,7 @@ export class MainLayoutComponent implements OnInit {
   private readonly keycloak = inject(KeycloakService);
   private readonly userService = inject(UserService);
   private readonly chatService = inject(ChatService);
+  private readonly callService = inject(CallService);
   private readonly notificationService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -200,6 +204,8 @@ export class MainLayoutComponent implements OnInit {
     // The profile is already preloaded by APP_INITIALIZER; this opens the RSocket stream that
     // carries incoming messages for the whole session.
     this.chatService.initializeStream();
+    // Calls ring on any page.
+    this.callService.listen();
 
     this.chatService.messages$
       .pipe(takeUntilDestroyed(this.destroyRef))

@@ -1,0 +1,161 @@
+// The ringing banner slides in at the top; the return bar sits under the safe area.
+.incoming {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1300;
+  width: min(420px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: #0f1526;
+  color: #f5f7fb;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 35%);
+  animation: slide-in 260ms ease-out;
+}
+
+@keyframes slide-in {
+  from { transform: translate(-50%, -24px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .incoming {
+    animation: none;
+  }
+}
+
+.caller {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+
+  p {
+    margin: 0;
+  }
+
+  .name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kind {
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.initials {
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  color: white;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex: none;
+}
+
+.round {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-orange);
+    outline-offset: 3px;
+  }
+}
+
+.decline {
+  background: var(--danger, #dc2626);
+}
+
+.audio-only {
+  background: rgb(255 255 255 / 16%);
+}
+
+.accept {
+  background: var(--success, #16a34a);
+  animation: ring 1.2s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-12deg); }
+  20%, 40% { transform: rotate(12deg); }
+  50% { transform: rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accept {
+    animation: none;
+  }
+}
+
+.return-bar {
+  position: fixed;
+  top: env(safe-area-inset-top);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--success, #16a34a);
+  color: white;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 20%);
+
+  button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: inherit;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+
+    &:hover {
+      background: rgb(255 255 255 / 15%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 2px;
+    }
+  }
+
+  .hang-up {
+    background: rgb(0 0 0 / 20%);
+    padding: 6px;
+  }
+}

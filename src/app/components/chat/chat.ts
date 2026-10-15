@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap, timer } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, map, of, switchMap, timer } from 'rxjs';
+import { CallService } from '../../services/call.service';
+import { Call, CallMedia, isLive } from '../../models/call.model';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { ActivatedRoute, Router } from '@angular/router';
@@ -82,8 +84,15 @@ export class ChatComponent implements OnInit {
     private readonly photoResizer = inject(PhotoResizer);
     private readonly dialog = inject(MatDialog);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly calls = inject(CallService);
+
+    /** The call going on in this conversation, if any: the header offers to join it. */
+    readonly liveCall = signal<Call | null>(null);
+    readonly callStarting = signal(false);
 
     readonly conversation = signal<Conversation | null>(null);
+    /** For the call button: read in an injection context, as toObservable requires. */
+    private readonly conversation$ = toObservable(this.conversation);
     readonly messages = signal<Message[]>([]);
     readonly isLoading = signal(true);
     readonly isSending = signal(false);
@@ -170,6 +179,7 @@ export class ChatComponent implements OnInit {
     readonly isPartnerOnline = computed(() => this.partnerPresence()?.online === true);
 
     ngOnInit(): void {
+        this.followLiveCall();
         const currentUser = this.userService.getCurrentUserValue();
         this.currentUserId = currentUser ? currentUser.id : null;
 
@@ -536,6 +546,34 @@ export class ChatComponent implements OnInit {
 
     goBack(): void {
         this.navigationService.back();
+    }
+
+    /** Calls the conversation's members, or joins the call already going on, then opens it. */
+    async startCall(media: CallMedia): Promise<void> {
+        const conversationId = this.conversation()?.id;
+        if (!conversationId || this.callStarting()) {
+            return;
+        }
+        this.callStarting.set(true);
+        const call = await this.calls.start(conversationId, media);
+        this.callStarting.set(false);
+        if (call) {
+            this.router.navigate(['/call', call.id]);
+        }
+    }
+
+    /** Asked once the conversation is known, then kept up to date by the call events. */
+    private followLiveCall(): void {
+        this.conversation$.pipe(
+            map(conversation => conversation?.id ?? null),
+            distinctUntilChanged(),
+            switchMap(id => id ? this.calls.liveCall(id).pipe(catchError(() => of(null))) : of(null)),
+            takeUntilDestroyed(this.destroyRef),
+        ).subscribe(call => this.liveCall.set(call));
+        this.calls.events$.pipe(
+            filter(event => event.call.conversationId === this.conversation()?.id),
+            takeUntilDestroyed(this.destroyRef),
+        ).subscribe(event => this.liveCall.set(isLive(event.call) ? event.call : null));
     }
 
     /** From an event's group to the event itself. */

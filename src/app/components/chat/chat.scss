@@ -290,6 +290,19 @@
     }
 }
 
+.chat-header .call-button {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+// A call going on here: the header offers to join it, in green like the return bar.
+.chat-header .join-call {
+    flex-shrink: 0;
+    background: var(--success, #16a34a);
+    color: white;
+    border-radius: 999px;
+}
+
 .media-panel {
     flex: 1;
     overflow-y: auto;

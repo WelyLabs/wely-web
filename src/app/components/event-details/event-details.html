@@ -32,6 +32,7 @@
                 <mat-icon>near_me</mat-icon>Y aller
               </a>
             }
+            <ng-container *ngTemplateOutlet="groupCall; context: { $implicit: 'light-button' }" />
           </div>
         </div>
       } @else {
@@ -147,6 +148,7 @@
                 <mat-icon>near_me</mat-icon>Y aller
               </a>
             }
+            <ng-container *ngTemplateOutlet="groupCall; context: { $implicit: 'outline-button' }" />
           </div>
 
           <ng-container *ngTemplateOutlet="poll" />
@@ -341,3 +343,18 @@
     <button type="button" class="gradient-button" (click)="goBack()">Retour au calendrier</button>
   </div>
 }
+
+<!-- The group's call, for members once the group exists: join the one going on, or start one. -->
+<ng-template #groupCall let-buttonClass>
+  @if (member() && conversationId()) {
+    @if (liveCall(); as call) {
+      <button type="button" [class]="buttonClass + ' call-live'" (click)="startGroupCall(call.media)" [disabled]="callStarting()">
+        <mat-icon>call</mat-icon>Appel en cours · Rejoindre
+      </button>
+    } @else {
+      <button type="button" [class]="buttonClass" (click)="startGroupCall('VIDEO')" [disabled]="callStarting()">
+        <mat-icon>videocam</mat-icon>Appel de groupe
+      </button>
+    }
+  }
+</ng-template>

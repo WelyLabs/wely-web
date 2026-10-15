@@ -1,3 +1,5 @@
+import { CallService } from '../../services/call.service';
+import { callServiceStub } from '../../../testing/call-service.stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MainLayoutComponent } from './main-layout';
 import { Router } from '@angular/router';
@@ -98,6 +100,7 @@ describe('MainLayoutComponent', () => {
                     { provide: KeycloakService, useValue: keycloakMock },
                     { provide: UserService, useValue: userServiceMock },
                     { provide: ChatService, useValue: chatServiceMock },
+                    { provide: CallService, useValue: callServiceStub() },
                     { provide: NotificationService, useValue: notificationServiceMock },
                     { provide: Router, useValue: routerMock },
                     { provide: LoggerService, useValue: loggerMock }

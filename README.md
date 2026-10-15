@@ -37,6 +37,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 | **Lieux** | Lieu d'un événement choisi sur une carte (MapLibre, tuiles OpenFreeMap) avec recherche d'adresse (Photon) ; mini-carte sur la page de l'événement |
 | **Social** | Recherche d'utilisateurs, ajout par tag `Pseudo#1234`, demandes d'amis |
 | **Messagerie** | Conversations temps réel via RSocket, historique paginé |
+| **Appels** | Audio et vidéo depuis une conversation, ou avec tous les participants d'un événement (12 au plus) : sonnerie chiptune originale, micro et caméra coupables, caméra avant/arrière, la personne qui parle mise en avant |
 | **Profil** | Consultation et édition, recadrage d'avatar |
 
 ---
@@ -84,6 +85,7 @@ src/app/
     { path: 'profile',         component: UserProfileComponent },
     { path: 'conversations',   component: ConversationsListComponent },
     { path: 'chat/:convId',    component: ChatComponent },
+    { path: 'call/:callId',    component: CallScreenComponent },
   ]
 }
 ```
@@ -149,6 +151,18 @@ return encodeCompositeMetadata([
 ```
 
 La connexion se reconnecte automatiquement en cas de coupure, et le flux se reprend après un délai.
+
+### Appels
+
+Le son et l'image ne passent pas par nos serveurs : le navigateur ouvre **une** `RTCPeerConnection` vers le SFU de Cloudflare Realtime, y publie son micro et sa caméra et y reçoit les pistes des autres. wely-chat, qui détient la clé Cloudflare, vérifie chaque étape et relaie la négociation.
+
+| Pièce | Rôle |
+|---|---|
+| `CallService` | L'appel de bout en bout : `call.events` (second flux RSocket sur la même connexion), entrée et sortie, micro et caméra, *heartbeat* toutes les 15 s, état en signals |
+| `CallSession` | La connexion WebRTC, sans Angular : publication (offer → answer du SFU), abonnement (offer du SFU → answer du navigateur), une négociation à la fois |
+| `SpeakerDetector` | Qui parle, d'après le volume reçu : grande tuile et caméra en pleine résolution ; les autres reçoivent une couche *simulcast* plus petite à mesure que la grille se remplit |
+| `Ringtone` | La sonnerie : une mélodie originale en ondes carrées (Web Audio), sans fichier ; vibration quand le navigateur bloque le son |
+| `CallOverlayComponent` | Sur toutes les pages : le bandeau d'appel entrant, et la barre « Appel en cours · Revenir » |
 
 ---
 

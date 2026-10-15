@@ -1,3 +1,5 @@
+import { CallService } from '../../services/call.service';
+import { callServiceStub } from '../../../testing/call-service.stub';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -103,6 +105,7 @@ describe('EventDetailsComponent', () => {
     ];
     const me = new BehaviorSubject<User | null>({ id: 'me' } as User);
     let schedule: { getConflicts: ReturnType<typeof vi.fn> };
+    let calls: ReturnType<typeof callServiceStub>;
     let chatService: {
         getEventConversation: ReturnType<typeof vi.fn>;
         sendMessage: ReturnType<typeof vi.fn>;
@@ -146,6 +149,7 @@ describe('EventDetailsComponent', () => {
             removeCover: vi.fn().mockReturnValue(of(undefined))
         };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
+        calls = callServiceStub();
         schedule = { getConflicts: vi.fn().mockReturnValue(of([])) };
         pollStream = { follow: vi.fn().mockReturnValue(NEVER) };
         router = { navigate: vi.fn() };
@@ -173,6 +177,7 @@ describe('EventDetailsComponent', () => {
                     ledger: vi.fn().mockReturnValue(of({ currency: 'EUR', totalCents: 0, balances: [], transfers: [] }))
                 } },
                 { provide: ChatService, useValue: chatService },
+                { provide: CallService, useValue: calls },
                 // The conflicts card asks on its own: no conflict, so it stays hidden.
                 { provide: ScheduleService, useValue: schedule },
                 { provide: UserService, useValue: { currentUser$: me } },
@@ -340,6 +345,47 @@ describe('EventDetailsComponent', () => {
         expect(shown?.system).toBe(true);
         expect(shown?.senderName).toBe('Wely');
         expect(fixture.nativeElement.querySelector('.system-notice')?.textContent).toContain('Date fixée');
+    });
+
+    describe('group call', () => {
+        const live = {
+            id: 'call-1', conversationId: 'conv-1', startedBy: 'f1', media: 'VIDEO' as const, status: 'ACTIVE' as const,
+            startedAt: '2026-10-12T10:00:00Z', endedAt: null, memberIds: ['org', 'me', 'f1'], participants: [],
+        };
+
+        it('template_shouldOfferMembersAGroupCall_andStartIt', async () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+            calls.start.mockResolvedValue(live);
+            create();
+
+            const button = [...fixture.nativeElement.querySelectorAll('button')]
+                .find((candidate: HTMLButtonElement) => candidate.textContent?.includes('Appel de groupe')) as HTMLButtonElement;
+            button.click();
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(calls.start).toHaveBeenCalledWith('conv-1', 'VIDEO');
+            expect(router.navigate).toHaveBeenCalledWith(['/call', 'call-1']);
+        });
+
+        it('template_shouldOfferToJoin_theCallGoingOn', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'] })));
+            calls.liveCall.mockReturnValue(of(live));
+            create();
+
+            expect(calls.liveCall).toHaveBeenCalledWith('conv-1');
+            expect(fixture.nativeElement.querySelector('.call-live')?.textContent).toContain('Appel en cours');
+
+            calls.events$.next({ type: 'ENDED', actorId: 'f1', call: { ...live, status: 'ENDED' } });
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.call-live')).toBeNull();
+        });
+
+        it('template_shouldOfferNoCall_toAGuest', () => {
+            create();
+
+            expect(fixture.nativeElement.textContent).not.toContain('Appel de groupe');
+        });
     });
 
     it('openDiscussion_shouldOpenTheGroupInTheChat', () => {
