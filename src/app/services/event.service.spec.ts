@@ -341,6 +341,31 @@ describe('EventService', () => {
         httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
     });
 
+    it('getMyBirthdays_shouldAskForTheRangeAsInstants', () => {
+        let birthdays: unknown[] | undefined;
+        service.getMyBirthdays(new Date('2026-03-09T00:00:00Z'), new Date('2026-03-16T00:00:00Z')).subscribe(value => (birthdays = value));
+
+        const request = httpMock.expectOne(req => req.url === `${apiUrl}/me/birthdays`);
+        expect(request.request.params.get('from')).toBe('2026-03-09T00:00:00.000Z');
+        expect(request.request.params.get('to')).toBe('2026-03-16T00:00:00.000Z');
+        request.flush([{ userId: 'lea', name: 'Léa', date: '2026-03-12', mine: false, closeness: 'CLOSE', canOrganize: true, surprise: null }]);
+
+        expect(birthdays).toHaveLength(1);
+    });
+
+    it('toggleSubscriptionById_shouldSubscribe_thenRefreshTheLists', () => {
+        let joined: FeedEvent | undefined;
+        service.toggleSubscriptionById('s1').subscribe(event => (joined = event));
+
+        const request = httpMock.expectOne(`${apiUrl}/s1/subscribe`);
+        expect(request.request.method).toBe('POST');
+        request.flush(payload({ id: 's1', kind: 'SURPRISE', honoreeId: 'lea' }));
+        httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+
+        expect(joined?.kind).toBe('SURPRISE');
+    });
+
     it('calendarFileUrl_shouldAskForALink_andPointAtTheEventsIcs', () => {
         let url: string | undefined;
         service.calendarFileUrl('ev-1').subscribe(value => (url = value));

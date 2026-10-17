@@ -23,6 +23,9 @@
             </button>
             <span class="live-badge"><span class="dot"></span>C'est aujourd'hui</span>
           </div>
+          @if (event.kind === 'SURPRISE') {
+            <span class="surprise-badge">🤫 Surprise</span>
+          }
           <h1>{{ event.title }}</h1>
           <p class="live-meta">{{ event.location }} · {{ timeRange(event) }}</p>
           <p class="live-countdown">{{ countdown() }}</p>
@@ -64,6 +67,9 @@
         }
         <div class="hero-text">
           <span class="overline">{{ phase() === 'past' ? 'Terminé · ' + dayLabel(event.startDate) : countdown() }}</span>
+          @if (event.kind === 'SURPRISE') {
+            <span class="surprise-badge" title="La personne fêtée ne voit pas cet événement">🤫 Surprise</span>
+          }
           <h1>{{ event.title }}</h1>
           <p class="hero-meta" [class.polling]="polling()">{{ whenLabel(event) }} · {{ event.location }}</p>
           @if (organizerName()) {
@@ -208,7 +214,8 @@
       }
     </main>
 
-    @if (phase() === 'guest') {
+    <!-- A birthday is not an outing one joins. -->
+    @if (phase() === 'guest' && event.kind !== 'BIRTHDAY') {
       <div class="action-bar">
         <div class="action-text">
           <strong>{{ participants()?.count ?? 0 }} participant{{ (participants()?.count ?? 0) > 1 ? 's' : '' }}</strong>

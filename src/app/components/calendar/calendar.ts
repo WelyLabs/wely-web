@@ -8,7 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { EventService, FeedEvent, EventCreateRequest, FreeRange, FriendCalendarEntry } from '../../services/event.service';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
@@ -16,6 +17,12 @@ import { NotificationService } from '../../services/notification.service';
 import { ScheduleService } from '../../services/schedule.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { readOutingProposal } from '../../core/ui/outing-proposal';
+import { allDayLocalRange, daysCovered } from '../../core/ui/all-day';
+import {
+  BirthdayOccurrence, BirthdayTone, SURPRISE_END_HOUR, SURPRISE_START_HOUR, birthdayEmoji, birthdayTone, isBirthdayToday,
+  parseLocalDate, surpriseDescription, surpriseTitle
+} from '../../models/birthday.model';
+import { BirthdaySheetAction, BirthdaySheetComponent } from '../birthday-sheet/birthday-sheet';
 
 /** How often the now-line is repositioned. */
 const TIME_MARKER_REFRESH_MS = 60000;
@@ -90,13 +97,17 @@ export interface CalendarEvent {
   slotId?: string;
   /** True when the signed-in user organizes this event, false when they only joined a friend's. */
   mine?: boolean;
+  /** Whole days: drawn in the all-day row, by its UTC dates; start and end are then local midnights, the end exclusive. */
+  allDay?: boolean;
 }
 
 /** Fixed events as they are; each open poll as one tentative entry per proposed slot, polls deduplicated. */
 export function toCalendarEvents(subscribed: FeedEvent[], polls: FeedEvent[], myId: string | null = null): CalendarEvent[] {
   const isOpenPoll = (event: FeedEvent) => event.poll?.status === 'OPEN';
   const openPolls = new Map([...subscribed, ...polls].filter(isOpenPoll).map(event => [event.id, event]));
-  const fixed = subscribed.filter(event => !isOpenPoll(event)).map(event => toCalendarEvent(event, event.startDate, event.endDate, myId));
+  const fixed = subscribed.filter(event => !isOpenPoll(event)).map(event => event.allDay
+    ? toAllDayCalendarEvent(event, myId)
+    : toCalendarEvent(event, event.startDate, event.endDate, myId));
   const tentative = [...openPolls.values()].flatMap(event => (event.poll?.slots ?? []).map(slot => ({
     ...toCalendarEvent(event, slot.start, slot.end, myId),
     tentative: true,
@@ -117,6 +128,55 @@ function toCalendarEvent(event: FeedEvent, start: Date, end: Date, myId: string 
   };
 }
 
+/** An all-day event on the days its UTC dates name, whatever the viewer's zone. */
+function toAllDayCalendarEvent(event: FeedEvent, myId: string | null): CalendarEvent {
+  const { start, end } = allDayLocalRange(event.startDate, event.endDate);
+  return { ...toCalendarEvent(event, start, end, myId), time: ALL_DAY_LABEL, allDay: true };
+}
+
+export const ALL_DAY_LABEL = 'Toute la journée';
+
+/** A birthday as the calendar draws it: its day, its tone and its emoji. */
+export interface CalendarBirthday {
+  occurrence: BirthdayOccurrence;
+  day: Date;
+  tone: BirthdayTone;
+  emoji: string;
+}
+
+/** Birthdays by local day (`toDateString()`), the user's own first. */
+export function birthdaysByDay(occurrences: readonly BirthdayOccurrence[]): Map<string, CalendarBirthday[]> {
+  const byDay = new Map<string, CalendarBirthday[]>();
+  const ordered = [...occurrences].sort((a, b) => Number(b.mine) - Number(a.mine));
+  for (const occurrence of ordered) {
+    const day = parseLocalDate(occurrence.date);
+    if (!day) {
+      continue;
+    }
+    const tone = birthdayTone(occurrence);
+    const key = day.toDateString();
+    byDay.set(key, [...(byDay.get(key) ?? []), { occurrence, day, tone, emoji: birthdayEmoji(tone) }]);
+  }
+  return byDay;
+}
+
+/** The surprise party a birthday pre-fills: that evening, friends only, the place left to choose. */
+export function surprisePrefill(honoreeId: string, name: string, day: Date): EventCreateRequest {
+  const startDate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), SURPRISE_START_HOUR);
+  const endDate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), SURPRISE_END_HOUR);
+  return {
+    kind: 'SURPRISE',
+    honoreeId,
+    title: surpriseTitle(name),
+    description: surpriseDescription(name),
+    location: '',
+    visibility: 'FRIENDS',
+    allDay: false,
+    startDate,
+    endDate
+  };
+}
+
 /** 24-hour clock, as read in France. */
 export function formatTimeRange(start: Date, end: Date): string {
   const format = (d: Date) => `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -124,6 +184,13 @@ export function formatTimeRange(start: Date, end: Date): string {
 }
 
 const POLL_INVALID_CODE = 'EVT-BUS-014';
+const CONFLICT_STATUS = 409;
+/** Height of one chip of the all-day row, and the gap between two. */
+const ALL_DAY_CHIP_PX = 22;
+const ALL_DAY_GAP_PX = 4;
+/** Pieces of the birthday banner's confetti. */
+const CONFETTI_PIECES = 14;
+const NO_BIRTHDAYS: CalendarBirthday[] = [];
 
 import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-popover';
 import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
@@ -190,10 +257,11 @@ const POPOVER_CLICK_GUARD_MS = 500;
   selector: 'app-calendar',
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent, MonthDayOverlayComponent],
+  // Birthdays and the all-day row have their own sheet too.
   templateUrl: './calendar.html',
   // The ways in to a new event, and the phone layout, have their own sheets: the calendar's is at
   // its size budget.
-  styleUrls: ['./calendar.scss', './calendar-create.scss', './calendar-phone.scss', './calendar-poll.scss'],
+  styleUrls: ['./calendar.scss', './calendar-create.scss', './calendar-phone.scss', './calendar-poll.scss', './calendar-birthday.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalendarComponent implements OnInit, OnDestroy {
@@ -205,6 +273,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly notifications = inject(NotificationService);
   private readonly schedule = inject(ScheduleService);
   private readonly userService = inject(UserService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly dialog = inject(MatDialog);
 
   /** Business id of the signed-in user: tells a month event apart as hosted vs joined. */
   private myId: string | null = null;
@@ -264,6 +334,169 @@ export class CalendarComponent implements OnInit, OnDestroy {
    * showing "Review PR #123" to every user is not.
    */
   readonly events = signal<CalendarEvent[]>([]);
+
+  /** Bumped to fetch the birthdays again, once a surprise was created or joined. */
+  private readonly birthdayReload = signal(0);
+
+  /** The visible days, as the birthdays request: equal ranges do not refetch. */
+  private readonly birthdayRequest = computed(() => {
+    const days = this.days();
+    const reload = this.birthdayReload();
+    if (days.length === 0) {
+      return null;
+    }
+    const from = startOfDay(days[0].date);
+    const to = startOfDay(days[days.length - 1].date);
+    to.setDate(to.getDate() + 1);
+    return { from, to, reload };
+  }, {
+    equal: (a, b) => a === b || (!!a && !!b && a.reload === b.reload
+      && a.from.getTime() === b.from.getTime() && a.to.getTime() === b.to.getTime())
+  });
+
+  /** The user's birthday and their friends' over the visible days; none when wely-events cannot say. */
+  private readonly birthdays = toSignal(toObservable(this.birthdayRequest).pipe(
+    switchMap(request => request
+      ? this.eventService.getMyBirthdays(request.from, request.to).pipe(catchError((err: unknown) => {
+          this.logger.error('CalendarComponent', 'Could not load the birthdays', err);
+          return of<BirthdayOccurrence[]>([]);
+        }))
+      : of<BirthdayOccurrence[]>([]))
+  ), { initialValue: [] as BirthdayOccurrence[] });
+
+  private readonly birthdaysByDay = computed(() => birthdaysByDay(this.birthdays()));
+
+  birthdaysFor(date: Date): CalendarBirthday[] {
+    return this.birthdaysByDay().get(date.toDateString()) ?? NO_BIRTHDAYS;
+  }
+
+  /** Week and day views: how many chips the tallest day of the all-day row holds; no row at 0. */
+  readonly allDayRows = computed(() => {
+    if (this.viewMode() === 'month') {
+      return 0;
+    }
+    const byDay = this.eventsByDay();
+    const birthdays = this.birthdaysByDay();
+    return Math.max(0, ...this.days().map(day => {
+      const key = day.date.toDateString();
+      return (byDay.get(key) ?? NO_EVENTS).filter(event => event.allDay).length + (birthdays.get(key) ?? NO_BIRTHDAYS).length;
+    }));
+  });
+
+  /** The same height on every column, and beside the hours, so the grid stays aligned. */
+  readonly allDayRowHeight = computed(() => {
+    const rows = this.allDayRows();
+    return rows === 0 ? 0 : rows * ALL_DAY_CHIP_PX + (rows - 1) * ALL_DAY_GAP_PX + 2 * ALL_DAY_GAP_PX;
+  });
+
+  /** The signed-in user, for their own birthday's banner. */
+  private readonly me = toSignal(this.userService.currentUser$, { initialValue: null });
+  private readonly bannerClosed = signal(false);
+  /** « Joyeux anniversaire » on the user's birthday, until closed. */
+  readonly birthdayBanner = computed(() => !this.bannerClosed() && isBirthdayToday(this.me()?.birthDate));
+  readonly confetti = Array.from({ length: CONFETTI_PIECES }, (_, i) => i);
+  readonly firstName = computed(() => this.me()?.firstName ?? '');
+
+  closeBirthdayBanner(): void {
+    this.bannerClosed.set(true);
+  }
+
+  /** A birthday tapped: the sheet says what can be done, and the calendar does it. */
+  openBirthday(birthday: CalendarBirthday, event?: Event): void {
+    event?.stopPropagation();
+    this.dialog.open<BirthdaySheetComponent, BirthdayOccurrence, BirthdaySheetAction>(BirthdaySheetComponent, {
+      data: birthday.occurrence,
+      width: '360px',
+      maxWidth: '95vw',
+      autoFocus: false
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(action => this.onBirthdayAction(birthday.occurrence, action));
+  }
+
+  onBirthdayAction(birthday: BirthdayOccurrence, action: BirthdaySheetAction | undefined): void {
+    const surpriseId = birthday.surprise?.eventId;
+    switch (action) {
+      case 'organize':
+        this.openSurprise(birthday.userId, birthday.name, birthday.date);
+        break;
+      case 'join':
+        if (surpriseId) {
+          this.joinSurprise(surpriseId);
+        }
+        break;
+      case 'view':
+        if (surpriseId) {
+          this.router.navigate(['/event', surpriseId]);
+        }
+        break;
+      case 'profile':
+        this.router.navigate(['/friends', birthday.userId]);
+        break;
+    }
+  }
+
+  private joinSurprise(eventId: string): void {
+    this.eventService.toggleSubscriptionById(eventId).subscribe({
+      next: () => {
+        this.birthdayReload.update(count => count + 1);
+        this.router.navigate(['/event', eventId]);
+      },
+      error: (err: unknown) => {
+        this.logger.error('CalendarComponent', 'Could not join the surprise', err);
+        this.router.navigate(['/event', eventId]);
+      }
+    });
+  }
+
+  /** The surprise creation, pre-filled for that birthday: one press on « Créer » is enough. */
+  openSurprise(honoreeId: string, name: string, date: string): void {
+    const day = parseLocalDate(date);
+    if (!day) {
+      return;
+    }
+    const prefill = surprisePrefill(honoreeId, name, day);
+    this.currentDate.set(new Date(day));
+    this.generateCalendar();
+    this.startCreatingEvent(undefined, prefill.startDate, prefill.endDate);
+    this.popoverData.set(prefill);
+  }
+
+  /**
+   * `?date=YYYY-MM-DD` opens that day; with `surpriseFor`, the surprise for that friend's birthday.
+   * Read once: the query is cleared so that going back or reloading does not open it again.
+   */
+  private onQuery(query: ParamMap): void {
+    const date = query.get('date');
+    const day = parseLocalDate(date);
+    const honoreeId = query.get('surpriseFor');
+    if (!day || !date) {
+      return;
+    }
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    if (!honoreeId) {
+      this.currentDate.set(new Date(day));
+      this.toggleView('day');
+      return;
+    }
+    const to = new Date(day);
+    to.setDate(to.getDate() + 1);
+    this.eventService.getMyBirthdays(day, to).pipe(
+      map(birthdays => birthdays.find(birthday => birthday.userId === honoreeId && !birthday.mine) ?? null),
+      catchError(() => of(null)),
+      switchMap(birthday => birthday ? of(birthday) : this.socialService.listFriendships().pipe(
+        map(friends => ({ name: friends.find(friend => friend.userId === honoreeId)?.userName ?? '', surprise: null })),
+        catchError(() => of({ name: '', surprise: null })))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(found => {
+      // Prepared already: the link opens it, to join.
+      if (found.surprise) {
+        this.router.navigate(['/event', found.surprise.eventId]);
+        return;
+      }
+      this.openSurprise(honoreeId, found.name || 'ton ami', date);
+    });
+  }
 
   /** Friends whose calendar can be laid over the week or day view. */
   readonly friendships = signal<FriendSummary[]>([]);
@@ -514,6 +747,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.updateTimePosition();
     this.timeUpdateInterval = setInterval(() => this.updateTimePosition(), TIME_MARKER_REFRESH_MS);
     this.openProposedOuting();
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(query => this.onQuery(query));
   }
 
   /** « Proposer une sortie » on a friend's page: opens the form as a poll on the slots it picked. */
@@ -743,7 +977,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         date: date,
         isCurrentMonth: true,
         isToday: this.isSameDate(date, new Date()),
-        hasEvents: this.events().some(event => this.isSameDate(event.startDate, date))
+        hasEvents: this.getEventsForDay(date).length > 0
       });
     }
 
@@ -776,7 +1010,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         date: date,
         isCurrentMonth: date.getMonth() === this.currentDate().getMonth(),
         isToday: this.isSameDate(date, new Date()),
-        hasEvents: this.events().some(event => this.isSameDate(event.startDate, date))
+        hasEvents: this.getEventsForDay(date).length > 0
       });
     }
 
@@ -791,7 +1025,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       date: date,
       isCurrentMonth: true,
       isToday: this.isSameDate(date, new Date()),
-      hasEvents: this.events().some(event => this.isSameDate(event.startDate, date))
+      hasEvents: this.getEventsForDay(date).length > 0
     }]);
   }
 
@@ -813,8 +1047,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const byDay = new Map<string, CalendarEvent[]>();
     const sorted = [...this.events()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
     for (const event of sorted) {
-      const key = event.startDate.toDateString();
-      byDay.set(key, [...(byDay.get(key) ?? []), event]);
+      // An all-day event shows on each of its days.
+      const days = event.allDay ? daysCovered(event.startDate, event.endDate) : [event.startDate];
+      for (const day of days) {
+        const key = day.toDateString();
+        byDay.set(key, [...(byDay.get(key) ?? []), event]);
+      }
     }
     return byDay;
   });
@@ -823,7 +1061,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly eventsByHour = computed(() => {
     const byHour = new Map<string, CalendarEvent[]>();
     for (const [day, events] of this.eventsByDay()) {
-      for (const event of events) {
+      for (const event of events.filter(candidate => !candidate.allDay)) {
         const key = `${day}|${event.startDate.getHours()}`;
         byHour.set(key, [...(byHour.get(key) ?? []), event]);
       }
@@ -847,7 +1085,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   getAllDayEvents(date: Date): CalendarEvent[] {
-    const events = this.getEventsForDay(date).filter(event => event.time.toLowerCase() === 'all day');
+    const events = this.getEventsForDay(date).filter(event => event.allDay);
     return events.length > 0 ? events : NO_EVENTS;
   }
 
@@ -897,7 +1135,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   selectDate(day: CalendarDay) {
     this.selectedDate.set(day.date);
-    this.selectedEvents.set(this.events().filter(e => this.isSameDate(e.startDate, day.date)));
+    this.selectedEvents.set(this.getEventsForDay(day.date));
     this.isDetailsOpen.set(true);
   }
 
@@ -1210,6 +1448,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: created => {
         this.savingEvent.set(false);
+        if (data.kind === 'SURPRISE') {
+          this.birthdayReload.update(count => count + 1);
+        }
         this.isPopoverVisible.set(false);
         this.isDetailsOpen.set(false);
         this.selectedDate.set(null);
@@ -1222,6 +1463,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
       },
       error: (err: unknown) => {
         this.savingEvent.set(false);
+        const existing = err instanceof HttpErrorResponse && err.status === CONFLICT_STATUS ? err.error?.eventId : null;
+        if (data.kind === 'SURPRISE' && typeof existing === 'string') {
+          this.onSurpriseExists(existing);
+          return;
+        }
         const invalidPoll = err instanceof HttpErrorResponse && err.error?.code === POLL_INVALID_CODE;
         this.createError.set(invalidPoll
           ? 'Les créneaux proposés ne sont pas valides : chacun doit être à venir et différent des autres.'
@@ -1229,6 +1475,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
         this.logger.error('CalendarComponent', 'Error creating event:', err);
       }
     });
+  }
+
+  /** Someone prepared the surprise first: its page is opened, to join it rather than make a second one. */
+  private onSurpriseExists(eventId: string): void {
+    this.cancelCreatingEvent();
+    this.birthdayReload.update(count => count + 1);
+    const open = () => this.router.navigate(['/event', eventId]);
+    open();
+    this.notifications.showAction('Une surprise est déjà prévue : rejoins-la !', 'Voir', open);
   }
 
   /**

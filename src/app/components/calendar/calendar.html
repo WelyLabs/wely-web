@@ -59,6 +59,25 @@
       </div>
     </div>
 
+    @if (birthdayBanner()) {
+      <!-- The user's own birthday: a banner, and confetti that falls once (none with reduced motion). -->
+      <div class="birthday-banner" role="status">
+        <div class="confetti" aria-hidden="true">
+          @for (piece of confetti; track piece) {
+            <i [style.--i]="piece"></i>
+          }
+        </div>
+        <span class="banner-cake" aria-hidden="true">🎂</span>
+        <div class="banner-text">
+          <strong>Joyeux anniversaire{{ firstName() ? ', ' + firstName() : '' }} !</strong>
+          <span>Toute la bande Wely te souhaite une magnifique journée.</span>
+        </div>
+        <button type="button" aria-label="Fermer" (click)="closeBirthdayBanner()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
+
     @if (showCreateHint()) {
       <div class="create-hint">
         <mat-icon>lightbulb</mat-icon>
@@ -90,6 +109,9 @@
             (click)="selectDate(day)" (keydown.enter)="selectDate(day)" (keydown.space)="selectDate(day)">
             <div class="day-content">
               <span class="day-number">{{ day.date | date:'d' }}</span>
+              @for (birthday of birthdaysFor(day.date); track birthday.occurrence.userId) {
+                <ng-container *ngTemplateOutlet="birthdayChip; context: { $implicit: birthday }" />
+              }
               @if (day.hasEvents) {
                 <!-- Titles, not a dot: a month that only marks which days are busy says less
                      than an empty one, because the reader cannot tell whether a day is worth
@@ -121,6 +143,9 @@
         <!-- Time Axis -->
         <div class="time-axis">
           <div class="axis-header"></div>
+          @if (allDayRows() > 0) {
+            <div class="all-day-axis" [style.height.px]="allDayRowHeight()">Journée</div>
+          }
           @for (hour of hours; track hour) {
             <div class="hour-slot">
               {{ hour | number:'2.0' }}:00
@@ -135,11 +160,14 @@
                 <span class="day-label">{{ day.date | date:'EEE' }}</span>
                 <span class="date-label">{{ day.date | date:'d' }}</span>
               </div>
-              <!-- Full Day Events Section -->
-              @if (getAllDayEvents(day.date).length > 0) {
-                <div class="full-day-events">
-                  @for (event of getAllDayEvents(day.date); track event) {
-                    <div class="full-day-card" role="button" tabindex="0"
+              <!-- Whole days and birthdays: one row, as tall on every column so the hours line up. -->
+              @if (allDayRows() > 0) {
+                <div class="full-day-events" [style.height.px]="allDayRowHeight()">
+                  @for (birthday of birthdaysFor(day.date); track birthday.occurrence.userId) {
+                    <ng-container *ngTemplateOutlet="birthdayChip; context: { $implicit: birthday }" />
+                  }
+                  @for (event of getAllDayEvents(day.date); track event.id) {
+                    <div class="full-day-card" role="button" tabindex="0" [class.mine]="event.mine"
                       (click)="viewEventDetails(event)" (keydown.enter)="viewEventDetails(event)"
                       (keydown.space)="viewEventDetails(event)">
                       <span class="event-title">{{ event.title }}</span>
@@ -240,6 +268,20 @@
 
     </div>
   </div>
+
+  <!-- A birthday: warm for one's own, then by closeness. A press opens its sheet, never the day. -->
+  <ng-template #birthdayChip let-birthday>
+    <button type="button" [class]="'birthday-chip tone-' + birthday.tone"
+      [title]="birthday.occurrence.mine ? 'Ton anniversaire' : 'Anniversaire de ' + birthday.occurrence.name"
+      (click)="openBirthday(birthday, $event)" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
+      (mousedown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()">
+      <span aria-hidden="true">{{ birthday.emoji }}</span>
+      <span class="birthday-name">{{ birthday.occurrence.mine ? 'Ton anniversaire' : birthday.occurrence.name }}</span>
+      @if (birthday.occurrence.surprise) {
+        <span class="birthday-secret" aria-label="une surprise se prépare">🤫</span>
+      }
+    </button>
+  </ng-template>
 
   <!-- On a phone the header has no room for the button: it floats above the bottom bar. -->
   @if (!isPopoverVisible() && !isDetailsOpen()) {

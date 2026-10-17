@@ -1,0 +1,26 @@
+<div class="birthday-sheet" [class]="'tone-' + tone">
+  <button type="button" class="sheet-close" aria-label="Fermer" (click)="close()">
+    <mat-icon>close</mat-icon>
+  </button>
+  <div class="sheet-ring">
+    <div class="sheet-avatar" [style.background]="color">
+      @if (picture()) {
+        <img [src]="picture()" [alt]="'Photo de profil de ' + birthday.name">
+      } @else {
+        <span aria-hidden="true">{{ initials }}</span>
+      }
+    </div>
+    <span class="sheet-emoji" aria-hidden="true">{{ emoji }}</span>
+  </div>
+  <h2 mat-dialog-title>{{ heading }}</h2>
+  <p class="sheet-hint">{{ hint }}</p>
+  @if (options.length > 0) {
+    <div class="sheet-actions">
+      @for (option of options; track option.action) {
+        <button type="button" [class]="option.primary ? 'sheet-primary' : 'sheet-secondary'" (click)="choose(option.action)">
+          {{ option.label }}
+        </button>
+      }
+    </div>
+  }
+</div>

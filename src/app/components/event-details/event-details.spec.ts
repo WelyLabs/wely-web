@@ -441,6 +441,25 @@ describe('EventDetailsComponent', () => {
         expect(component.people().map(person => person.id)).toEqual(['f1', 'u2']);
     });
 
+    it('template_shouldBadgeASurprise_andOfferToJoinIt', () => {
+        eventService.getEvent.mockReturnValue(of(event({ kind: 'SURPRISE', honoreeId: 'lea' })));
+
+        create();
+
+        expect(fixture.nativeElement.querySelector('.surprise-badge')?.textContent).toContain('🤫 Surprise');
+        expect(fixture.nativeElement.querySelector('.action-bar .gradient-button')).not.toBeNull();
+    });
+
+    it('template_shouldNotOfferToJoinABirthday', () => {
+        eventService.getEvent.mockReturnValue(of(event({ kind: 'BIRTHDAY', allDay: true })));
+
+        create();
+
+        expect(fixture.nativeElement.querySelector('.action-bar')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.surprise-badge')).toBeNull();
+        expect(component.timeRange(component.event()!)).toBe('Toute la journée');
+    });
+
     it('phase_shouldTreatTheOrganizerAsAMember', () => {
         eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me' })));
 

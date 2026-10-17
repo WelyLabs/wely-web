@@ -658,6 +658,9 @@ export class EventDetailsComponent implements OnInit {
   }
 
   timeRange(event: FeedEvent): string {
+    if (event.allDay) {
+      return 'Toute la journée';
+    }
     const format = (date: Date) => date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     return `${format(event.startDate)} – ${format(event.endDate)}`;
   }

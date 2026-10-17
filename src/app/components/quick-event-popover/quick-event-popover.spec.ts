@@ -10,7 +10,7 @@ import { EventCoverDialogComponent } from '../event-cover-dialog/event-cover-dia
 import { EventService } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { ScheduleService } from '../../services/schedule.service';
-import { CONFLICT_CHECK_DELAY_MS } from './quick-event-popover';
+import { CONFLICT_CHECK_DELAY_MS, toSubmittedRequest } from './quick-event-popover';
 
 describe('QuickEventPopoverComponent', () => {
     let component: QuickEventPopoverComponent;
@@ -748,6 +748,90 @@ describe('QuickEventPopoverComponent', () => {
         expect(card.getAttribute('role')).toBe('dialog');
         expect(card.getAttribute('aria-modal')).toBe('true');
     });
+
+    describe('all day', () => {
+        const local = (day: number, hour = 0) => new Date(2026, 2, day, hour);
+        const open = (overrides: Partial<EventCreateRequest>) => {
+            fixture.componentRef.setInput('data', { ...request(), title: 'Ski', startDate: local(12, 18), endDate: local(12, 19), ...overrides });
+            fixture.detectChanges();
+        };
+
+        it('toSubmittedRequest_shouldSendUtcMidnights_forAnAllDayDraft', () => {
+            const sent = toSubmittedRequest({ ...request(), allDay: true, startDate: local(12, 18), endDate: local(14, 9) });
+
+            expect(sent.startDate.toISOString()).toBe('2026-03-12T00:00:00.000Z');
+            expect(sent.endDate!.toISOString()).toBe('2026-03-15T00:00:00.000Z');
+            expect(sent.allDay).toBe(true);
+        });
+
+        it('toSubmittedRequest_shouldKeepTheHours_otherwise', () => {
+            const sent = toSubmittedRequest({ ...request(), startDate: local(12, 18), endDate: local(12, 19) });
+
+            expect(sent.startDate).toEqual(local(12, 18));
+            expect(sent.allDay).toBe(false);
+        });
+
+        it('toggleAllDay_shouldHideTheHours_andKeepOneDay', () => {
+            open({});
+
+            component.toggleAllDay();
+            fixture.detectChanges();
+
+            expect(component.allDay()).toBe(true);
+            expect(component.invalidRange()).toBe(false);
+            expect(fixture.nativeElement.querySelector('#quick-event-start-time')).toBeNull();
+            expect(fixture.nativeElement.querySelector('#quick-event-end-day')).not.toBeNull();
+            expect(fixture.nativeElement.querySelector('.all-day-toggle').getAttribute('aria-checked')).toBe('true');
+        });
+
+        it('toggleAllDay_shouldTurnThePollOff_andHideItsSwitch', () => {
+            open({});
+            component.togglePollMode();
+
+            component.toggleAllDay();
+            fixture.detectChanges();
+
+            expect(component.pollMode()).toBe(false);
+            expect(fixture.nativeElement.querySelector('.poll-toggle')).toBeNull();
+        });
+
+        it('toggleAllDay_shouldGiveTheHoursBack_anHourLong_whenTurnedOff', () => {
+            open({});
+            component.toggleAllDay();
+
+            component.toggleAllDay();
+
+            expect(component.allDay()).toBe(false);
+            expect(component.draft().endDate!.getTime() - component.draft().startDate.getTime()).toBe(3_600_000);
+        });
+
+        it('onSave_shouldEmitTheWholeDays', () => {
+            open({});
+            const saved: EventSubmission[] = [];
+            component.save.subscribe(submission => saved.push(submission));
+            component.toggleAllDay();
+
+            component.onSave();
+
+            expect(saved[0].request).toMatchObject({ allDay: true });
+            expect(saved[0].request.startDate.toISOString()).toBe('2026-03-12T00:00:00.000Z');
+            expect(saved[0].request.endDate!.toISOString()).toBe('2026-03-13T00:00:00.000Z');
+        });
+    });
+
+    describe('surprise', () => {
+        it('template_shouldSayItIsASurprise_withoutVisibilityOrPoll_andThePlaceOptional', () => {
+            fixture.componentRef.setInput('data', { ...request(), title: 'Anniversaire surprise de Léa 🎉', kind: 'SURPRISE', honoreeId: 'lea' });
+            fixture.detectChanges();
+            const el: HTMLElement = fixture.nativeElement;
+
+            expect(el.querySelector('.surprise-ribbon')?.textContent).toContain('ne le verra pas');
+            expect(el.querySelector('.visibility-group')).toBeNull();
+            expect(el.querySelector('.poll-toggle')).toBeNull();
+            expect(el.querySelector<HTMLInputElement>('#quick-event-location')?.placeholder).toContain('plus tard');
+            expect(component.canSave()).toBe(true);
+        });
+    });
 });
 
 describe('QuickEventPopoverComponent on a wide screen', () => {
@@ -901,5 +985,5 @@ describe('QuickEventPopoverComponent schedule conflicts', () => {
         expect(component.conflictWhen(bowling)).not.toContain('·');
         expect(component.slotLabel({ start: new Date(2026, 9, 17, 14), end: new Date(2026, 9, 17, 15) })).toContain('·');
     });
-});
 
+});

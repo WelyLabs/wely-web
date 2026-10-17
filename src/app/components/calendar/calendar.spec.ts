@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CalendarComponent, CalendarEvent, defaultStart, formatTimeRange, toCalendarEvents } from './calendar';
+import { ALL_DAY_LABEL, CalendarComponent, CalendarEvent, birthdaysByDay, defaultStart, formatTimeRange, surprisePrefill, toCalendarEvents } from './calendar';
+import { ActivatedRoute, ParamMap, convertToParamMap } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
+import { BirthdayOccurrence } from '../../models/birthday.model';
 import { NotificationService } from '../../services/notification.service';
 import { ScheduleService } from '../../services/schedule.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -22,6 +25,7 @@ describe('CalendarComponent', () => {
     let socialServiceMock: { listFriendships: ReturnType<typeof vi.fn> };
     let notificationsMock: { showAction: ReturnType<typeof vi.fn> };
     let scheduleMock: { getConflicts: ReturnType<typeof vi.fn>; checkConflicts: ReturnType<typeof vi.fn> };
+    let queryParams: BehaviorSubject<ParamMap>;
     const friendships: FriendSummary[] = [
         { userId: 'lea', userName: 'lea', hashtag: 6000, closeness: 'CLOSE', proposal: null, proposedByFriend: false },
         { userId: 'hugo', userName: 'hugo', hashtag: 9074, closeness: 'FRIEND', proposal: null, proposedByFriend: false }
@@ -40,8 +44,11 @@ describe('CalendarComponent', () => {
             uploadCover: vi.fn().mockReturnValue(of(mockEvents[0])),
             getFriendCalendar: vi.fn().mockReturnValue(of([])),
             findFreeSlots: vi.fn().mockReturnValue(of([])),
-            getMyPolls: vi.fn().mockReturnValue(of([]))
+            getMyPolls: vi.fn().mockReturnValue(of([])),
+            getMyBirthdays: vi.fn().mockReturnValue(of([])),
+            toggleSubscriptionById: vi.fn().mockReturnValue(of(mockEvents[0]))
         };
+        queryParams = new BehaviorSubject<ParamMap>(convertToParamMap({}));
         routerMock = {
             navigate: vi.fn()
         };
@@ -60,6 +67,7 @@ describe('CalendarComponent', () => {
                 { provide: NotificationService, useValue: notificationsMock },
                 { provide: ScheduleService, useValue: scheduleMock },
                 { provide: Router, useValue: routerMock },
+                { provide: ActivatedRoute, useValue: { queryParamMap: queryParams } },
                 { provide: UserService, useValue: { currentUser$: of(null) } }
             ]
         }).compileComponents();
@@ -1155,6 +1163,7 @@ describe('CalendarComponent', () => {
                     { provide: ScheduleService, useValue: scheduleMock },
                 { provide: ScheduleService, useValue: scheduleMock },
                     { provide: Router, useValue: routerMock },
+                    { provide: ActivatedRoute, useValue: { queryParamMap: queryParams } },
                     { provide: UserService, useValue: { currentUser$: of(null) } },
                     { provide: BreakpointObserver, useValue: { observe: () => of({ matches: on, breakpoints: {} }) } }
                 ]
@@ -1461,6 +1470,170 @@ describe('CalendarComponent', () => {
             openWith({ navigationId: 1 });
 
             expect(component.isPopoverVisible()).toBe(false);
+        });
+    });
+
+    describe('all-day events', () => {
+        const allDay = (id: string, start: string, end: string): FeedEvent => ({
+            id, title: id, organizerId: 'me', startDate: new Date(start), endDate: new Date(end),
+            location: '', image: null, description: '', allDay: true
+        });
+
+        it('toCalendarEvents_shouldPlaceAnAllDayEventOnItsUtcDate', () => {
+            const [event] = toCalendarEvents([allDay('a', '2026-03-12T00:00:00Z', '2026-03-13T00:00:00Z')], [], 'me');
+
+            expect(event.allDay).toBe(true);
+            expect(event.time).toBe(ALL_DAY_LABEL);
+            expect([event.startDate.getFullYear(), event.startDate.getMonth(), event.startDate.getDate()]).toEqual([2026, 2, 12]);
+            expect([event.endDate.getMonth(), event.endDate.getDate()]).toEqual([2, 13]);
+            expect(event.startDate.getHours()).toBe(0);
+        });
+
+        it('getAllDayEvents_shouldListAMultiDayEventOnEachOfItsDays_andNeverInAnHour', () => {
+            component.events.set(toCalendarEvents([allDay('trip', '2026-03-12T00:00:00Z', '2026-03-15T00:00:00Z')], [], 'me'));
+
+            expect(component.getAllDayEvents(new Date(2026, 2, 12)).map(event => event.id)).toEqual(['trip']);
+            expect(component.getAllDayEvents(new Date(2026, 2, 14)).map(event => event.id)).toEqual(['trip']);
+            expect(component.getAllDayEvents(new Date(2026, 2, 15))).toEqual([]);
+            expect(component.getEventsForHour(new Date(2026, 2, 12), 0)).toEqual([]);
+        });
+
+        it('allDayRowHeight_shouldFitTheBusiestVisibleDay_andBeZeroWithout', () => {
+            expect(component.allDayRowHeight()).toBe(0);
+            const monday = component.days()[0].date;
+            const utc = (offset: number) => new Date(Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate() + offset)).toISOString();
+            component.events.set(toCalendarEvents([
+                allDay('one', utc(0), utc(1)), allDay('two', utc(0), utc(2))
+            ], [], 'me'));
+
+            expect(component.allDayRows()).toBe(2);
+            expect(component.allDayRowHeight()).toBe(2 * 22 + 4 + 8);
+        });
+    });
+
+    describe('birthdays', () => {
+        const occurrence = (overrides: Partial<BirthdayOccurrence>): BirthdayOccurrence => ({
+            userId: 'lea', name: 'Léa', date: '2026-03-12', mine: false, closeness: 'CLOSE',
+            canOrganize: true, surprise: null, ...overrides
+        });
+
+        it('birthdaysByDay_shouldGroupByLocalDay_ownFirst_withTheirTone', () => {
+            const byDay = birthdaysByDay([
+                occurrence({ userId: 'hugo', closeness: 'FRIEND' }),
+                occurrence({ userId: 'me', mine: true, closeness: null }),
+                occurrence({ userId: 'zoe', closeness: 'INTIMATE', date: '2026-03-13' })
+            ]);
+
+            const twelfth = byDay.get(new Date(2026, 2, 12).toDateString())!;
+            expect(twelfth.map(birthday => [birthday.occurrence.userId, birthday.tone, birthday.emoji]))
+                .toEqual([['me', 'mine', '🎂'], ['hugo', 'friend', '🎈']]);
+            expect(byDay.get(new Date(2026, 2, 13).toDateString())![0].tone).toBe('intimate');
+        });
+
+        it('birthdaysFor_shouldShowWhatWelyEventsReturnsForTheVisibleDays', () => {
+            (eventServiceMock.getMyBirthdays as ReturnType<typeof vi.fn>).mockReturnValue(of([occurrence({ date: '2026-03-12' })]));
+            component.currentDate.set(new Date(2026, 2, 12));
+            component.toggleView('week');
+            fixture.detectChanges();
+
+            expect(component.birthdaysFor(new Date(2026, 2, 12)).map(birthday => birthday.tone)).toEqual(['close']);
+            const [from, to] = (eventServiceMock.getMyBirthdays as ReturnType<typeof vi.fn>).mock.lastCall!;
+            expect(from.getTime()).toBe(component.days()[0].date.setHours(0, 0, 0, 0));
+            expect(to.getTime() - from.getTime()).toBeGreaterThanOrEqual(6 * 86_400_000);
+            expect(fixture.nativeElement.querySelector('.birthday-chip.tone-close')?.textContent).toContain('Léa');
+        });
+
+        it('surprisePrefill_shouldPrepareTheEveningForFriends_withoutAPlace', () => {
+            const prefill = surprisePrefill('lea', 'Léa', new Date(2026, 2, 12));
+
+            expect(prefill).toMatchObject({
+                kind: 'SURPRISE', honoreeId: 'lea', title: 'Anniversaire surprise de Léa 🎉', location: '',
+                visibility: 'FRIENDS', allDay: false,
+                description: '🤫 Léa ne voit pas cet événement. Invite ses amis et choisis le lieu.'
+            });
+            expect([prefill.startDate.getDate(), prefill.startDate.getHours()]).toEqual([12, 19]);
+            expect(prefill.endDate!.getHours()).toBe(23);
+        });
+
+        it('onBirthdayAction_shouldOpenThePrefilledSurprise_whenOrganizing', () => {
+            component.onBirthdayAction(occurrence({}), 'organize');
+
+            expect(component.isPopoverVisible()).toBe(true);
+            expect(component.popoverData()).toMatchObject({ kind: 'SURPRISE', honoreeId: 'lea' });
+        });
+
+        it('onBirthdayAction_shouldJoinTheSurprise_thenOpenIt', () => {
+            component.onBirthdayAction(occurrence({ surprise: { eventId: 's1', organizerId: 'zoe', joined: false } }), 'join');
+
+            expect(eventServiceMock.toggleSubscriptionById).toHaveBeenCalledWith('s1');
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 's1']);
+        });
+
+        it('onBirthdayAction_shouldDoNothing_whenTheSheetIsDismissed', () => {
+            component.onBirthdayAction(occurrence({}), undefined);
+
+            expect(component.isPopoverVisible()).toBe(false);
+            expect(routerMock.navigate).not.toHaveBeenCalled();
+        });
+
+        it('submitEvent_shouldOpenTheExistingSurprise_whenOneIsAlreadyPlanned', () => {
+            eventServiceMock.createEvent = vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({
+                status: 409, error: { code: 'EVT-BUS-030', eventId: 'existing' }
+            })));
+            component.openSurprise('lea', 'Léa', '2026-03-12');
+
+            component.submitEvent(component.popoverData());
+
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 'existing']);
+            expect(component.isPopoverVisible()).toBe(false);
+            expect(component.createError()).toBeNull();
+        });
+    });
+
+    describe('deep links', () => {
+        it('queryParams_shouldOpenTheDay_withADate', () => {
+            queryParams.next(convertToParamMap({ date: '2026-03-12' }));
+
+            expect(component.viewMode()).toBe('day');
+            expect(component.days()[0].date.toDateString()).toBe(new Date(2026, 2, 12).toDateString());
+            expect(routerMock.navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: {}, replaceUrl: true }));
+        });
+
+        it('queryParams_shouldOpenThePrefilledSurprise_forAFriend', () => {
+            (eventServiceMock.getMyBirthdays as ReturnType<typeof vi.fn>).mockReturnValue(of([{
+                userId: 'lea', name: 'Léa', date: '2026-03-12', mine: false, closeness: 'INTIMATE', canOrganize: true, surprise: null
+            }]));
+
+            queryParams.next(convertToParamMap({ surpriseFor: 'lea', date: '2026-03-12' }));
+
+            expect(component.isPopoverVisible()).toBe(true);
+            expect(component.popoverData().title).toBe('Anniversaire surprise de Léa 🎉');
+            expect(component.popoverData().startDate.getHours()).toBe(19);
+        });
+
+        it('queryParams_shouldOpenTheSurprise_whenOneAlreadyExists', () => {
+            (eventServiceMock.getMyBirthdays as ReturnType<typeof vi.fn>).mockReturnValue(of([{
+                userId: 'lea', name: 'Léa', date: '2026-03-12', mine: false, closeness: 'CLOSE', canOrganize: false,
+                surprise: { eventId: 's1', organizerId: 'zoe', joined: false }
+            }]));
+
+            queryParams.next(convertToParamMap({ surpriseFor: 'lea', date: '2026-03-12' }));
+
+            expect(routerMock.navigate).toHaveBeenCalledWith(['/event', 's1']);
+            expect(component.isPopoverVisible()).toBe(false);
+        });
+
+        it('queryParams_shouldFallBackOnTheFriendsName_whenTheBirthdayIsNotListed', () => {
+            queryParams.next(convertToParamMap({ surpriseFor: 'lea', date: '2026-03-12' }));
+
+            expect(component.popoverData().title).toBe('Anniversaire surprise de lea 🎉');
+        });
+
+        it('queryParams_shouldBeIgnored_withoutAValidDate', () => {
+            queryParams.next(convertToParamMap({ surpriseFor: 'lea', date: 'tomorrow' }));
+
+            expect(component.isPopoverVisible()).toBe(false);
+            expect(routerMock.navigate).not.toHaveBeenCalled();
         });
     });
 });

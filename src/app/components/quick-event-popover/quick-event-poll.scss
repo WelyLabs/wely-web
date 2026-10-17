@@ -1,6 +1,6 @@
 // ── Date poll: « Proposer plusieurs dates » and the proposed slots ─────────────────────────
 .dialog-card {
-    .poll-toggle {
+    .poll-toggle, .all-day-toggle {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -151,4 +151,15 @@
             height: 18px;
         }
     }
+}
+
+// ── A surprise party: said once, above the title ─────────────────────────────────────────
+.dialog-card .surprise-ribbon {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--brand-tint-orange);
+    color: var(--orange-ink);
+    font-size: 13px;
+    font-weight: 600;
 }

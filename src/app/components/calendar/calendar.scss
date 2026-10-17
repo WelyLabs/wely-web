@@ -429,36 +429,6 @@
                     }
                 }
 
-                .full-day-events {
-                    padding: 4px 8px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                    background: var(--bg-secondary);
-                    border-bottom: 1px solid var(--border-subtle);
-                    min-height: 4px;
-
-                    .full-day-card {
-                        background: var(--primary-blue);
-                        color: white;
-                        padding: 4px 8px;
-                        border-radius: 6px;
-                        font-size: 11px;
-                        font-weight: 700;
-                        cursor: pointer;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        box-shadow: var(--shadow-sm);
-                        transition: transform 0.2s;
-
-                        &:hover {
-                            transform: translateY(-1px);
-                            filter: brightness(1.1);
-                        }
-                    }
-                }
-
                 .hour-slots {
                     position: relative; // Context for timeline-indicator
 

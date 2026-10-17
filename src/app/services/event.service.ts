@@ -3,12 +3,16 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Coordinates, MapArea } from '../models/place.model';
+import { BirthdayOccurrence } from '../models/birthday.model';
 
 /**
  * Who may see an event besides those taking part: everyone, the organizer's friends, nobody, or
  * the members of the community it was published in (set by the backend, never chosen).
  */
 export type Visibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE' | 'COMMUNITY';
+
+/** A plain event, a member's yearly birthday, or a surprise party kept from the person it is for. */
+export type EventKind = 'STANDARD' | 'BIRTHDAY' | 'SURPRISE';
 
 export interface EventCreateRequest {
   title: string;
@@ -24,6 +28,12 @@ export interface EventCreateRequest {
   candidateSlots?: { start: Date; end: Date }[];
   /** Publishes the event in this community, for its members only. */
   communityId?: string;
+  /** Whole days: start and end are UTC midnights, the end exclusive. */
+  allDay?: boolean;
+  /** STANDARD when left out. */
+  kind?: EventKind;
+  /** For a SURPRISE: whose birthday it celebrates. */
+  honoreeId?: string | null;
 }
 
 /** Member ids by answer to a community event; everyone taking part is a yes, the organizer first. */
@@ -82,6 +92,10 @@ export interface FeedEvent {
   communityId?: string | null;
   /** Who answered what, for a community event only. */
   responses?: EventResponses | null;
+  /** Whole days: start and end are UTC midnights, the end exclusive. */
+  allDay?: boolean;
+  kind?: EventKind;
+  honoreeId?: string | null;
 }
 
 /**
@@ -311,7 +325,12 @@ export class EventService {
   }
 
   toggleSubscription(event: FeedEvent): Observable<FeedEvent> {
-    return this.http.post<EventPayload>(`${this.apiUrl}/${event.id}/subscribe`, {}).pipe(
+    return this.toggleSubscriptionById(event.id);
+  }
+
+  /** Joins the event, or leaves it when already in. */
+  toggleSubscriptionById(eventId: string): Observable<FeedEvent> {
+    return this.http.post<EventPayload>(`${this.apiUrl}/${eventId}/subscribe`, {}).pipe(
       map((updated) => this.toFeedEvent(updated)),
       tap(() => this.refreshEvents()),
     );
@@ -378,6 +397,12 @@ export class EventService {
         const end = this.toDate(entry.end);
         return start && end ? [{ ...entry, start, end }] : [];
       })));
+  }
+
+  /** The caller's birthday and their friends' between `from` and `to` (at most 400 days apart). */
+  getMyBirthdays(from: Date, to: Date): Observable<BirthdayOccurrence[]> {
+    const params = { from: from.toISOString(), to: to.toISOString() };
+    return this.http.get<BirthdayOccurrence[]>(`${this.apiUrl}/me/birthdays`, { params });
   }
 
   /** The caller's own profile summary: their outings, circle, places and accounts. */

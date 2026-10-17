@@ -13,6 +13,7 @@ import { rangeLabel } from '../../core/ui/schedule-labels';
 import { LocationPickerComponent } from '../location-picker/location-picker';
 import { EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult } from '../event-cover-dialog/event-cover-dialog';
 import { Place } from '../../models/place.model';
+import { allDayWireRange } from '../../core/ui/all-day';
 
 /** A proposed date of a poll. */
 export interface ProposedSlot {
@@ -75,6 +76,15 @@ export function withTime(date: Date, value: string): Date | null {
 }
 
 const DAY_MS = 86400000;
+const HOUR_MS = 3600000;
+
+/** The request the form sends: an all-day draft becomes UTC midnights, its last day included. */
+export function toSubmittedRequest(draft: EventCreateRequest): EventCreateRequest {
+    if (!draft.allDay) {
+        return { ...draft, allDay: false };
+    }
+    return { ...draft, ...allDayWireRange(draft.startDate, draft.endDate ?? draft.startDate), allDay: true };
+}
 
 /** How many slots a date poll may propose. */
 export const MIN_POLL_SLOTS = 2;
@@ -137,8 +147,14 @@ export class QuickEventPopoverComponent {
     readonly startTime = computed(() => toTimeValue(this.draft().startDate));
     readonly endDay = computed(() => toDateValue(this.endOf(this.draft())));
     readonly endTime = computed(() => toTimeValue(this.endOf(this.draft())));
-    /** An end at or before the start cannot be saved. */
-    readonly invalidRange = computed(() => this.endOf(this.draft()) <= this.draft().startDate);
+    /** Whole days, without hours. */
+    readonly allDay = computed(() => !!this.draft().allDay);
+    /** A surprise party: its honoree never sees it, and the place may be chosen later. */
+    readonly surprise = computed(() => this.draft().kind === 'SURPRISE');
+    /** An end at or before the start cannot be saved; all day, the last day may be the first. */
+    readonly invalidRange = computed(() => this.allDay()
+        ? this.endDay() < this.startDay()
+        : this.endOf(this.draft()) <= this.draft().startDate);
 
     /** Two columns: wide enough to show every option without folding any away. */
     readonly wide = toSignal(inject(BreakpointObserver).observe(WIDE_LAYOUT).pipe(map(state => state.matches)),
@@ -240,7 +256,7 @@ export class QuickEventPopoverComponent {
         if (this.pollMode() || this.invalidRange()) {
             return null;
         }
-        const draft = this.draft();
+        const draft = toSubmittedRequest(this.draft());
         return { start: draft.startDate, end: this.endOf(draft) };
     }, { equal: sameRange });
 
@@ -297,6 +313,23 @@ export class QuickEventPopoverComponent {
 
     onPlacePicked(place: Place): void {
         this.draft.update(draft => ({ ...draft, location: place.label, coordinates: place.coordinates }));
+    }
+
+    /**
+     * « Toute la journée »: the hours go, the days stay. A one-day event keeps one day; turned off,
+     * an end left at the start moves an hour later.
+     */
+    toggleAllDay(): void {
+        const draft = this.draft();
+        if (draft.allDay) {
+            const end = this.endOf(draft) > draft.startDate ? this.endOf(draft) : new Date(draft.startDate.getTime() + HOUR_MS);
+            this.draft.set({ ...draft, allDay: false, endDate: end });
+            return;
+        }
+        // A poll proposes hours; whole days are not offered there.
+        this.pollMode.set(false);
+        this.candidates.set([]);
+        this.draft.set({ ...draft, allDay: true, endDate: this.spansSeveralDays() ? draft.endDate : draft.startDate });
     }
 
     /** Turns the date poll on, the slot being edited becoming its first proposal, or off. */
@@ -410,7 +443,7 @@ export class QuickEventPopoverComponent {
         if (!this.canSave()) {
             return;
         }
-        const draft = this.draft();
+        const draft = toSubmittedRequest(this.draft());
         const cover = this.cover()?.blob ?? null;
         if (!this.pollMode()) {
             this.save.emit({ request: draft, cover });

@@ -1,5 +1,9 @@
 <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="quick-event-heading" [class.wide]="wide()">
-    <h2 id="quick-event-heading" class="visually-hidden">Nouvel événement</h2>
+    <h2 id="quick-event-heading" class="visually-hidden">{{ surprise() ? 'Anniversaire surprise' : 'Nouvel événement' }}</h2>
+
+    @if (surprise()) {
+        <p class="surprise-ribbon" role="note">🤫 Anniversaire surprise · la personne fêtée ne le verra pas</p>
+    }
 
     <div class="form-group title-group">
         <label class="visually-hidden" for="quick-event-title">Titre de l'événement</label>
@@ -13,6 +17,17 @@
             <div class="form-group date-group">
                 <mat-icon>schedule</mat-icon>
                 <div class="date-fields">
+                    @if (allDay()) {
+                        <div class="date-row">
+                            <label class="visually-hidden" for="quick-event-start-day">Premier jour</label>
+                            <input id="quick-event-start-day" type="date" class="day-input" [ngModel]="startDay()"
+                                (ngModelChange)="onStartChange('date', $event)">
+                            <span class="arrow" aria-hidden="true">→</span>
+                            <label class="visually-hidden" for="quick-event-end-day">Dernier jour</label>
+                            <input id="quick-event-end-day" type="date" class="day-input" [ngModel]="endDay()"
+                                (ngModelChange)="onEndChange('date', $event)">
+                        </div>
+                    } @else {
                     <div class="date-row">
                         <label class="visually-hidden" for="quick-event-start-day">Date de début</label>
                         <input id="quick-event-start-day" type="date" class="day-input" [ngModel]="startDay()"
@@ -36,6 +51,7 @@
                             <input id="quick-event-end-time" type="time" class="time-input" [ngModel]="endTime()"
                                 (ngModelChange)="onEndChange('time', $event)">
                         </div>
+                    }
                     }
                     @if (invalidRange()) {
                         <small class="field-error">La fin doit venir après le début.</small>
@@ -65,13 +81,21 @@
                 </div>
             }
 
-            <!-- A date poll: the fields above edit the selected slot, « Ajouter » proposes one more. -->
-            <button type="button" class="poll-toggle" role="switch" [attr.aria-checked]="pollMode()"
-                (click)="togglePollMode()">
-                <mat-icon>how_to_vote</mat-icon>
-                <span>Proposer plusieurs dates</span>
+            <button type="button" class="all-day-toggle" role="switch" [attr.aria-checked]="allDay()"
+                (click)="toggleAllDay()">
+                <mat-icon>today</mat-icon>
+                <span>Toute la journée</span>
                 <span class="switch" aria-hidden="true"></span>
             </button>
+            <!-- A date poll: the fields above edit the selected slot, « Ajouter » proposes one more. -->
+            @if (!allDay() && !surprise()) {
+                <button type="button" class="poll-toggle" role="switch" [attr.aria-checked]="pollMode()"
+                    (click)="togglePollMode()">
+                    <mat-icon>how_to_vote</mat-icon>
+                    <span>Proposer plusieurs dates</span>
+                    <span class="switch" aria-hidden="true"></span>
+                </button>
+            }
             @if (pollMode()) {
                 <div class="poll-slots">
                     <ul class="slot-list" aria-label="Créneaux proposés">
@@ -111,7 +135,7 @@
                 <mat-icon>location_on</mat-icon>
                 <label class="visually-hidden" for="quick-event-location">Lieu de l'événement</label>
                 <input id="quick-event-location" type="text" [ngModel]="draft().location"
-                    (ngModelChange)="update('location', $event)" placeholder="Ajouter un lieu">
+                    (ngModelChange)="update('location', $event)" [placeholder]="surprise() ? 'Lieu (à choisir plus tard)' : 'Ajouter un lieu'">
                 <button type="button" class="map-toggle" [class.open]="pickingLocation()" [class.pinned]="pickedPlace()"
                     [attr.aria-expanded]="pickingLocation()" (click)="toggleLocationPicker()"
                     [attr.aria-label]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'"
@@ -128,6 +152,8 @@
                 }
             }
 
+            <!-- A surprise is shown to the honoree's friends and never to them: not a choice. -->
+            @if (!surprise()) {
             <div class="form-group visibility-group">
                 <div class="visibility-choices" role="radiogroup" aria-label="Visibilité">
                     @for (option of visibilityOptions; track option.value) {
@@ -139,6 +165,7 @@
                 </div>
                 <small class="visibility-hint">{{ visibilityHint() }}</small>
             </div>
+            }
         </section>
 
         <!-- The rest: folded on a phone, shown across the bottom on a wide screen. -->
