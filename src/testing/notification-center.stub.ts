@@ -36,7 +36,7 @@ export function notificationCenterStub() {
     markRead: vi.fn(),
     markGroupRead: vi.fn(),
     markAllRead: vi.fn(),
-    getPreferences: vi.fn(() => of<NotificationPreferences>({ calls: true, messages: true, events: true, friends: true })),
+    getPreferences: vi.fn(() => of<NotificationPreferences>({ calls: true, messages: true, events: true, friends: true, birthdays: true })),
     savePreferences: vi.fn(() => of(undefined))
   };
 }

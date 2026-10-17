@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
+import { NotificationPreferences } from '../../models/notification.model';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DELETION_CONSEQUENCES, PreferencesComponent } from './preferences';
 import { AccountDeletionService, DeletionOutcome, PendingDeletionStep } from '../../services/account-deletion.service';
@@ -253,13 +254,21 @@ describe('PreferencesComponent', () => {
       expect(el().querySelector('.ios-hint')).toBeNull();
     });
 
+    it('template_shouldOfferTheBirthdays_onByDefault_whenTheServerDoesNotKnowThemYet', () => {
+      center.getPreferences.mockReturnValue(of({ calls: true, messages: true, events: true, friends: true } as NotificationPreferences));
+      create();
+
+      expect(toggle('birthdays').getAttribute('aria-checked')).toBe('true');
+      expect(setting('birthdays').textContent).toContain('Anniversaires');
+    });
+
     it('setCategory_shouldSaveAllFourChoices', () => {
       create();
 
       toggle('messages').click();
       fixture.detectChanges();
 
-      expect(center.savePreferences).toHaveBeenCalledWith({ calls: true, messages: false, events: true, friends: true });
+      expect(center.savePreferences).toHaveBeenCalledWith({ calls: true, messages: false, events: true, friends: true, birthdays: true });
       expect(component.notificationPrefs()?.messages).toBe(false);
     });
 

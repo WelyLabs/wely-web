@@ -292,7 +292,7 @@ describe('NotificationCenterService', () => {
 
     describe('preferences', () => {
         it('getPreferences_shouldReadThem', () => {
-            const prefs = { calls: true, messages: false, events: true, friends: true };
+            const prefs = { calls: true, messages: false, events: true, friends: true, birthdays: true };
             let read: unknown;
 
             service.getPreferences().subscribe(value => (read = value));
@@ -302,7 +302,7 @@ describe('NotificationCenterService', () => {
         });
 
         it('savePreferences_shouldPutThem', () => {
-            const prefs = { calls: false, messages: true, events: true, friends: false };
+            const prefs = { calls: false, messages: true, events: true, friends: false, birthdays: true };
 
             service.savePreferences(prefs).subscribe();
             const request = http.expectOne(`${API}/preferences`);

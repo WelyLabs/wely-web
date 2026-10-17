@@ -107,7 +107,8 @@ export class PreferencesComponent implements OnInit {
     { key: 'calls', label: 'Appels', detail: 'Quand on t\'appelle, et les appels manqués.' },
     { key: 'messages', label: 'Messages', detail: 'Les nouveaux messages de tes discussions.' },
     { key: 'events', label: 'Événements', detail: 'Une date fixée ou un événement déplacé.' },
-    { key: 'friends', label: 'Amis', detail: 'Les demandes d\'ami et celles acceptées.' }
+    { key: 'friends', label: 'Amis', detail: 'Les demandes d\'ami et celles acceptées.' },
+    { key: 'birthdays', label: 'Anniversaires', detail: 'Les anniversaires de tes amis et les surprises qui se préparent.' }
   ];
 
   readonly pushState = this.push.state;
@@ -135,7 +136,8 @@ export class PreferencesComponent implements OnInit {
     this.center.getPreferences()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: preferences => this.notificationPrefs.set(preferences),
+        // On by default, as wely-notifications has it, when the server does not know the category yet.
+        next: preferences => this.notificationPrefs.set({ ...preferences, birthdays: preferences.birthdays ?? true }),
         error: () => this.prefsError.set('Tes réglages de notifications n\'ont pas pu être chargés.')
       });
     this.accountDeletion.eligibility()

@@ -5,9 +5,13 @@ export type NotificationType =
   | 'EVENT_DATE_FIXED'
   | 'EVENT_MOVED'
   | 'FRIEND_REQUEST'
-  | 'FRIEND_ACCEPTED';
+  | 'FRIEND_ACCEPTED'
+  | 'BIRTHDAY_TODAY'
+  | 'FRIEND_BIRTHDAY'
+  | 'BIRTHDAY_SURPRISE_PROPOSAL'
+  | 'BIRTHDAY_SURPRISE_CREATED';
 
-export type NotificationCategory = 'CALLS' | 'MESSAGES' | 'EVENTS' | 'FRIENDS';
+export type NotificationCategory = 'CALLS' | 'MESSAGES' | 'EVENTS' | 'FRIENDS' | 'BIRTHDAYS';
 
 /** A notification as wely-notifications sends it; a grouped one is updated in place (same id). */
 export interface AppNotification {
@@ -31,6 +35,7 @@ export interface NotificationPreferences {
   messages: boolean;
   events: boolean;
   friends: boolean;
+  birthdays: boolean;
 }
 
 const ICONS: Record<NotificationType, string> = {
@@ -40,7 +45,11 @@ const ICONS: Record<NotificationType, string> = {
   EVENT_DATE_FIXED: 'event',
   EVENT_MOVED: 'event',
   FRIEND_REQUEST: 'person_add',
-  FRIEND_ACCEPTED: 'how_to_reg'
+  FRIEND_ACCEPTED: 'how_to_reg',
+  BIRTHDAY_TODAY: 'cake',
+  FRIEND_BIRTHDAY: 'cake',
+  BIRTHDAY_SURPRISE_PROPOSAL: 'celebration',
+  BIRTHDAY_SURPRISE_CREATED: 'celebration'
 };
 
 /** The Material icon for a notification. */
@@ -53,9 +62,18 @@ function pathOf(url: string): string {
   return url.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
 }
 
-/** True when the screen at `url` is the one the link opens: no toast for what is on screen. */
+/** The query of an app URL, without the leading « ? » or the fragment. */
+function queryOf(url: string): string {
+  return url.split('#')[0].split('?')[1] ?? '';
+}
+
+/**
+ * True when the screen at `url` is the one the link opens: no toast for what is on screen. A link
+ * with a query (a day of the calendar, a surprise to prepare) is another screen unless it matches too.
+ */
 export function isSameScreen(url: string, link: string): boolean {
-  return pathOf(url) === pathOf(link);
+  const query = queryOf(link);
+  return pathOf(url) === pathOf(link) && (query === '' || query === queryOf(url));
 }
 
 /** The unread badge text: nothing at zero, capped at 99+. */

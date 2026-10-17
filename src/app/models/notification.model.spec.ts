@@ -12,7 +12,11 @@ describe('notification.model', () => {
         ['EVENT_DATE_FIXED', 'event'],
         ['EVENT_MOVED', 'event'],
         ['FRIEND_REQUEST', 'person_add'],
-        ['FRIEND_ACCEPTED', 'how_to_reg']
+        ['FRIEND_ACCEPTED', 'how_to_reg'],
+        ['BIRTHDAY_TODAY', 'cake'],
+        ['FRIEND_BIRTHDAY', 'cake'],
+        ['BIRTHDAY_SURPRISE_PROPOSAL', 'celebration'],
+        ['BIRTHDAY_SURPRISE_CREATED', 'celebration']
     ] as const)('notificationIcon_shouldMap %s to %s', (type, icon) => {
         expect(notificationIcon(type)).toBe(icon);
     });
@@ -26,6 +30,12 @@ describe('notification.model', () => {
         expect(isSameScreen('/chat/c1/', '/chat/c1')).toBe(true);
         expect(isSameScreen('/chat/c10', '/chat/c1')).toBe(false);
         expect(isSameScreen('/', '/')).toBe(true);
+    });
+
+    it('isSameScreen_shouldTellALinkWithAQueryApart_fromThePageWithout', () => {
+        // A surprise to prepare is another screen than the calendar already open: it gets its toast.
+        expect(isSameScreen('/calendar', '/calendar?surpriseFor=lea&date=2027-03-12')).toBe(false);
+        expect(isSameScreen('/calendar?date=2027-03-12', '/calendar?date=2027-03-12')).toBe(true);
     });
 
     it('badgeText_shouldBeEmptyAtZero_andCappedAt99', () => {
