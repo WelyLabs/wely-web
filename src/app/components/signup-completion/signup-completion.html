@@ -1,0 +1,38 @@
+<div class="signup-backdrop">
+  <div class="signup-card" role="dialog" aria-modal="true" aria-labelledby="signup-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+    <div class="signup-head">
+      <span class="signup-mark" aria-hidden="true">🎉</span>
+      <h2 id="signup-title">Finalise ton inscription</h2>
+      <p>{{ firstName() ? 'Bienvenue ' + firstName() + ' ! ' : 'Bienvenue ! ' }}Encore un détail et c'est parti.</p>
+    </div>
+
+    @if (steps.length > 1) {
+      <ol class="signup-steps" aria-label="Étapes">
+        @for (item of steps; track item.id; let i = $index) {
+          <li [class.done]="i < stepIndex()" [class.current]="i === stepIndex()">{{ item.title }}</li>
+        }
+      </ol>
+    }
+
+    <form class="signup-step" (submit)="next(); $event.preventDefault()">
+      @switch (step().id) {
+        @case ('birthDate') {
+          <label for="signup-birth-date">{{ step().title }}</label>
+          <input id="signup-birth-date" type="date" required [min]="bounds.min" [max]="bounds.max"
+            [value]="birthDate()" (input)="onBirthDate($event)" (change)="onBirthDate($event)"
+            [attr.aria-invalid]="!!shownError()" aria-describedby="signup-birth-hint">
+          <small id="signup-birth-hint" class="signup-hint"><mat-icon>lock</mat-icon>{{ step().hint }}</small>
+        }
+      }
+      @if (shownError(); as message) {
+        <p class="signup-error" role="alert">{{ message }}</p>
+      }
+      @if (saveError(); as message) {
+        <p class="signup-error" role="alert">{{ message }}</p>
+      }
+      <button type="submit" class="signup-submit" [disabled]="saving()">
+        {{ saving() ? 'Enregistrement…' : isLastStep() ? 'C\'est parti' : 'Suivant' }}
+      </button>
+    </form>
+  </div>
+</div>

@@ -93,7 +93,7 @@ describe('FriendProfileComponent', () => {
       currentUser$: of({ id: 'me' }),
       getFriendProfile: vi.fn().mockReturnValue(of({
         id: 'lea', userName: 'lea', hashtag: 6000, firstName: 'Léa', lastName: 'Martin', joinedDate: '2026-01-15T10:30:00',
-        bio: 'Toujours partante', interests: ['Rando', 'Ciné']
+        bio: 'Toujours partante', interests: ['Rando', 'Ciné'], birthday: { month: 3, day: 12 }
       }))
     };
     events = {
@@ -143,6 +143,11 @@ describe('FriendProfileComponent', () => {
       expect(text()).toContain('Rando');
       expect(text()).toContain('Amis depuis octobre 2025');
       expect(fixture.nativeElement.querySelector('.closeness-badge').textContent).toContain('Proche');
+    });
+
+    it('birthdayLabel_shouldShowTheDayAndMonth_neverTheYear', () => {
+      expect(component.birthdayLabel()).toBe('12 mars');
+      expect(fixture.nativeElement.querySelector('.birthday').textContent).toContain('🎂 12 mars');
     });
 
     it('since_shouldReadAnInstantWithNanoseconds', () => {

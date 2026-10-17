@@ -123,6 +123,25 @@ describe('MainLayoutComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    it('signupPending_shouldBlockTheApp_untilTheRegistrationIsCompleted', () => {
+        userSubject.next({ ...userSubject.value!, registrationCompleted: false });
+        fixture.detectChanges();
+
+        expect(component.signupPending()).toBe(true);
+        expect(fixture.nativeElement.querySelector('app-signup-completion')).not.toBeNull();
+
+        userSubject.next({ ...userSubject.value!, registrationCompleted: true, birthDate: '1995-03-12' });
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-signup-completion')).toBeNull();
+    });
+
+    it('signupPending_shouldNotBlock_aProfileThatSaysNothing', () => {
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-signup-completion')).toBeNull();
+    });
+
     it('should initialize services and subscriptions on init', () => {
         fixture.detectChanges();
         expect(chatServiceMock.initializeStream).toHaveBeenCalled();

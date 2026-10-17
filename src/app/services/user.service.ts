@@ -27,6 +27,14 @@ export interface FriendProfile {
     joinedDate: string | null;
     bio: string | null;
     interests: string[];
+    /** Day and month only, never the year; null when they have not given it. */
+    birthday?: { month: number; day: number } | null;
+}
+
+/** What finishing the signup sends; the steps added later bring their own fields. */
+export interface RegistrationCompletion {
+    /** `YYYY-MM-DD`. */
+    birthDate: string;
 }
 
 /** What the profile form may change; the email stays with Keycloak. */
@@ -138,6 +146,19 @@ export class UserService {
             switchMap(saved => from(this.keycloak.updateToken(-1)).pipe(
                 map(() => saved),
                 catchError(() => of(saved))))
+        );
+    }
+
+    /**
+     * Finishes the signup, and later changes the birth date: wely-users answers with the profile
+     * as stored, which becomes the current user.
+     */
+    completeRegistration(completion: RegistrationCompletion): Observable<User> {
+        return this.http.put<User>(`${this.apiUrl}/profile/registration`, completion).pipe(
+            tap(saved => this.updateCurrentUser({
+                birthDate: saved.birthDate ?? completion.birthDate,
+                registrationCompleted: saved.registrationCompleted ?? true
+            }))
         );
     }
 

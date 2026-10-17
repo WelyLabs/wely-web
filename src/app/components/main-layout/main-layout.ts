@@ -13,6 +13,7 @@ import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
 import { CallService } from '../../services/call.service';
 import { CallOverlayComponent } from '../call/call-overlay/call-overlay';
+import { SignupCompletionComponent, needsSignupCompletion } from '../signup-completion/signup-completion';
 import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
 import { NotificationService } from '../../services/notification.service';
@@ -38,6 +39,7 @@ const NAV_SETTLE_MS = 350;
   standalone: true,
   imports: [
     CallOverlayComponent,
+    SignupCompletionComponent,
     RouterModule,
     MatSidenavModule,
     MatListModule,
@@ -86,6 +88,8 @@ export class MainLayoutComponent implements OnInit {
   );
 
   readonly userProfile = toSignal<User | null, null>(this.userService.currentUser$, { initialValue: null });
+  /** The blocking « Finalise ton inscription » card, until wely-users records the signup as complete. */
+  readonly signupPending = computed(() => needsSignupCompletion(this.userProfile()));
   private readonly avatars = inject(AvatarService);
   /** The signed-in user's picture URL, through AvatarService: pictures are private. */
   readonly myPicture = computed(() => this.avatars.url(this.userProfile()?.id)());

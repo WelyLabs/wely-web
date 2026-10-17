@@ -27,7 +27,8 @@ describe('EditProfileDialogComponent', () => {
             close: vi.fn()
         };
         userServiceMock = {
-            updateProfile: vi.fn().mockReturnValue(of({}))
+            updateProfile: vi.fn().mockReturnValue(of({})),
+            completeRegistration: vi.fn().mockReturnValue(of({}))
         };
 
         await TestBed.configureTestingModule({
@@ -47,7 +48,7 @@ describe('EditProfileDialogComponent', () => {
     it('should create and initialize form', () => {
         expect(component).toBeTruthy();
         // No email: it stays with Keycloak.
-        expect(component.profileForm.value).toEqual(formValues);
+        expect(component.profileForm.value).toEqual({ ...formValues, birthDate: '' });
     });
 
     it('should mark form as invalid if fields are empty', () => {
@@ -113,5 +114,32 @@ describe('EditProfileDialogComponent', () => {
     it('should close on cancel', () => {
         component.onCancel();
         expect(dialogRefMock.close).toHaveBeenCalledWith(false);
+    });
+
+    it('onSubmit_shouldSaveTheBirthDateThroughTheRegistration_whenItChanged', () => {
+        const saved = { ...formValues, hashtag: 1234 };
+        userServiceMock.updateProfile.mockReturnValue(of(saved));
+        component.profileForm.patchValue({ birthDate: '1995-03-12' });
+
+        component.onSubmit();
+
+        expect(userServiceMock.updateProfile).toHaveBeenCalledWith(formValues);
+        expect(userServiceMock.completeRegistration).toHaveBeenCalledWith({ birthDate: '1995-03-12' });
+        expect(dialogRefMock.close).toHaveBeenCalledWith({ ...saved, birthDate: '1995-03-12' });
+    });
+
+    it('onSubmit_shouldNotTouchTheBirthDate_whenItIsUnchanged', () => {
+        component.onSubmit();
+
+        expect(userServiceMock.completeRegistration).not.toHaveBeenCalled();
+    });
+
+    it('profileForm_shouldRejectABirthDateUnderThirteenYears', () => {
+        const recent = new Date();
+        recent.setFullYear(recent.getFullYear() - 5);
+        component.profileForm.patchValue({ birthDate: recent.toISOString().slice(0, 10) });
+
+        expect(component.profileForm.get('birthDate')?.hasError('birthDate')).toBe(true);
+        expect(component.profileForm.invalid).toBe(true);
     });
 });

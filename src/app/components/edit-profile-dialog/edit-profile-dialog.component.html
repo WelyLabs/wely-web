@@ -72,6 +72,15 @@
         }
       </mat-form-field>
 
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Date de naissance</mat-label>
+        <mat-icon matPrefix>cake</mat-icon>
+        <input matInput type="date" formControlName="birthDate" [min]="birthBounds.min" [max]="birthBounds.max">
+        @if (profileForm.get('birthDate')?.getError('birthDate'); as message) {
+          <mat-error>{{ message }}</mat-error>
+        }
+        <mat-hint>Tes amis verront le jour et le mois, jamais ton année.</mat-hint>
+      </mat-form-field>
 
       @if (errorMessage()) {
         <div class="error-message">

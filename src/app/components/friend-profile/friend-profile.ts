@@ -25,6 +25,7 @@ import { MIN_SHOWN_FREE_MS, freeWithinUsefulHours, pickOutingSlots } from '../..
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { eventTint } from '../../core/ui/event-tint';
 import { personLink } from '../../core/ui/person-link';
+import { dayMonthLabel } from '../../models/birthday.model';
 
 const DAY_MS = 86_400_000;
 const WEEK_DAYS = 7;
@@ -118,6 +119,12 @@ export class FriendProfileComponent implements OnInit {
   readonly closenessLabel = computed(() => {
     const closeness = this.person()?.closeness;
     return closeness ? CLOSENESS_LABELS[closeness] : null;
+  });
+
+  /** « 12 mars »: a friend's birthday, day and month only; null when they have not given it. */
+  readonly birthdayLabel = computed(() => {
+    const birthday = this.page().profile?.birthday;
+    return birthday ? dayMonthLabel(birthday.month, birthday.day) || null : null;
   });
 
   /** When the friendship began; wely-social may send nanoseconds, which Date reads to the millisecond. */

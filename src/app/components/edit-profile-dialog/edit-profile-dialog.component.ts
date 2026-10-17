@@ -7,14 +7,26 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators, ReactiveFormsModule } from '@angular/forms';
+import { map, of, switchMap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ProfileUpdate, UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
+import { birthDateBounds, birthDateError } from '../../models/birthday.model';
 
 /** wely-users' code for a username someone else has. */
 const USERNAME_TAKEN = 'USR-BUS-004';
+
+/** Empty is allowed (nothing to change); anything else must be a date wely-users accepts. */
+function birthDateValidator(control: AbstractControl<string | null>): ValidationErrors | null {
+    const value = control.value;
+    if (!value) {
+        return null;
+    }
+    const message = birthDateError(value);
+    return message ? { birthDate: message } : null;
+}
 
 @Component({
     selector: 'app-edit-profile-dialog',
@@ -45,6 +57,7 @@ export class EditProfileDialogComponent {
     readonly data = inject<User>(MAT_DIALOG_DATA);
 
     readonly profileForm: FormGroup;
+    readonly birthBounds = birthDateBounds();
     readonly isLoading = signal(false);
     readonly errorMessage = signal('');
 
@@ -59,7 +72,8 @@ export class EditProfileDialogComponent {
                 Validators.pattern(/^[a-zA-Z0-9_-]+$/) // Alphanumeric, underscore, hyphen only
             ]],
             firstName: [data.firstName, [Validators.required, Validators.minLength(2)]],
-            lastName: [data.lastName, [Validators.required, Validators.minLength(2)]]
+            lastName: [data.lastName, [Validators.required, Validators.minLength(2)]],
+            birthDate: [data.birthDate ?? '', [birthDateValidator]]
         });
     }
 
@@ -71,10 +85,17 @@ export class EditProfileDialogComponent {
         this.isLoading.set(true);
         this.errorMessage.set('');
 
-        const update: ProfileUpdate = this.profileForm.getRawValue();
+        const { birthDate, ...names } = this.profileForm.getRawValue() as ProfileUpdate & { birthDate: string };
+        const update: ProfileUpdate = names;
+        // The birth date goes through the signup endpoint, only when it changed.
+        const birthDateChanged = !!birthDate && birthDate !== (this.data.birthDate ?? '');
 
         this.userService.updateProfile(update)
-            .pipe(takeUntilDestroyed(this.destroyRef))
+            .pipe(
+                switchMap(saved => birthDateChanged
+                    ? this.userService.completeRegistration({ birthDate }).pipe(map(() => ({ ...saved, birthDate })))
+                    : of(saved)),
+                takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: saved => {
                     this.isLoading.set(false);

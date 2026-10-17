@@ -193,4 +193,27 @@ describe('UserService', () => {
 
         await expect(result).rejects.toMatchObject({ status: 403, error: { code: 'USR-BUS-010' } });
     });
+
+    it('completeRegistration_shouldPutTheBirthDate_andMarkTheCurrentUserComplete', async () => {
+        service['currentUserSubject'].next({ ...MOCK_USER, registrationCompleted: false, birthDate: null });
+
+        const saved = firstValueFrom(service.completeRegistration({ birthDate: '1995-03-12' }));
+        const request = httpMock.expectOne(`${apiUrl}/profile/registration`);
+        expect(request.request.method).toBe('PUT');
+        expect(request.request.body).toEqual({ birthDate: '1995-03-12' });
+        request.flush({ ...MOCK_USER, birthDate: '1995-03-12', registrationCompleted: true });
+        await saved;
+
+        expect(service.getCurrentUserValue()).toMatchObject({ birthDate: '1995-03-12', registrationCompleted: true });
+    });
+
+    it('completeRegistration_shouldLeaveTheCurrentUser_whenRefused', async () => {
+        service['currentUserSubject'].next({ ...MOCK_USER, registrationCompleted: false });
+
+        const saved = firstValueFrom(service.completeRegistration({ birthDate: '2020-01-01' }));
+        httpMock.expectOne(`${apiUrl}/profile/registration`).flush({ code: 'USR-VAL-010' }, { status: 400, statusText: 'Bad Request' });
+
+        await expect(saved).rejects.toBeTruthy();
+        expect(service.getCurrentUserValue()?.registrationCompleted).toBe(false);
+    });
 });

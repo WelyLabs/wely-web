@@ -74,6 +74,9 @@
                   @if (since(); as since) {
                     <span class="since">Amis depuis {{ since | date:'MMMM y' }}</span>
                   }
+                  @if (birthdayLabel(); as birthday) {
+                    <span class="since birthday">🎂 {{ birthday }}</span>
+                  }
                 </p>
                 @if (page().profile; as profile) {
                   @if (profile.bio) {

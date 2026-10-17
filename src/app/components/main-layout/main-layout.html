@@ -165,3 +165,6 @@
   </mat-sidenav-content>
 </mat-sidenav-container>
 <app-call-overlay />
+@if (signupPending()) {
+  <app-signup-completion [firstName]="userProfile()?.firstName ?? ''" />
+}

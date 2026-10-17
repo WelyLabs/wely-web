@@ -24,6 +24,10 @@ export interface User {
         efficiency: number;
     };
     roles?: string[];
+    /** `YYYY-MM-DD`; only the user sees their own year. */
+    birthDate?: string | null;
+    /** False until the signup-completion steps are done. */
+    registrationCompleted?: boolean;
 }
 
 /** Relationship state between the caller and another user, as the graph reports it. */

@@ -1,0 +1,137 @@
+.signup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--text-primary) 40%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.signup-card {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  padding: 28px 24px 24px;
+  border-radius: 24px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  overflow: hidden;
+
+  // A thin band of the brand gradient across the top.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--accent-gradient);
+  }
+}
+
+.signup-head {
+  text-align: center;
+  margin-bottom: 20px;
+
+  .signup-mark {
+    font-size: 36px;
+  }
+
+  h2 {
+    margin: 8px 0 4px;
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+}
+
+.signup-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-tertiary);
+
+  li.current {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  li.done {
+    color: var(--success-ink);
+  }
+}
+
+.signup-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  input {
+    font: inherit;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--text-tertiary);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-blue);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.signup-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.signup-error {
+  margin: 0;
+  color: var(--danger-ink);
+  font-size: 13px;
+}
+
+.signup-submit {
+  margin-top: 12px;
+  height: 48px;
+  border: none;
+  border-radius: 24px;
+  background: var(--accent-gradient);
+  color: white;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
