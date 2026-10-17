@@ -460,6 +460,24 @@ describe('EventDetailsComponent', () => {
         expect(component.timeRange(component.event()!)).toBe('Toute la journée');
     });
 
+    it('startDay_shouldReadAnAllDayEventByItsUtcDate', () => {
+        const allDay = event({ allDay: true, startDate: new Date('2026-03-12T00:00:00Z'), endDate: new Date('2026-03-13T00:00:00Z') });
+        eventService.getEvent.mockReturnValue(of(allDay));
+
+        create();
+
+        const day = component.startDay(component.event()!);
+        expect([day.getFullYear(), day.getMonth(), day.getDate()]).toEqual([2026, 2, 12]);
+    });
+
+    it('startDay_shouldKeepATimedEventsStart', () => {
+        eventService.getEvent.mockReturnValue(of(event()));
+
+        create();
+
+        expect(component.startDay(component.event()!)).toBe(component.event()!.startDate);
+    });
+
     it('phase_shouldTreatTheOrganizerAsAMember', () => {
         eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me' })));
 

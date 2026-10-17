@@ -66,7 +66,7 @@
           <p class="cover-error" role="alert">{{ coverError() }}</p>
         }
         <div class="hero-text">
-          <span class="overline">{{ phase() === 'past' ? 'Terminé · ' + dayLabel(event.startDate) : countdown() }}</span>
+          <span class="overline">{{ phase() === 'past' ? 'Terminé · ' + dayLabel(startDay(event)) : countdown() }}</span>
           @if (event.kind === 'SURPRISE') {
             <span class="surprise-badge" title="La personne fêtée ne voit pas cet événement">🤫 Surprise</span>
           }
@@ -98,7 +98,7 @@
               @if (polling()) {
                 <div><strong>Sondage en cours</strong><span class="muted">La date n'est pas encore fixée</span></div>
               } @else {
-                <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+                <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(startDay(event)) }}</span></div>
               }
             </div>
             @if (!polling()) {
@@ -185,7 +185,7 @@
               @if (polling()) {
                 <div><strong>Sondage en cours</strong><span class="muted">La date n'est pas encore fixée</span></div>
               } @else {
-                <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
+                <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(startDay(event)) }}</span></div>
               }
             </div>
             @if (!polling()) {

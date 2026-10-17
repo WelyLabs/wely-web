@@ -40,6 +40,7 @@ import { NotificationService } from '../../services/notification.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 import { HandOverDialogComponent, HandOverDialogData, HandOverDialogResult } from '../hand-over-dialog/hand-over-dialog';
 import { Call, CallMedia, isLive } from '../../models/call.model';
+import { allDayLocalRange } from '../../core/ui/all-day';
 
 /**
  * What the page is for, given who looks and when.
@@ -655,6 +656,11 @@ export class EventDetailsComponent implements OnInit {
     link.download = icsFileName(event.title);
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** The day the event starts on: an all-day event's UTC date, which a local reading shifts west of UTC. */
+  startDay(event: FeedEvent): Date {
+    return event.allDay ? allDayLocalRange(event.startDate, event.endDate).start : event.startDate;
   }
 
   timeRange(event: FeedEvent): string {
