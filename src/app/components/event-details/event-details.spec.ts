@@ -92,6 +92,7 @@ describe('EventDetailsComponent', () => {
         toggleSubscription: ReturnType<typeof vi.fn>;
         removeCover: ReturnType<typeof vi.fn>;
         leave: ReturnType<typeof vi.fn>;
+        calendarFileUrl: ReturnType<typeof vi.fn>;
     };
     let notifications: { showInfo: ReturnType<typeof vi.fn> };
     let dialog: { open: ReturnType<typeof vi.fn> };
@@ -155,7 +156,8 @@ describe('EventDetailsComponent', () => {
             getParticipants: vi.fn().mockReturnValue(of(participants())),
             toggleSubscription: vi.fn().mockReturnValue(of(event())),
             removeCover: vi.fn().mockReturnValue(of(undefined)),
-            leave: vi.fn().mockReturnValue(of({ deleted: false, event: event() }))
+            leave: vi.fn().mockReturnValue(of({ deleted: false, event: event() })),
+            calendarFileUrl: vi.fn().mockReturnValue(of('/api/v1/events-service/public/calendar/tok.ics'))
         };
         notifications = { showInfo: vi.fn() };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
@@ -1025,6 +1027,90 @@ describe('EventDetailsComponent', () => {
             expect(component.coverError()).toContain('indisponibles');
             expect(component.coverRemoving()).toBe(false);
             expect(component.event()?.image).toBe('https://media/cover.jpg');
+        });
+    });
+
+    describe('add to calendar', () => {
+        const el = (): HTMLElement => fixture.nativeElement;
+
+        it('template_shouldOfferTheAgendaOnceTheDateIsFixed', () => {
+            create();
+
+            expect(el().querySelector('.info-card .add-to-calendar')?.textContent).toContain('Ajouter à mon calendrier');
+        });
+
+        it('template_shouldNotOfferTheAgendaWhileTheDateIsVotedOn', () => {
+            eventService.getEvent.mockReturnValue(of(event({
+                poll: { status: 'OPEN', fixedSlotId: null, slots: [] }
+            })));
+            create();
+
+            expect(el().querySelector('.add-to-calendar')).toBeNull();
+        });
+
+        it('googleCalendarUrl_shouldFillGoogleWithTheEventAndLinkBackToThePage', () => {
+            create();
+
+            const url = new URL(component.googleCalendarUrl()!);
+            expect(url.hostname).toBe('calendar.google.com');
+            expect(url.searchParams.get('text')).toBe('Soirée jeux');
+            expect(url.searchParams.get('location')).toBe('Le Transbordeur');
+            expect(url.searchParams.get('details')).toBe(`Ramenez vos jeux\n\n${window.location.origin}/event/e1`);
+        });
+
+        it('addToCalendarApp_shouldOpenTheIcsWelyEventsServes', () => {
+            create();
+            const open = vi.spyOn(component, 'openCalendarFile').mockImplementation(() => undefined);
+            const download = vi.spyOn(component, 'downloadIcs');
+
+            component.addToCalendarApp();
+
+            expect(eventService.calendarFileUrl).toHaveBeenCalledWith('e1');
+            expect(open).toHaveBeenCalledWith('/api/v1/events-service/public/calendar/tok.ics');
+            expect(download).not.toHaveBeenCalled();
+        });
+
+        it('addToCalendarApp_shouldSaveTheFileBuiltHere_withoutALink', () => {
+            eventService.calendarFileUrl.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+            create();
+            const open = vi.spyOn(component, 'openCalendarFile').mockImplementation(() => undefined);
+            const download = vi.spyOn(component, 'downloadIcs').mockImplementation(() => undefined);
+
+            component.addToCalendarApp();
+
+            expect(open).not.toHaveBeenCalled();
+            expect(download).toHaveBeenCalled();
+        });
+
+        it('downloadIcs_shouldSaveTheEventAsAnIcsFile', async () => {
+            create();
+            let saved: Blob | undefined;
+            const createUrl = vi.spyOn(URL, 'createObjectURL').mockImplementation(blob => {
+                saved = blob as Blob;
+                return 'blob:ics';
+            });
+            const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+            const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+            component.downloadIcs();
+
+            const clicked = click.mock.contexts[0] as HTMLAnchorElement | undefined;
+            expect(clicked?.download).toBe('soiree-jeux.ics');
+            expect(clicked?.href).toBe('blob:ics');
+            expect(saved?.type).toBe('text/calendar;charset=utf-8');
+            // jsdom's Blob has no text(): read through a FileReader.
+            const ics = await new Promise<string>(resolve => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.readAsText(saved!);
+            });
+            expect(ics).toContain('UID:e1@welylabs.app');
+            expect(ics).toContain('SUMMARY:Soirée jeux');
+            expect(ics).toContain(`DTSTART:${at('2026-10-18T19:30:00').toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`);
+            expect(revoke).toHaveBeenCalledWith('blob:ics');
+            createUrl.mockRestore();
+            revoke.mockRestore();
+            click.mockRestore();
         });
     });
 
