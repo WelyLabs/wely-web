@@ -8,6 +8,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { personLink } from '../../core/ui/person-link';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { EMPTY, Observable, catchError, distinctUntilChanged, filter, interval, of, retry, switchMap, throwError, timer } from 'rxjs';
 
@@ -23,6 +24,7 @@ import { UserService } from '../../services/user.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { RelationStatus, UserWithStatusDTO } from '../../models/user.model';
 import { EventMapComponent, openStreetMapUrl } from '../event-map/event-map';
+import { googleCalendarUrl, icsFileName, icsOf } from '../../core/ui/calendar-export';
 import { ChatBubbleComponent, ChatBubbleMessage } from '../shared/chat-bubble/chat-bubble';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from '../../core/ui/deleted-user';
@@ -134,7 +136,7 @@ export function countdownOf(event: FeedEvent, now: Date): string {
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, EventMapComponent, ChatBubbleComponent,
+  imports: [PendingTrailDirective, NgTemplateOutlet, MatIconModule, MatMenuModule, EventMapComponent, ChatBubbleComponent,
     EventExpensesComponent, EventPollComponent, EventConflictsComponent],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss',
@@ -302,6 +304,18 @@ export class EventDetailsComponent implements OnInit {
     return event.coordinates
       ? openStreetMapUrl(event.coordinates)
       : `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
+  });
+
+  /** The page itself, which the agenda's copy links back to. */
+  private readonly eventUrl = computed(() => {
+    const event = this.event();
+    return event ? `${window.location.origin}/event/${event.id}` : '';
+  });
+
+  /** Google Calendar's « add event » page, filled in with the event. */
+  readonly googleCalendarUrl = computed(() => {
+    const event = this.event();
+    return event ? googleCalendarUrl(event, this.eventUrl()) : null;
   });
 
   constructor() {
@@ -602,6 +616,45 @@ export class EventDetailsComponent implements OnInit {
   /** The organizer moved the event out of a conflict: the page shows its new dates. */
   onRescheduled(moved: FeedEvent): void {
     this.event.set(moved);
+  }
+
+  /**
+   * Into Apple Calendar, Outlook and the others: the browser opens the .ics wely-events serves,
+   * and iOS and macOS Safari bring up the « add to calendar » sheet rather than saving a file.
+   * Without a link (wely-events unreachable), the file built here is saved instead.
+   */
+  addToCalendarApp(): void {
+    const event = this.event();
+    if (!event) {
+      return;
+    }
+    this.eventService.calendarFileUrl(event.id).subscribe({
+      next: url => this.openCalendarFile(url),
+      error: error => {
+        this.logger.warn('EventDetailsComponent', 'Could not get a calendar link, saving the file instead', error);
+        this.downloadIcs();
+      }
+    });
+  }
+
+  /** The calendar app takes over from here; a seam for the tests, where jsdom cannot navigate. */
+  openCalendarFile(url: string): void {
+    window.location.assign(url);
+  }
+
+  /** The event as an .ics file, built here: the fallback when wely-events gives no link. */
+  downloadIcs(): void {
+    const event = this.event();
+    if (!event) {
+      return;
+    }
+    const file = new Blob([icsOf(event, this.eventUrl(), new Date())], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = icsFileName(event.title);
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   timeRange(event: FeedEvent): string {

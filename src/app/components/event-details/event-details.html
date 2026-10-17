@@ -95,6 +95,9 @@
                 <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
               }
             </div>
+            @if (!polling()) {
+              <ng-container *ngTemplateOutlet="addToCalendar" />
+            }
             <div class="info-row">
               <span class="info-icon"><mat-icon>location_on</mat-icon></span>
               <div><strong>{{ event.location }}</strong></div>
@@ -179,6 +182,9 @@
                 <div><strong>{{ timeRange(event) }}</strong><span class="muted">{{ dayLabel(event.startDate) }}</span></div>
               }
             </div>
+            @if (!polling()) {
+              <ng-container *ngTemplateOutlet="addToCalendar" />
+            }
             <div class="info-row">
               <span class="info-icon"><mat-icon>location_on</mat-icon></span>
               <div><strong>{{ event.location }}</strong></div>
@@ -215,6 +221,23 @@
       </div>
     }
   </div>
+
+  <!-- A copy into the viewer's own agenda, once the date is fixed. -->
+  <ng-template #addToCalendar>
+    <button type="button" class="outline-button add-to-calendar" [matMenuTriggerFor]="calendarMenu">
+      <mat-icon>event_available</mat-icon>Ajouter à mon calendrier
+    </button>
+    <mat-menu #calendarMenu="matMenu" class="glass-menu">
+      <a mat-menu-item [href]="googleCalendarUrl()" target="_blank" rel="noopener noreferrer">
+        <mat-icon>open_in_new</mat-icon>
+        <span>Google Agenda</span>
+      </a>
+      <button mat-menu-item (click)="addToCalendarApp()">
+        <mat-icon>event</mat-icon>
+        <span>Apple Calendar, Outlook…</span>
+      </button>
+    </mat-menu>
+  </ng-template>
 
   <!-- Guests and members alike vote while the date is open. -->
   <ng-template #poll>

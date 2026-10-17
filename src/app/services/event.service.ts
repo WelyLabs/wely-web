@@ -300,6 +300,16 @@ export class EventService {
     return this.http.get<EventParticipants>(`${this.apiUrl}/${id}/participants`);
   }
 
+  /**
+   * A short-lived address of the event's .ics (five minutes), which a calendar app opens without
+   * the viewer's token. Served as text/calendar, it brings up Apple's « add to calendar » sheet.
+   */
+  calendarFileUrl(eventId: string): Observable<string> {
+    return this.http.post<{ token: string }>(`${this.apiUrl}/${eventId}/calendar-link`, {}).pipe(
+      map(link => `${environment.apiUrl}/events-service/public/calendar/${encodeURIComponent(link.token)}.ics`)
+    );
+  }
+
   toggleSubscription(event: FeedEvent): Observable<FeedEvent> {
     return this.http.post<EventPayload>(`${this.apiUrl}/${event.id}/subscribe`, {}).pipe(
       map((updated) => this.toFeedEvent(updated)),

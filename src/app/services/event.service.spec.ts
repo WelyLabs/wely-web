@@ -341,6 +341,17 @@ describe('EventService', () => {
         httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
     });
 
+    it('calendarFileUrl_shouldAskForALink_andPointAtTheEventsIcs', () => {
+        let url: string | undefined;
+        service.calendarFileUrl('ev-1').subscribe(value => (url = value));
+
+        const request = httpMock.expectOne(`${apiUrl}/ev-1/calendar-link`);
+        expect(request.request.method).toBe('POST');
+        request.flush({ token: 'tok_-1', expiresAt: '2026-10-17T10:05:00Z' });
+
+        expect(url).toBe(`${environment.apiUrl}/events-service/public/calendar/tok_-1.ics`);
+    });
+
     it('removeCover_shouldDeleteTheCover_thenRefreshTheLists', () => {
         let done = false;
         service.removeCover('ev-1').subscribe(() => (done = true));
