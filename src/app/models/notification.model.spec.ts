@@ -16,7 +16,10 @@ describe('notification.model', () => {
         ['BIRTHDAY_TODAY', 'cake'],
         ['FRIEND_BIRTHDAY', 'cake'],
         ['BIRTHDAY_SURPRISE_PROPOSAL', 'celebration'],
-        ['BIRTHDAY_SURPRISE_CREATED', 'celebration']
+        ['BIRTHDAY_SURPRISE_CREATED', 'celebration'],
+        ['REUNION_NUDGE', 'waving_hand'],
+        ['FRIENDSHIP_ANNIVERSARY', 'auto_awesome'],
+        ['CLOSENESS_UPGRADED', 'favorite']
     ] as const)('notificationIcon_shouldMap %s to %s', (type, icon) => {
         expect(notificationIcon(type)).toBe(icon);
     });
@@ -36,6 +39,12 @@ describe('notification.model', () => {
         // A surprise to prepare is another screen than the calendar already open: it gets its toast.
         expect(isSameScreen('/calendar', '/calendar?surpriseFor=lea&date=2027-03-12')).toBe(false);
         expect(isSameScreen('/calendar?date=2027-03-12', '/calendar?date=2027-03-12')).toBe(true);
+    });
+
+    it('isSameScreen_shouldTellAnOutingProposal_fromTheFriendPage', () => {
+        // « Proposer une sortie » from a reunion nudge opens the form, not just the page already open.
+        expect(isSameScreen('/friends/hugo', '/friends/hugo?propose=1')).toBe(false);
+        expect(isSameScreen('/friends/lea', '/friends/lea/memories')).toBe(false);
     });
 
     it('badgeText_shouldBeEmptyAtZero_andCappedAt99', () => {

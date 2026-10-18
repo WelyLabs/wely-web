@@ -9,7 +9,10 @@ export type NotificationType =
   | 'BIRTHDAY_TODAY'
   | 'FRIEND_BIRTHDAY'
   | 'BIRTHDAY_SURPRISE_PROPOSAL'
-  | 'BIRTHDAY_SURPRISE_CREATED';
+  | 'BIRTHDAY_SURPRISE_CREATED'
+  | 'REUNION_NUDGE'
+  | 'FRIENDSHIP_ANNIVERSARY'
+  | 'CLOSENESS_UPGRADED';
 
 export type NotificationCategory = 'CALLS' | 'MESSAGES' | 'EVENTS' | 'FRIENDS' | 'BIRTHDAYS';
 
@@ -49,7 +52,10 @@ const ICONS: Record<NotificationType, string> = {
   BIRTHDAY_TODAY: 'cake',
   FRIEND_BIRTHDAY: 'cake',
   BIRTHDAY_SURPRISE_PROPOSAL: 'celebration',
-  BIRTHDAY_SURPRISE_CREATED: 'celebration'
+  BIRTHDAY_SURPRISE_CREATED: 'celebration',
+  REUNION_NUDGE: 'waving_hand',
+  FRIENDSHIP_ANNIVERSARY: 'auto_awesome',
+  CLOSENESS_UPGRADED: 'favorite'
 };
 
 /** The Material icon for a notification. */
