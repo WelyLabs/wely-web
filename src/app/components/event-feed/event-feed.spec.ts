@@ -7,6 +7,8 @@ import { Subject, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { eventTint } from '../../core/ui/event-tint';
+import { signal } from '@angular/core';
+import { AvatarService } from '../../services/avatar.service';
 
 describe('EventFeedComponent', () => {
     let component: EventFeedComponent;
@@ -45,7 +47,8 @@ describe('EventFeedComponent', () => {
             providers: [
                 { provide: EventService, useValue: eventServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
-                { provide: Router, useValue: routerMock }
+                { provide: Router, useValue: routerMock },
+                { provide: AvatarService, useValue: { url: () => signal(null) } }
             ]
         }).compileComponents();
 
@@ -239,6 +242,25 @@ describe('EventFeedComponent', () => {
             (component as any).feed.set([later, sooner]);
 
             expect(component.gridEvents().map(e => e.id)).toEqual(['sooner', 'later']);
+        });
+
+        it('gridEvents_shouldPutWhereTheClosestFriendsGoFirst', () => {
+            const sooner = event('sooner', new Date('2026-12-01T10:00:00Z'));
+            const intimate = { ...event('intimate', new Date('2026-12-05T10:00:00Z')), affinity: 3 };
+            (component as any).feed.set([sooner, intimate]);
+
+            expect(component.gridEvents().map(e => e.id)).toEqual(['intimate', 'sooner']);
+        });
+
+        it('template_shouldSayWhichFriendsGo_onAGridCard', () => {
+            (component as any).feed.set([{
+                ...event('going', new Date('2026-12-05T10:00:00Z')),
+                friendsGoing: [{ userId: 'Org 1', closeness: 'CLOSE' }], friendsGoingCount: 2, affinity: 2
+            }]);
+            component.showView('grid');
+            fixture.detectChanges();
+
+            expect(fixture.nativeElement.querySelector('.grid-card app-friends-going').textContent).toContain('1 de tes proches y va');
         });
 
         it('gridEvents_shouldKeepACardSkippedWhileSwiping', () => {

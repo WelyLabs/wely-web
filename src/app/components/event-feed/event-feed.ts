@@ -9,6 +9,8 @@ import { EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
 import { ExploreMapComponent } from '../explore-map/explore-map';
 import { eventTint } from '../../core/ui/event-tint';
+import { FriendsGoingComponent } from '../friends-going/friends-going';
+import { byAffinity } from '../../models/friendship-insights.model';
 
 /** Horizontal travel, in pixels, past which a drag counts as a swipe rather than a nudge. */
 const SWIPE_THRESHOLD_PX = 100;
@@ -40,7 +42,7 @@ export type FeedView = 'swipe' | 'grid' | 'map';
 @Component({
   selector: 'app-event-feed',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, ExploreMapComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, ExploreMapComponent, FriendsGoingComponent],
   templateUrl: './event-feed.html',
   styleUrl: './event-feed.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -77,10 +79,8 @@ export class EventFeedComponent implements OnInit {
   /** The map first: where things happen around you is the quickest way into them. */
   readonly view = signal<FeedView>('map');
 
-  /** The grid's cards, soonest first: the feed arrives in no order a reader could use. */
-  readonly gridEvents = computed(() =>
-    [...this.feed()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime()),
-  );
+  /** The grid's cards, where the closest friends go first, then soonest. */
+  readonly gridEvents = computed(() => [...this.feed()].sort(byAffinity));
 
   /** The top card plus the two stacked behind it. */
   readonly currentEvents = computed(() => this.events().slice(0, VISIBLE_CARDS));

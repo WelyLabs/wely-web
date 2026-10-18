@@ -1,0 +1,17 @@
+@if (label(); as label) {
+  <span class="friends-going">
+    <span class="stack" aria-hidden="true">
+      @for (friend of stack(); track friend.userId) {
+        @let picture = avatars.url(friend.userId)();
+        <span class="avatar" [style.background]="friend.color">
+          @if (picture) {
+            <img [src]="picture" alt="">
+          } @else {
+            {{ friend.initials }}
+          }
+        </span>
+      }
+    </span>
+    <span class="label">{{ label }}</span>
+  </span>
+}

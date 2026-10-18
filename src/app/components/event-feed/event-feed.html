@@ -50,6 +50,7 @@
                   <div class="organizer">par {{ organiser }}</div>
                 }
                 <h2>{{ event.title }}</h2>
+                <app-friends-going class="going" [event]="event" [names]="organiserNames()" />
                 <div class="meta">
                   <mat-icon>schedule</mat-icon>
                   <span>{{ event.startDate | date:'EEE d MMM · HH:mm' }}</span>
@@ -112,6 +113,7 @@
                 <div class="organizer">par {{ organiser }}</div>
               }
               <h2>{{ event.title }}</h2>
+              <app-friends-going class="going" [event]="event" [names]="organiserNames()" />
               <div class="location">
                 <mat-icon>location_on</mat-icon>
                 {{ event.location }}
