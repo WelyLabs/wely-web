@@ -16,6 +16,10 @@ import { UserService } from '../../services/user.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { signal } from '@angular/core';
+import { FriendshipInsightsService } from '../../services/friendship-insights.service';
+import { AvatarService } from '../../services/avatar.service';
+import { circleColor } from '../friend-overlay-bar/friend-overlay-bar';
 
 describe('CalendarComponent', () => {
     let component: CalendarComponent;
@@ -26,6 +30,7 @@ describe('CalendarComponent', () => {
     let notificationsMock: { showAction: ReturnType<typeof vi.fn> };
     let scheduleMock: { getConflicts: ReturnType<typeof vi.fn>; checkConflicts: ReturnType<typeof vi.fn> };
     let queryParams: BehaviorSubject<ParamMap>;
+    let insightsMock: { getCircle: ReturnType<typeof vi.fn>; getReunions: ReturnType<typeof vi.fn>; dismissReunion: ReturnType<typeof vi.fn> };
     const friendships: FriendSummary[] = [
         { userId: 'lea', userName: 'lea', hashtag: 6000, closeness: 'CLOSE', proposal: null, proposedByFriend: false },
         { userId: 'hugo', userName: 'hugo', hashtag: 9074, closeness: 'FRIEND', proposal: null, proposedByFriend: false }
@@ -57,6 +62,11 @@ describe('CalendarComponent', () => {
             listFriendships: vi.fn().mockReturnValue(of(friendships))
         };
         notificationsMock = { showAction: vi.fn() };
+        insightsMock = {
+            getCircle: vi.fn().mockReturnValue(of([])),
+            getReunions: vi.fn().mockReturnValue(of([])),
+            dismissReunion: vi.fn().mockReturnValue(of(undefined))
+        };
         scheduleMock = { getConflicts: vi.fn().mockReturnValue(of([])), checkConflicts: vi.fn().mockReturnValue(of([])) };
 
         await TestBed.configureTestingModule({
@@ -68,7 +78,9 @@ describe('CalendarComponent', () => {
                 { provide: ScheduleService, useValue: scheduleMock },
                 { provide: Router, useValue: routerMock },
                 { provide: ActivatedRoute, useValue: { queryParamMap: queryParams } },
-                { provide: UserService, useValue: { currentUser$: of(null) } }
+                { provide: UserService, useValue: { currentUser$: of(null) } },
+                { provide: FriendshipInsightsService, useValue: insightsMock },
+                { provide: AvatarService, useValue: { url: () => signal(null) } }
             ]
         }).compileComponents();
 
@@ -686,6 +698,96 @@ describe('CalendarComponent', () => {
 
             expect(component.overlayFor(new Date(2026, 9, 14))).toEqual({ blocks: [], free: [] });
             expect(component.overlayError()).toBeNull();
+        });
+    });
+
+    describe('Mon cercle', () => {
+        const monday = new Date(2026, 9, 12);
+        const circleEntry = (userId: string, start: Date, end: Date, title: string | null = null) =>
+            ({ userId, start, end, allDay: false, eventId: null, title, location: null, description: null });
+
+        const showWeekOf = (day: Date) => {
+            component.currentDate.set(day);
+            component.toggleView('week');
+            fixture.detectChanges();
+        };
+
+        it('circleOn_shouldBeOff_andFetchNothing_byDefault', () => {
+            expect(component.circleOn()).toBe(false);
+            expect(insightsMock.getCircle).not.toHaveBeenCalled();
+        });
+
+        it('onCircleChange_shouldAskTheIntimatesCalendars_forTheVisibleWeek', () => {
+            showWeekOf(monday);
+
+            component.onCircleChange(true);
+            fixture.detectChanges();
+
+            expect(insightsMock.getCircle).toHaveBeenCalledWith(new Date(2026, 9, 12), new Date(2026, 9, 19));
+        });
+
+        it('overlayFor_shouldLayTheCircleInOneLane_colouredPerFriend', () => {
+            insightsMock.getCircle.mockReturnValue(of([
+                circleEntry('lea', new Date(2026, 9, 14, 18), new Date(2026, 9, 14, 20), 'Poterie'),
+                circleEntry('hugo', new Date(2026, 9, 14, 9), new Date(2026, 9, 14, 10))
+            ]));
+            showWeekOf(monday);
+
+            component.onCircleChange(true);
+            fixture.detectChanges();
+
+            const blocks = component.overlayFor(new Date(2026, 9, 14)).blocks;
+            expect(blocks.map(block => [block.friendName, block.owner, block.color, block.left])).toEqual([
+                ['Mon cercle', 'lea', circleColor('lea'), 50],
+                ['Mon cercle', 'hugo', circleColor('hugo'), 50]
+            ]);
+            expect(component.ownLaneWidth()).toBe(50);
+            expect(fixture.nativeElement.querySelector('.friend-block-owner').textContent).toBe('lea');
+        });
+
+        it('daySummaries_shouldShowTheCirclesLoad_inTheMonth', () => {
+            insightsMock.getCircle.mockReturnValue(of([
+                circleEntry('lea', new Date(2026, 9, 14, 8), new Date(2026, 9, 14, 23))
+            ]));
+            component.currentDate.set(new Date(2026, 9, 1));
+            component.toggleView('month');
+
+            component.onCircleChange(true);
+            fixture.detectChanges();
+
+            expect(component.summaryFor(new Date(2026, 9, 14))?.loads).toEqual([
+                { friendName: 'Mon cercle', color: expect.any(String), ratio: 1 }
+            ]);
+        });
+
+        it('overlayError_shouldSay_whenTheCircleCannotBeRead', () => {
+            insightsMock.getCircle.mockReturnValue(throwError(() => new Error('502')));
+            showWeekOf(monday);
+
+            component.onCircleChange(true);
+            fixture.detectChanges();
+
+            expect(component.overlayError()).toBe('Impossible de charger ton cercle.');
+        });
+
+        it('onCircleChange_shouldClearTheLane_whenTurnedOff', () => {
+            insightsMock.getCircle.mockReturnValue(of([
+                circleEntry('lea', new Date(2026, 9, 14, 18), new Date(2026, 9, 14, 20))
+            ]));
+            showWeekOf(monday);
+            component.onCircleChange(true);
+            fixture.detectChanges();
+
+            component.onCircleChange(false);
+            fixture.detectChanges();
+
+            expect(component.overlayFor(new Date(2026, 9, 14)).blocks).toEqual([]);
+            expect(component.ownLaneWidth()).toBe(100);
+        });
+
+        it('template_shouldPlaceTheReunionCard', () => {
+            expect(fixture.nativeElement.querySelector('app-reunion-card')).not.toBeNull();
+            expect(insightsMock.getReunions).toHaveBeenCalled();
         });
     });
 

@@ -1,0 +1,168 @@
+:host {
+    display: block;
+}
+
+.reunion-card {
+    position: relative;
+    margin: 0 0 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: var(--bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+
+    // A thin line of the accent along the top: a suggestion from Wely, not an event.
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0 0 auto;
+        height: 3px;
+        background: var(--accent-gradient);
+    }
+}
+
+header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+
+    .spark {
+        font-size: 24px;
+    }
+
+    h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+}
+
+ul {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    background: var(--bg-subtle);
+}
+
+.avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+.who {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 8px;
+
+    strong {
+        font-size: 15px;
+    }
+
+    .line {
+        flex-basis: 100%;
+        font-size: 13px;
+        color: var(--text-secondary);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}
+
+.badge {
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--orange-ink);
+    background: var(--brand-tint-orange);
+
+    &[data-closeness='INTIMATE'] {
+        color: white;
+        background: var(--accent-gradient);
+    }
+}
+
+.actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 6px;
+}
+
+button {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.later {
+    border: 1px solid color-mix(in srgb, var(--text-primary) 14%, transparent);
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.propose {
+    border: none;
+    background: var(--accent-gradient);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    li {
+        flex-wrap: wrap;
+    }
+
+    .actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

@@ -8,7 +8,7 @@ describe('CalendarOverlayComponent', () => {
 
     const block = (overrides: Partial<FriendBlock> = {}): FriendBlock => ({
         top: 120, height: 40, left: 50, width: 50, color: '#f97316', friendName: 'lea',
-        title: 'Poterie', location: null, ...overrides
+        title: 'Poterie', location: null, owner: null, ...overrides
     });
 
     beforeEach(async () => {
@@ -29,6 +29,14 @@ describe('CalendarOverlayComponent', () => {
         expect(placed.style.width).toBe('50%');
         expect(placed.style.getPropertyValue('--lane-color')).toBe('#f97316');
         expect(placed.textContent?.trim()).toBe('Poterie');
+    });
+
+    it('blocks_shouldNameTheirOwner_inASharedLane', () => {
+        fixture.componentRef.setInput('blocks', [block({ owner: 'lea', title: null })]);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.friend-block-owner').textContent).toBe('lea');
+        expect(blocks()[0].textContent).toContain('Occupé');
     });
 
     it('blocks_shouldReadBusy_whenNothingIsDisclosed', () => {

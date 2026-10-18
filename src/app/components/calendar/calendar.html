@@ -89,9 +89,13 @@
       </div>
     }
 
+    <!-- « Ça fait longtemps »: close friends not seen for a while; nothing when there are none. -->
+    <app-reunion-card />
+
     @if (friendships().length > 0) {
       <app-friend-overlay-bar [friendships]="friendships()" [selected]="overlayFriendIds()"
-        [colors]="overlayColors()" [error]="overlayError()" (selectedChange)="onOverlayFriendsChange($event)" />
+        [colors]="overlayColors()" [error]="overlayError()" (selectedChange)="onOverlayFriendsChange($event)"
+        [circle]="circleOn()" (circleChange)="onCircleChange($event)" />
     }
 
     <!-- Month View Layout -->

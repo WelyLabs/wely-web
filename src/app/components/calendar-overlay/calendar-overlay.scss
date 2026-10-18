@@ -38,6 +38,7 @@
     }
 }
 
+.friend-block-owner,
 .friend-block-title,
 .friend-block-location {
     // Lanes narrow down with each friend added: cut rather than wrap.
@@ -52,4 +53,12 @@
 
 .friend-block-location {
     opacity: 0.8;
+}
+
+// In « Mon cercle », the friend's name above what they are doing.
+.friend-block-owner {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }

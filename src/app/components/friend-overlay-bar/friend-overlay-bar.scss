@@ -11,6 +11,28 @@
     max-width: 360px;
 }
 
+.circle-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid color-mix(in srgb, var(--text-primary) 14%, transparent);
+    border-radius: 999px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    cursor: pointer;
+
+    &.on {
+        border-color: transparent;
+        color: white;
+        background: var(--accent-gradient);
+    }
+}
+
 .legend {
     display: flex;
     flex-wrap: wrap;

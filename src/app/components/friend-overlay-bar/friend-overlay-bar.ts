@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { CLOSENESS_LABELS, Closeness, FriendSummary } from '../../models/friendship.model';
 import { FriendMentionInputComponent } from '../friend-mention-input/friend-mention-input';
 import { MAX_OVERLAID_FRIENDS } from '../calendar-overlay/overlay-layout';
+import { avatarColor } from '../../core/ui/avatar';
 
 /** What a closeness lets the viewer see of the friend's calendar, for the legend. */
 const DISCLOSES: Readonly<Record<Closeness, string>> = {
@@ -17,6 +18,18 @@ interface LegendEntry {
     color: string;
     closeness: string;
     discloses: string;
+}
+
+/** An intimate friend in « Mon cercle », in the colour of their periods. */
+interface CircleMember {
+    userId: string;
+    userName: string;
+    color: string;
+}
+
+/** Each intimate's colour in « Mon cercle »: the same as their avatar, so they are recognised. */
+export function circleColor(userId: string): string {
+    return avatarColor(userId);
 }
 
 /**
@@ -37,8 +50,20 @@ export class FriendOverlayBarComponent {
     readonly colors = input<ReadonlyMap<string, string>>(new Map());
     readonly error = input<string | null>(null);
     readonly selectedChange = output<string[]>();
+    /** « Mon cercle »: every intimate friend's calendar, in one combined lane. */
+    readonly circle = input(false);
+    readonly circleChange = output<boolean>();
 
     readonly max = MAX_OVERLAID_FRIENDS;
+
+    /** Who « Mon cercle » shows; no toggle without an intimate friend. */
+    readonly intimates = computed<CircleMember[]>(() => this.friendships()
+        .filter(friend => friend.closeness === 'INTIMATE')
+        .map(friend => ({ userId: friend.userId, userName: friend.userName, color: circleColor(friend.userId) })));
+
+    toggleCircle(): void {
+        this.circleChange.emit(!this.circle());
+    }
 
     readonly legend = computed<LegendEntry[]>(() => {
         const byId = new Map(this.friendships().map(friend => [friend.userId, friend]));

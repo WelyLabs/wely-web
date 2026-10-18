@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FriendOverlayBarComponent } from './friend-overlay-bar';
+import { FriendOverlayBarComponent, circleColor } from './friend-overlay-bar';
 import { FriendSummary } from '../../models/friendship.model';
 import { MAX_OVERLAID_FRIENDS } from '../calendar-overlay/overlay-layout';
 
@@ -16,6 +16,40 @@ describe('FriendOverlayBarComponent', () => {
         component = fixture.componentInstance;
         fixture.componentRef.setInput('friendships', [lea, hugo]);
         fixture.detectChanges();
+    });
+
+    it('circle_shouldOfferTheToggle_withAnIntimateFriend', () => {
+        const emitted: boolean[] = [];
+        component.circleChange.subscribe(value => emitted.push(value));
+        const toggle = fixture.nativeElement.querySelector('.circle-toggle') as HTMLButtonElement;
+
+        expect(toggle.textContent).toContain('Mon cercle');
+        expect(toggle.getAttribute('aria-pressed')).toBe('false');
+        toggle.click();
+        fixture.componentRef.setInput('circle', true);
+        fixture.detectChanges();
+        toggle.click();
+
+        expect(emitted).toEqual([true, false]);
+        expect(toggle.classList).toContain('on');
+    });
+
+    it('circle_shouldListTheIntimatesInTheirColours_whenOn', () => {
+        fixture.componentRef.setInput('circle', true);
+        fixture.detectChanges();
+
+        const legend = fixture.nativeElement.querySelector('.circle-legend') as HTMLElement;
+        expect(component.intimates().map(member => member.userId)).toEqual(['lea']);
+        expect(legend.textContent).toContain('lea');
+        expect(legend.textContent).not.toContain('hugo');
+        expect(component.intimates()[0].color).toBe(circleColor('lea'));
+    });
+
+    it('circle_shouldHideTheToggle_withoutAnIntimateFriend', () => {
+        fixture.componentRef.setInput('friendships', [hugo]);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.circle-toggle')).toBeNull();
     });
 
     it('legend_shouldBeEmpty_whenNobodyIsOverlaid', () => {

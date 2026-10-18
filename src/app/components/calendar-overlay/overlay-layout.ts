@@ -37,6 +37,9 @@ export interface Period {
 export interface FriendPeriod extends Period {
     title: string | null;
     location: string | null;
+    /** In a lane shared by several friends (« Mon cercle »): whose period it is, and their colour. */
+    owner?: string | null;
+    color?: string;
 }
 
 /** One friend's lane: their name, colour and the periods that keep them busy. */
@@ -58,6 +61,8 @@ export interface FriendBlock {
     /** Null when the friendship does not disclose it: the block then reads "busy". */
     title: string | null;
     location: string | null;
+    /** Whose period it is, in a shared lane; null in a friend's own lane. */
+    owner: string | null;
 }
 
 /** A stretch of the day when everyone is free, across the whole column. */
@@ -147,10 +152,11 @@ export function layoutDay(day: Date, lanes: readonly FriendLane[], free: readonl
             ...placed,
             left: (index + 1) * width,
             width,
-            color: lane.color,
+            color: period.color ?? lane.color,
             friendName: lane.friendName,
             title: period.title,
-            location: period.location
+            location: period.location,
+            owner: period.owner ?? null
         }] : [];
     }));
 

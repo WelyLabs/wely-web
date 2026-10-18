@@ -5,6 +5,9 @@
     <div class="friend-block" [class.busy]="!block.title"
         [style.top.px]="block.top" [style.height.px]="block.height"
         [style.left.%]="block.left" [style.width.%]="block.width" [style.--lane-color]="block.color">
+        @if (block.owner) {
+            <span class="friend-block-owner">{{ block.owner }}</span>
+        }
         <span class="friend-block-title">{{ block.title ?? 'Occupé' }}</span>
         @if (block.location) {
             <span class="friend-block-location">{{ block.location }}</span>

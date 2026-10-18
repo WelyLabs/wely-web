@@ -3,6 +3,13 @@
         [selected]="selected()" [max]="max" [colors]="colors()" placeholder="@ superposer un ami"
         (selectedChange)="selectedChange.emit($event)" />
 
+    @if (intimates().length > 0) {
+        <button type="button" class="circle-toggle" [class.on]="circle()" [attr.aria-pressed]="circle()"
+            [title]="'Superposer le calendrier de tes intimes'" (click)="toggleCircle()">
+            <span aria-hidden="true">💝</span>Mon cercle
+        </button>
+    }
+
     @if (legend().length > 0) {
         <ul class="legend">
             @for (entry of legend(); track entry.userId) {
@@ -16,6 +23,14 @@
                 <span class="swatch"></span>
                 Vous êtes tous libres
             </li>
+        </ul>
+    }
+
+    @if (circle() && intimates().length > 0) {
+        <ul class="legend circle-legend" aria-label="Mon cercle">
+            @for (member of intimates(); track member.userId) {
+                <li><span class="swatch" [style.background]="member.color"></span>{{ member.userName }}</li>
+            }
         </ul>
     }
 

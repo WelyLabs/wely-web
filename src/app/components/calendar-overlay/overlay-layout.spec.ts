@@ -23,6 +23,19 @@ describe('layoutDay', () => {
         ]);
     });
 
+    it('layoutDay_shouldColourEachPeriodByItsOwner_inASharedLane', () => {
+        const circle: FriendLane = {
+            friendName: 'Mon cercle', color: '#lane', periods: [
+                { start: at(14, 18), end: at(14, 20), title: 'Poterie', location: null, owner: 'lea', color: '#lea' },
+                { start: at(14, 9), end: at(14, 10), title: null, location: null }
+            ]
+        };
+
+        const { blocks } = layoutDay(wednesday, [circle], [], HOUR);
+
+        expect(blocks.map(b => [b.owner, b.color])).toEqual([['lea', '#lea'], [null, '#lane']]);
+    });
+
     it('laneWidth_shouldShareTheColumnBetweenTheUserAndTheirFriends', () => {
         expect(laneWidth(0)).toBe(100);
         expect(laneWidth(1)).toBe(50);

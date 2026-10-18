@@ -23,6 +23,7 @@ import {
   parseLocalDate, surpriseDescription, surpriseTitle
 } from '../../models/birthday.model';
 import { BirthdaySheetAction, BirthdaySheetComponent } from '../birthday-sheet/birthday-sheet';
+import { CircleEntry, FriendshipInsightsService, MAX_CIRCLE_DAYS } from '../../services/friendship-insights.service';
 
 /** How often the now-line is repositioned. */
 const TIME_MARKER_REFRESH_MS = 60000;
@@ -66,6 +67,17 @@ interface OverlayData {
 }
 
 const NO_OVERLAY: OverlayData = { calendars: [], free: [] };
+
+/** What « Mon cercle » fetched: every intimate friend's entries over the visible days. */
+interface CircleData {
+  entries: CircleEntry[];
+  failed: boolean;
+}
+
+const NO_CIRCLE: CircleData = { entries: [], failed: false };
+/** The combined lane of « Mon cercle »; each period has its friend's own colour. */
+export const CIRCLE_LANE_NAME = 'Mon cercle';
+const CIRCLE_LANE_COLOR = '#e11d48';
 
 
 /** Six rows of seven, so the month grid never changes height between months. */
@@ -196,7 +208,8 @@ import { QuickEventPopoverComponent } from '../quick-event-popover/quick-event-p
 import { CalendarOverlayComponent } from '../calendar-overlay/calendar-overlay';
 import { DayLayout, DaySummary, FriendLane, MAX_OVERLAID_FRIENDS, OVERLAY_COLORS, laneWidth, layoutDay, summarizeDay } from '../calendar-overlay/overlay-layout';
 import { MonthDayOverlayComponent } from '../month-day-overlay/month-day-overlay';
-import { FriendOverlayBarComponent } from '../friend-overlay-bar/friend-overlay-bar';
+import { FriendOverlayBarComponent, circleColor } from '../friend-overlay-bar/friend-overlay-bar';
+import { ReunionCardComponent } from '../reunion-card/reunion-card';
 
 /** Shared empty result: a cell without events gets the same array every time, nothing to diff. */
 const NO_EVENTS: CalendarEvent[] = [];
@@ -256,7 +269,7 @@ const POPOVER_CLICK_GUARD_MS = 500;
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent, MonthDayOverlayComponent],
+  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule, QuickEventPopoverComponent, CalendarOverlayComponent, FriendOverlayBarComponent, MonthDayOverlayComponent, ReunionCardComponent],
   // Birthdays and the all-day row have their own sheet too.
   templateUrl: './calendar.html',
   // The ways in to a new event, and the phone layout, have their own sheets: the calendar's is at
@@ -275,6 +288,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly userService = inject(UserService);
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
+  private readonly insights = inject(FriendshipInsightsService);
 
   /** Business id of the signed-in user: tells a month event apart as hosted vs joined. */
   private myId: string | null = null;
@@ -531,23 +545,75 @@ export class CalendarComponent implements OnInit, OnDestroy {
     switchMap(request => request ? this.fetchOverlay(request.friendIds, request.from, request.to) : of(NO_OVERLAY))
   ), { initialValue: NO_OVERLAY });
 
+  /** « Mon cercle »: every intimate friend's calendar laid over the grid, in one combined lane. */
+  readonly circleOn = signal(false);
+
+  /** The visible days, at most what wely-events answers at once; null while the circle is off. */
+  private readonly circleRequest = computed(() => {
+    const days = this.days();
+    if (!this.circleOn() || days.length === 0) {
+      return null;
+    }
+    const from = startOfDay(days[0].date);
+    const to = startOfDay(days[days.length - 1].date);
+    to.setDate(to.getDate() + 1);
+    const latest = new Date(from);
+    latest.setDate(latest.getDate() + MAX_CIRCLE_DAYS);
+    return { from, to: to > latest ? latest : to };
+  }, {
+    equal: (a, b) => a === b || (!!a && !!b && a.from.getTime() === b.from.getTime() && a.to.getTime() === b.to.getTime())
+  });
+
+  private readonly circleData = toSignal(toObservable(this.circleRequest).pipe(
+    switchMap(request => request
+      ? this.insights.getCircle(request.from, request.to).pipe(
+          map((entries): CircleData => ({ entries, failed: false })),
+          catchError((err: unknown) => {
+            this.logger.error('CalendarComponent', 'Could not load the circle', err);
+            return of<CircleData>({ entries: [], failed: true });
+          }))
+      : of(NO_CIRCLE))
+  ), { initialValue: NO_CIRCLE });
+
+  onCircleChange(on: boolean): void {
+    this.circleOn.set(on);
+  }
+
   readonly overlayError = computed(() => {
     const data = this.overlayData();
     const failed = data.calendars.filter(calendar => calendar.failed).map(calendar => this.nameOf(calendar.friendId));
     if (failed.length > 0) {
       return `Impossible de charger le calendrier de ${failed.join(', ')}.`;
     }
+    if (this.circleOn() && this.circleData().failed) {
+      return 'Impossible de charger ton cercle.';
+    }
     return data.free === null ? 'Les créneaux communs n\'ont pas pu être calculés.' : null;
   });
 
-  /** One lane per overlaid friend, in mention order, with the entries fetched for them. */
+  /** One lane per overlaid friend, in mention order, then « Mon cercle » when it is on. */
   private readonly overlayLanes = computed<FriendLane[]>(() => {
     const colors = this.overlayColors();
-    return this.overlayData().calendars.map(calendar => ({
+    const lanes: FriendLane[] = this.overlayData().calendars.map(calendar => ({
       friendName: this.nameOf(calendar.friendId),
       color: colors.get(calendar.friendId) ?? OVERLAY_COLORS[0],
       periods: calendar.entries
     }));
+    if (this.circleOn()) {
+      lanes.push({
+        friendName: CIRCLE_LANE_NAME,
+        color: CIRCLE_LANE_COLOR,
+        periods: this.circleData().entries.map(entry => ({
+          start: entry.start,
+          end: entry.end,
+          title: entry.title,
+          location: entry.location,
+          owner: this.nameOf(entry.userId),
+          color: circleColor(entry.userId)
+        }))
+      });
+    }
+    return lanes;
   });
 
   /** Week and day views: each column's lanes and common free time, by `toDateString()`. */
@@ -566,7 +632,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   /** Month view: each cell's friend loads and common free stretch, by `toDateString()`. */
   readonly daySummaries = computed(() => {
-    if (this.viewMode() !== 'month' || this.overlayFriendIds().length === 0) {
+    if (this.viewMode() !== 'month' || (this.overlayFriendIds().length === 0 && !this.circleOn())) {
       return new Map<string, DaySummary>();
     }
     const lanes = this.overlayLanes();

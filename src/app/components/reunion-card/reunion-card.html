@@ -1,0 +1,36 @@
+@if (candidates().length > 0) {
+  <section class="reunion-card" aria-label="Ça fait longtemps">
+    <header>
+      <span class="spark" aria-hidden="true">💭</span>
+      <div>
+        <h3>Ça fait longtemps</h3>
+        <p>Des proches que tu n’as pas vus depuis un moment.</p>
+      </div>
+    </header>
+    <ul>
+      @for (candidate of candidates(); track candidate.friendId) {
+        <li>
+          @let picture = avatars.url(candidate.friendId)();
+          <span class="avatar" [style.background]="avatarColor(candidate.friendId)" aria-hidden="true">
+            @if (picture) {
+              <img [src]="picture" alt="">
+            } @else {
+              {{ initialsOf(candidate.name) }}
+            }
+          </span>
+          <span class="who">
+            <strong>{{ candidate.name }}</strong>
+            <span class="badge" [attr.data-closeness]="candidate.closeness">{{ closenessLabels[candidate.closeness] }}</span>
+            <span class="line">{{ lineOf(candidate) }}</span>
+          </span>
+          <span class="actions">
+            <button type="button" class="later" (click)="later(candidate)">Plus tard</button>
+            <button type="button" class="propose" (click)="propose(candidate)">
+              <mat-icon>how_to_vote</mat-icon>Proposer une sortie
+            </button>
+          </span>
+        </li>
+      }
+    </ul>
+  </section>
+}
