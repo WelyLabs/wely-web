@@ -216,6 +216,9 @@
                   <div class="section-header">
                     <h2>Ensemble</h2>
                     <span class="together-count">{{ overview.outingsTogether }} sortie{{ overview.outingsTogether > 1 ? 's' : '' }} ensemble</span>
+                    <a class="memories-link" [routerLink]="['/friends', person.userId, 'memories']">
+                      <mat-icon>auto_awesome</mat-icon>Vos souvenirs
+                    </a>
                   </div>
                   @if (overview.upcomingTogether.length > 0) {
                     <ul class="upcoming">

@@ -32,6 +32,10 @@ export const routes: Routes = [
                 path: 'friends/:userId',
                 loadComponent: () => import('./components/friend-profile/friend-profile').then(m => m.FriendProfileComponent)
             },
+            {
+                path: 'friends/:userId/memories',
+                loadComponent: () => import('./components/friend-memories/friend-memories').then(m => m.FriendMemoriesComponent)
+            },
             // The user directory is gone: friends are added by tag or through events. Old links land on the friends page.
             { path: 'users', redirectTo: 'friends' },
             {

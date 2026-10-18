@@ -143,6 +143,25 @@
     color: transparent;
 }
 
+.memories-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--orange-ink);
+    background: var(--brand-tint-orange);
+
+    mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+}
+
 .upcoming {
     list-style: none;
     margin: 0;

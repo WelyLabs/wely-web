@@ -18,6 +18,7 @@ import { AvatarService } from '../../services/avatar.service';
 import { SocialPerson } from '../../models/friendship.model';
 import { DeletedUsersService } from '../../services/deleted-users.service';
 import { deletedUsersStub } from '../../../testing/deleted-users.stub';
+import { CelebrationService } from '../../services/celebration.service';
 
 vi.mock('rsocket-core', () => import('../../../testing/rsocket-core.stub'));
 vi.mock('rsocket-websocket-client', () => import('../../../testing/rsocket-websocket-client.stub'));
@@ -30,6 +31,7 @@ describe('FriendProfileComponent', () => {
   let fixture: ComponentFixture<FriendProfileComponent>;
   let component: FriendProfileComponent;
   let params: BehaviorSubject<ParamMap>;
+  let snapshot: { queryParamMap: ParamMap };
   let router: Router;
   let social: Record<string, ReturnType<typeof vi.fn>>;
   let users: { currentUser$: unknown; getFriendProfile: ReturnType<typeof vi.fn> };
@@ -78,6 +80,7 @@ describe('FriendProfileComponent', () => {
 
   beforeEach(async () => {
     params = new BehaviorSubject(convertToParamMap({ userId: 'lea' }));
+    snapshot = { queryParamMap: convertToParamMap({}) };
     social = {
       getPerson: vi.fn().mockReturnValue(of(person())),
       getMutualFriends: vi.fn().mockReturnValue(of([{ userId: 'hugo', userName: 'hugo', hashtag: 9074 }, { userId: 'me', userName: 'moi', hashtag: 1 }])),
@@ -114,7 +117,7 @@ describe('FriendProfileComponent', () => {
       providers: [
         provideRouter([]),
         { provide: LOCALE_ID, useValue: 'fr-FR' },
-        { provide: ActivatedRoute, useValue: { paramMap: params } },
+        { provide: ActivatedRoute, useValue: { paramMap: params, snapshot } },
         { provide: SocialService, useValue: social },
         { provide: UserService, useValue: users },
         { provide: EventService, useValue: events },
@@ -242,6 +245,27 @@ describe('FriendProfileComponent', () => {
       expect(social['declineCloseness']).toHaveBeenCalledWith('lea');
     });
 
+    it('answerProposal_shouldCelebrateTheNewLevel_whenAccepted', () => {
+      social['acceptCloseness'].mockReturnValue(of({ friendId: 'lea', closeness: 'INTIMATE', proposal: null, proposedByFriend: false }));
+
+      component.answerProposal(true);
+
+      expect(TestBed.inject(CelebrationService).closeness()).toMatchObject({ name: 'lea', closeness: 'INTIMATE' });
+    });
+
+    it('answerProposal_shouldNotCelebrate_whenDeclined', () => {
+      component.answerProposal(false);
+
+      expect(TestBed.inject(CelebrationService).closeness()).toBeNull();
+    });
+
+    it('template_shouldLinkToTheMemories', () => {
+      const link = fixture.nativeElement.querySelector('.memories-link') as HTMLAnchorElement;
+
+      expect(link.textContent).toContain('Vos souvenirs');
+      expect(link.getAttribute('href')).toBe('/friends/lea/memories');
+    });
+
     it('removeFriend_shouldConfirmThenGoBackToTheFriends', () => {
       button('Retirer')!.click();
 
@@ -312,6 +336,29 @@ describe('FriendProfileComponent', () => {
       expect(social['getPerson']).toHaveBeenLastCalledWith('hugo');
       expect(component.userId()).toBe('hugo');
       expect(component.isFriend()).toBe(false);
+    });
+  });
+
+  describe('from a reunion nudge', () => {
+    beforeEach(() => {
+      snapshot.queryParamMap = convertToParamMap({ propose: '1' });
+    });
+
+    it('open_shouldProposeTheOuting_onceThePageIsRead', async () => {
+      await create();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/calendar'], {
+        state: { proposeSlots: [{ start: inDays(3, 18), end: inDays(3, 20) }], proposeWith: 'lea' },
+        replaceUrl: true
+      });
+    });
+
+    it('open_shouldStayOnThePage_whenNotFriends', async () => {
+      social['getPerson'].mockReturnValue(of(person({ relationStatus: 'NONE', closeness: null, since: null })));
+
+      await create();
+
+      expect(router.navigate).not.toHaveBeenCalledWith(['/calendar'], expect.anything());
     });
   });
 

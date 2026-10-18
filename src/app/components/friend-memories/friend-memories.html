@@ -1,0 +1,94 @@
+<div class="memories-page">
+  <a class="back" [routerLink]="['/friends', friendId()]"><mat-icon>arrow_back</mat-icon>Son profil</a>
+
+  @switch (page().state) {
+    @case ('loading') {
+      <div class="hero skeleton" aria-busy="true"></div>
+    }
+    @case ('notFriends') {
+      <div class="state card">
+        <mat-icon>person_off</mat-icon>
+        <h1>Pas de souvenirs ici</h1>
+        <p>Vous n’êtes pas amis sur Wely.</p>
+      </div>
+    }
+    @case ('error') {
+      <div class="state card" role="alert">
+        <mat-icon>cloud_off</mat-icon>
+        <h1>Souvenirs indisponibles</h1>
+        <p>Impossible de les charger pour le moment.</p>
+      </div>
+    }
+    @default {
+      @if (memories(); as memories) {
+        <section class="hero" [class.anniversary]="anniversary()" aria-label="Votre amitié">
+          @if (anniversary()) {
+            <!-- The day itself: confetti that falls twice, none with reduced motion. -->
+            <div class="confetti" aria-hidden="true">
+              @for (piece of confetti; track piece) {
+                <i [style.--i]="piece"></i>
+              }
+            </div>
+          }
+          @let picture = avatars.url(memories.friendId)();
+          <span class="avatar" [style.background]="avatarColor(memories.friendId)" aria-hidden="true">
+            @if (picture) {
+              <img [src]="picture" alt="">
+            } @else {
+              {{ initialsOf(memories.name) }}
+            }
+          </span>
+          @if (anniversary()) {
+            <p class="today">💛 C’est votre anniversaire d’amitié aujourd’hui</p>
+          }
+          <h1>{{ heading() }}</h1>
+          <p class="since">{{ closenessLabels[memories.closeness] }} · {{ sinceLabel() }}</p>
+          <p class="count">
+            <strong>{{ memories.sharedCount }}</strong>
+            sortie{{ memories.sharedCount > 1 ? 's' : '' }} partagée{{ memories.sharedCount > 1 ? 's' : '' }}
+          </p>
+        </section>
+
+        @if (milestones().length > 0) {
+          <section class="milestones" aria-label="Vos sorties">
+            @for (milestone of milestones(); track milestone.event.eventId) {
+              <a class="milestone card" [routerLink]="['/event', milestone.event.eventId]">
+                <span class="cover" [style.background]="eventTint(milestone.event.eventId)">
+                  @if (milestone.event.imageUrl) {
+                    <img [src]="milestone.event.imageUrl" alt="">
+                  }
+                </span>
+                <span class="milestone-text">
+                  <small>{{ milestone.label }}</small>
+                  <strong>{{ milestone.event.title }}</strong>
+                  <span>{{ dateOf(milestone.event) | date:'d MMMM y' }}</span>
+                </span>
+              </a>
+            }
+          </section>
+        }
+
+        <section class="highlights card" aria-label="Vos meilleurs moments">
+          <h2>Vos meilleurs moments</h2>
+          @if (memories.highlights.length === 0) {
+            <p class="muted">Vos sorties ensemble apparaîtront ici.</p>
+          } @else {
+            <div class="grid">
+              @for (event of memories.highlights; track event.eventId) {
+                <a class="highlight" [routerLink]="['/event', event.eventId]" [style.background]="eventTint(event.eventId)">
+                  @if (event.imageUrl) {
+                    <img [src]="event.imageUrl" alt="">
+                  }
+                  <span class="caption">
+                    <strong>{{ event.title }}</strong>
+                    <span>{{ dateOf(event) | date:'MMM y' }}</span>
+                  </span>
+                </a>
+              }
+            </div>
+          }
+        </section>
+      }
+    }
+  }
+</div>

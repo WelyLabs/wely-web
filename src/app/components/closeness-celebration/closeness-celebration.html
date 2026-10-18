@@ -1,0 +1,14 @@
+@for (celebration of shown(); track celebration.id) {
+  <div class="celebration" [attr.data-closeness]="celebration.closeness" role="status">
+    <div class="hearts" aria-hidden="true">
+      @for (heart of hearts; track heart) {
+        <i [style.--i]="heart">{{ celebration.closeness === 'INTIMATE' ? '💝' : '🧡' }}</i>
+      }
+    </div>
+    <button type="button" class="card" (click)="dismiss()" aria-label="Fermer">
+      <span class="emoji" aria-hidden="true">{{ celebration.closeness === 'INTIMATE' ? '💝' : '🧡' }}</span>
+      <strong>{{ celebration.name }} et toi êtes maintenant {{ celebration.closeness === 'INTIMATE' ? 'intimes' : 'proches' }}</strong>
+      <span>{{ celebration.closeness === 'INTIMATE' ? 'Votre lien passe au niveau supérieur.' : 'Vous partagez désormais un peu plus.' }}</span>
+    </button>
+  </div>
+}

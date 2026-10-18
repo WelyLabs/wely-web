@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { UserSearchComponent } from './user-search';
+import { CelebrationService } from '../../services/celebration.service';
 import { UserService } from '../../services/user.service';
 import { SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
@@ -356,6 +357,14 @@ describe('UserSearchComponent', () => {
 
             expect(socialServiceMock.acceptCloseness).toHaveBeenCalledWith('lea');
             expect(socialServiceMock.declineCloseness).toHaveBeenCalledWith('lea');
+        });
+
+        it('onClosenessAnswer_shouldCelebrateTheNewLevel_whenAccepted', () => {
+            socialServiceMock.acceptCloseness.mockReturnValue(of({ friendId: 'lea', closeness: 'CLOSE', proposal: null, proposedByFriend: false }));
+
+            component.onClosenessAnswer({ user: friendCard, accept: true });
+
+            expect(TestBed.inject(CelebrationService).closeness()).toMatchObject({ name: friendCard.userName, closeness: 'CLOSE' });
         });
 
         it('onClosenessChange_shouldExplainAConcurrentChange', () => {

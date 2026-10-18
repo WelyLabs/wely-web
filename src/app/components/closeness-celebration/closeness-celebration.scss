@@ -1,0 +1,95 @@
+.celebration {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    // The page stays usable underneath: only the card takes a click.
+    pointer-events: none;
+}
+
+.card {
+    pointer-events: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 340px;
+    padding: 20px 24px;
+    border: none;
+    border-radius: 24px;
+    font: inherit;
+    text-align: center;
+    color: white;
+    background: var(--accent-gradient);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--brand-orange) 40%, transparent);
+    cursor: pointer;
+    animation: card-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+    .emoji {
+        font-size: 40px;
+    }
+
+    strong {
+        font-size: 18px;
+    }
+
+    span:last-child {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+}
+
+// A close friend gets a glow that breathes; an intimate one, the hearts as well.
+.celebration[data-closeness='CLOSE'] .card {
+    animation: card-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both, glow 1.4s ease-in-out 0.45s 2;
+}
+
+.celebration[data-closeness='CLOSE'] .hearts {
+    display: none;
+}
+
+.hearts {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+
+    i {
+        position: absolute;
+        bottom: 40%;
+        left: calc(30% + var(--i) * 3.5%);
+        font-size: 22px;
+        font-style: normal;
+        opacity: 0;
+        animation: heart-rise 2.2s ease-out calc(var(--i) * 0.08s) both;
+    }
+}
+
+@keyframes card-in {
+    from { opacity: 0; transform: scale(0.85) translateY(12px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes glow {
+    50% { box-shadow: 0 12px 60px color-mix(in srgb, var(--brand-orange) 70%, transparent); }
+}
+
+@keyframes heart-rise {
+    0% { opacity: 0; transform: translateY(0) scale(0.6); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-260px) translateX(calc((var(--i) - 6) * 6px)) scale(1.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card,
+    .celebration[data-closeness='CLOSE'] .card {
+        animation: none;
+    }
+
+    .hearts {
+        display: none;
+    }
+}

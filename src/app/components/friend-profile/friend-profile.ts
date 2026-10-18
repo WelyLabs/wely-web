@@ -6,7 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { Observable, Subject, catchError, forkJoin, map, of, switchMap } from 'rxjs';
+import { Observable, Subject, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { LoggerService } from '../../core/logging/logger.service';
 import { SocialService } from '../../services/social.service';
@@ -15,9 +15,10 @@ import { EventService, FeedEvent, FreeRange, FriendCalendarEntry, FriendOverview
 import { ChatService } from '../../services/chat.service';
 import { AvatarService } from '../../services/avatar.service';
 import { DeletedUsersService } from '../../services/deleted-users.service';
+import { CelebrationService } from '../../services/celebration.service';
 import { USER_DELETED_CODE } from '../../models/account.model';
 import { UserNodeDTO } from '../../models/user.model';
-import { CLOSENESS_LABELS, Closeness, ClosenessOption, SocialPerson, closenessOptions } from '../../models/friendship.model';
+import { CLOSENESS_LABELS, Closeness, ClosenessOption, Friendship, SocialPerson, closenessOptions } from '../../models/friendship.model';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 import { countdownOf } from '../event-details/event-details';
 import { Period } from '../calendar-overlay/overlay-layout';
@@ -85,12 +86,15 @@ export class FriendProfileComponent implements OnInit {
   private readonly eventService = inject(EventService);
   private readonly chatService = inject(ChatService);
   private readonly deletedUsers = inject(DeletedUsersService);
+  private readonly celebrations = inject(CelebrationService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   readonly avatars = inject(AvatarService);
 
   private readonly me = toSignal(this.userService.currentUser$, { initialValue: null });
   private readonly load$ = new Subject<string>();
+  /** Opened with `?propose=1` (a reunion nudge): the outing is proposed once the page is read. */
+  private proposeOnLoad = false;
 
   readonly userId = signal('');
   readonly page = signal<FriendPage>(LOADING);
@@ -173,6 +177,12 @@ export class FriendProfileComponent implements OnInit {
     ).subscribe(page => {
       this.page.set(page);
       this.busy.set(false);
+      if (this.proposeOnLoad && page.state !== 'loading') {
+        this.proposeOnLoad = false;
+        if (this.isFriend()) {
+          this.proposeOuting(true);
+        }
+      }
     });
 
     // The same component follows a mutual friend's link: every new id is a new page.
@@ -188,6 +198,7 @@ export class FriendProfileComponent implements OnInit {
       return;
     }
     this.userId.set(id);
+    this.proposeOnLoad = this.route.snapshot?.queryParamMap.get('propose') === '1';
     this.page.set(LOADING);
     this.actionError.set(null);
     this.joinError.set(null);
@@ -309,10 +320,14 @@ export class FriendProfileComponent implements OnInit {
     }
   }
 
+  /** Accepting an upgrade is celebrated with the level both now share. */
   answerProposal(accept: boolean): void {
     const id = this.userId();
-    this.run(accept ? this.socialService.acceptCloseness(id) : this.socialService.declineCloseness(id),
-      'Impossible de répondre à la proposition');
+    const name = this.person()?.userName ?? '';
+    const proposal = this.person()?.proposal ?? null;
+    const accepted$ = this.socialService.acceptCloseness(id).pipe(tap((friendship: Friendship | null) =>
+      this.celebrations.celebrateCloseness(name, friendship?.closeness ?? proposal)));
+    this.run(accept ? accepted$ : this.socialService.declineCloseness(id), 'Impossible de répondre à la proposition');
   }
 
   addFriend(): void {
@@ -376,10 +391,16 @@ export class FriendProfileComponent implements OnInit {
 
   // --- Outings ---------------------------------------------------------------------------
 
-  /** Opens the calendar's form as a poll on up to three free evenings, or on the first free stretch. */
-  proposeOuting(): void {
+  /**
+   * Opens the calendar's form as a poll on up to three free evenings, or on the first free stretch.
+   * From a deep link the page is replaced, so that going back does not propose again.
+   */
+  proposeOuting(fromLink = false): void {
     const proposeSlots = pickOutingSlots(this.page().free ?? [], new Date());
-    this.router.navigate(['/calendar'], { state: { proposeSlots, proposeWith: this.person()?.userName ?? '' } });
+    this.router.navigate(['/calendar'], {
+      state: { proposeSlots, proposeWith: this.person()?.userName ?? '' },
+      ...(fromLink ? { replaceUrl: true } : {})
+    });
   }
 
   /** Joins one of the friend's outings; it then leaves the list, being shared now. */

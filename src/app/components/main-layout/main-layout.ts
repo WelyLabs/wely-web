@@ -13,6 +13,7 @@ import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
 import { CallService } from '../../services/call.service';
 import { CallOverlayComponent } from '../call/call-overlay/call-overlay';
+import { ClosenessCelebrationComponent } from '../closeness-celebration/closeness-celebration';
 import { SignupCompletionComponent, needsSignupCompletion } from '../signup-completion/signup-completion';
 import { ChatService } from '../../services/chat.service';
 import { User } from '../../models/user.model';
@@ -39,6 +40,7 @@ const NAV_SETTLE_MS = 350;
   standalone: true,
   imports: [
     CallOverlayComponent,
+    ClosenessCelebrationComponent,
     SignupCompletionComponent,
     RouterModule,
     MatSidenavModule,

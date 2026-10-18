@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { Observable, map } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { LoggerService } from '../../core/logging/logger.service';
 
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
@@ -15,10 +15,11 @@ import { Router } from '@angular/router';
 import { FriendshipFilter, SocialService } from '../../services/social.service';
 import { ChatService } from '../../services/chat.service';
 import { EventService } from '../../services/event.service';
+import { CelebrationService } from '../../services/celebration.service';
 import { UserWithStatusDTO } from '../../models/user.model';
 import { Conversation } from '../../models/chat.model';
 import { ClosenessAnswer, ClosenessChange, UserCardComponent } from '../user-card/user-card';
-import { FriendSummary } from '../../models/friendship.model';
+import { FriendSummary, Friendship } from '../../models/friendship.model';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AddFriendDialogComponent } from '../add-friend-dialog/add-friend-dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
@@ -45,6 +46,7 @@ export class UserSearchComponent implements OnInit {
     private readonly socialService = inject(SocialService);
     private readonly eventService = inject(EventService);
     private readonly chatService = inject(ChatService);
+    private readonly celebrations = inject(CelebrationService);
     private readonly breakpointObserver = inject(BreakpointObserver);
     private readonly dialog = inject(MatDialog);
     private readonly router = inject(Router);
@@ -210,8 +212,10 @@ export class UserSearchComponent implements OnInit {
     }
 
     onClosenessAnswer(answer: ClosenessAnswer): void {
+        const proposal = this.friendshipOf(answer.user)?.proposal ?? null;
         const request$ = answer.accept
-            ? this.socialService.acceptCloseness(answer.user.userId)
+            ? this.socialService.acceptCloseness(answer.user.userId).pipe(tap((friendship: Friendship | null) =>
+                this.celebrations.celebrateCloseness(answer.user.userName, friendship?.closeness ?? proposal)))
             : this.socialService.declineCloseness(answer.user.userId);
         this.runThenReload(request$, 'Error answering closeness proposal:', 'Impossible de répondre à la proposition');
     }
