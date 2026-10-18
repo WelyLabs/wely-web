@@ -1,0 +1,67 @@
+@if (!empty()) {
+  <div class="year-friends">
+    @if (newFriends().length > 0) {
+      <section class="block card" aria-label="Nouveaux amis">
+        <h3>{{ newFriendsTitle() }}</h3>
+        <ul class="faces">
+          @for (friend of newFriends(); track friend.userId) {
+            <li>
+              <a [routerLink]="['/friends', friend.userId]" [title]="friend.name">
+                <ng-container *ngTemplateOutlet="avatar; context: { $implicit: friend }" />
+                <span class="face-name">{{ friend.name }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (upgrades().length > 0) {
+      <section class="block card" aria-label="Liens renforcés">
+        <h3>Liens renforcés</h3>
+        <ul class="rows">
+          @for (upgrade of upgrades(); track upgrade.userId) {
+            <li>
+              <a [routerLink]="['/friends', upgrade.userId]">
+                <ng-container *ngTemplateOutlet="avatar; context: { $implicit: upgrade }" />
+                <span class="row-text">{{ upgrade.line }}</span>
+                <span class="heart" aria-hidden="true">{{ upgrade.intimate ? '💝' : '🧡' }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (companions().length > 0) {
+      <section class="block card" aria-label="Tes compagnons de sortie">
+        <h3>Tes compagnons de sortie</h3>
+        <ol class="rows">
+          @for (companion of companions(); track companion.userId) {
+            <li>
+              <a [routerLink]="['/friends', companion.userId]">
+                <span class="medal" aria-hidden="true">{{ companion.medal }}</span>
+                <ng-container *ngTemplateOutlet="avatar; context: { $implicit: companion }" />
+                <span class="row-text">
+                  <strong>{{ companion.name }}</strong>
+                  <span>{{ companion.outingsTogether }} sortie{{ companion.outingsTogether > 1 ? 's' : '' }} ensemble</span>
+                </span>
+              </a>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+  </div>
+}
+
+<ng-template #avatar let-person>
+  @let picture = avatars.url(person.userId)();
+  <span class="avatar" [style.background]="person.color" aria-hidden="true">
+    @if (picture) {
+      <img [src]="picture" alt="">
+    } @else {
+      {{ person.initials }}
+    }
+  </span>
+</ng-template>

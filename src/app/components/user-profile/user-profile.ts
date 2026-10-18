@@ -16,6 +16,7 @@ import { EditProfileDialogComponent } from '../edit-profile-dialog/edit-profile-
 import { AvatarUploadDialogComponent } from '../avatar-upload-dialog/avatar-upload-dialog.component';
 import { AboutDialogComponent } from '../about-dialog/about-dialog';
 import { PlacesMapComponent } from '../places-map/places-map';
+import { YearFriendsComponent } from '../year-friends/year-friends';
 import { countdownOf } from '../event-details/event-details';
 import { avatarColor, initialsOf } from '../../core/ui/avatar';
 import { formatCents } from '../../core/ui/money';
@@ -54,7 +55,7 @@ function plural(count: number, word: string): string {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [DatePipe, RouterLink, MatIconModule, MatDialogModule, PlacesMapComponent],
+  imports: [DatePipe, RouterLink, MatIconModule, MatDialogModule, PlacesMapComponent, YearFriendsComponent],
   templateUrl: './user-profile.html',
   styleUrl: './user-profile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -85,7 +86,7 @@ export class UserProfileComponent implements OnInit {
     return about !== null && (about.bio !== null || about.interests.length > 0);
   });
   /** Everyone's username, by id: the circle names people who are not always friends. */
-  private readonly names = signal<ReadonlyMap<string, string>>(new Map());
+  readonly names = signal<ReadonlyMap<string, string>>(new Map());
   /** The directory answered, or failed: only then is an unknown id worth asking about. */
   private readonly namesReady = signal(false);
   readonly deletedIcon = DELETED_USER_ICON;

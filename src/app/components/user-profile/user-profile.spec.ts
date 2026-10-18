@@ -182,6 +182,19 @@ describe('UserProfileComponent', () => {
             expect(component.stats().map(stat => stat.label)).toEqual(['Sorties', 'Organisées', 'Lieux']);
         });
 
+        it('template_shouldAddTheFriendsOfTheYear_toTonAnneeWely', () => {
+            component.summary.set(summary({
+                newFriendsThisYear: [{ userId: 'lea', since: '2026-02-01T10:00:00Z' }],
+                topFriendsThisYear: [{ userId: 'bob', outingsTogether: 5 }]
+            }));
+            fixture.detectChanges();
+
+            const year = fixture.nativeElement.querySelector('.year app-year-friends') as HTMLElement;
+            expect(year.textContent).toContain('1 nouvel ami cette année');
+            expect(year.textContent).toContain('bob');
+            expect(year.textContent).toContain('5 sorties ensemble');
+        });
+
         it('circle_shouldNameEachCompanion_andScaleTheirBar', () => {
             expect(component.circle().map(member => [member.name, member.share])).toEqual([['lea', 100], ['bob', 25]]);
         });
