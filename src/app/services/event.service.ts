@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Coordinates, MapArea } from '../models/place.model';
 import { BirthdayOccurrence } from '../models/birthday.model';
+import { FriendGoing, NewFriendThisYear, UpgradeThisYear } from '../models/friendship-insights.model';
 
 /**
  * Who may see an event besides those taking part: everyone, the organizer's friends, nobody, or
@@ -96,6 +97,12 @@ export interface FeedEvent {
   allDay?: boolean;
   kind?: EventKind;
   honoreeId?: string | null;
+  /** The caller's friends among those taking part, intimates first, at most five. */
+  friendsGoing?: FriendGoing[];
+  /** How many of the caller's friends take part, not capped. */
+  friendsGoingCount?: number;
+  /** The closest of them: 0 none, 1 friend, 2 close, 3 intimate. */
+  affinity?: number;
 }
 
 /**
@@ -165,6 +172,11 @@ export interface ProfileSummary {
   circle: Companion[];
   places: VisitedPlace[];
   balances: EventBalance[];
+  /** Absent from a wely-events that predates them. */
+  newFriendsThisYear?: NewFriendThisYear[];
+  upgradesThisYear?: UpgradeThisYear[];
+  /** At most three. */
+  topFriendsThisYear?: Companion[];
 }
 
 interface ProfileSummaryPayload extends Omit<ProfileSummary, 'upcoming' | 'memories'> {
@@ -244,7 +256,7 @@ export class EventService {
   private readonly apiUrl = `${environment.apiUrl}/events-service/events`;
 
   /**
-   * Loads both lists.
+   * Loads both lists; the feed is ranked by how close the friends going are, then by date.
    *
    * <p>Called by the components that display them, not from the constructor. This
    * service is root-provided, so fetching on construction issued both requests at
@@ -258,7 +270,7 @@ export class EventService {
       .subscribe((events) => this.subscribedEventsSubject.next(events));
 
     this.http
-      .get<EventPayload[]>(`${this.apiUrl}/me/feed`)
+      .get<EventPayload[]>(`${this.apiUrl}/me/feed`, { params: { rank: 'affinity' } })
       .pipe(map((events) => events.map((event) => this.toFeedEvent(event))))
       .subscribe((events) => this.feedEventsSubject.next(events));
   }

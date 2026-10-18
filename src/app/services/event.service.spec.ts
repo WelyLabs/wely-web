@@ -51,7 +51,7 @@ describe('EventService', () => {
         // bootstrap — including for a signed-out visitor on the landing page, where they
         // could only come back 401.
         expect(httpMock.match(`${apiUrl}/me/subscribed`)).toHaveLength(0);
-        expect(httpMock.match(`${apiUrl}/me/feed`)).toHaveLength(0);
+        expect(httpMock.match(`${apiUrl}/me/feed?rank=affinity`)).toHaveLength(0);
     });
 
     it('starts both lists empty', () => {
@@ -76,7 +76,7 @@ describe('EventService', () => {
         expect(subscribedRequest.request.method).toBe('GET');
         subscribedRequest.flush([payload({ id: 'a' })]);
 
-        const feedRequest = httpMock.expectOne(`${apiUrl}/me/feed`);
+        const feedRequest = httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`);
         expect(feedRequest.request.method).toBe('GET');
         feedRequest.flush([payload({ id: 'b' }), payload({ id: 'c' })]);
 
@@ -91,7 +91,7 @@ describe('EventService', () => {
 
         service.refreshEvents();
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([payload()]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
 
         expect(subscribed?.[0].startDate).toBeInstanceOf(Date);
         expect(subscribed?.[0].startDate.toISOString()).toBe('2026-03-14T09:30:00.000Z');
@@ -108,7 +108,7 @@ describe('EventService', () => {
         httpMock
             .expectOne(`${apiUrl}/me/subscribed`)
             .flush([payload({ startDate: [2026, 3, 14, 9, 30, 0], endDate: null })]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
 
         const start = subscribed?.[0].startDate;
         expect(start?.getFullYear()).toBe(2026);
@@ -126,7 +126,7 @@ describe('EventService', () => {
         httpMock
             .expectOne(`${apiUrl}/me/subscribed`)
             .flush([payload({ startDate: '2026-03-14T09:30:00Z', endDate: null })]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
 
         const event = subscribed?.[0];
         expect(event?.endDate.getTime()).toBe(event!.startDate.getTime() + 3_600_000);
@@ -140,7 +140,7 @@ describe('EventService', () => {
         httpMock
             .expectOne(`${apiUrl}/me/subscribed`)
             .flush([payload({ startDate: 'not a date', endDate: null })]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
 
         // A malformed date must not produce an Invalid Date that then spreads through
         // every comparison in the calendar.
@@ -168,7 +168,7 @@ describe('EventService', () => {
 
         // createEvent refreshes, so both lists are fetched again.
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
     });
 
     it('getEvent_shouldFetchOneEventAndConvertItsDates', () => {
@@ -213,7 +213,7 @@ describe('EventService', () => {
         expect(result?.id).toBe('1');
 
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
     });
 
     it('leave_shouldPostTheChoiceAndRefreshBothLists_whenTheEventStays', () => {
@@ -230,7 +230,7 @@ describe('EventService', () => {
         expect(result?.event?.startDate).toEqual(new Date('2026-03-14T09:30:00Z'));
 
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
     });
 
     it('leave_shouldReportNoEvent_whenTheLastMemberDeletedIt', () => {
@@ -244,7 +244,7 @@ describe('EventService', () => {
         expect(result).toEqual({ deleted: true, event: null });
 
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
     });
 
     it('leave_shouldPassTheErrorOnWithoutRefreshing_whenRefused', () => {
@@ -338,7 +338,7 @@ describe('EventService', () => {
         expect(result?.image).toBe('https://media/cover.jpg');
         expect(result?.startDate).toBeInstanceOf(Date);
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
     });
 
     it('getMyBirthdays_shouldAskForTheRangeAsInstants', () => {
@@ -361,7 +361,7 @@ describe('EventService', () => {
         expect(request.request.method).toBe('POST');
         request.flush(payload({ id: 's1', kind: 'SURPRISE', honoreeId: 'lea' }));
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
 
         expect(joined?.kind).toBe('SURPRISE');
     });
@@ -387,7 +387,7 @@ describe('EventService', () => {
 
         expect(done).toBe(true);
         httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-        httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+        httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
     });
 
     it('uploadCover_shouldNotRefresh_whenTheUploadFails', () => {
@@ -397,7 +397,7 @@ describe('EventService', () => {
         httpMock.expectOne(`${apiUrl}/ev-1/cover`).flush({ code: 'EVT-BUS-002' }, { status: 403, statusText: 'Forbidden' });
 
         expect(failed).toBe(true);
-        expect(httpMock.match(`${apiUrl}/me/feed`)).toHaveLength(0);
+        expect(httpMock.match(`${apiUrl}/me/feed?rank=affinity`)).toHaveLength(0);
     });
 
     describe('date poll', () => {
@@ -442,7 +442,7 @@ describe('EventService', () => {
             expect(request.request.body.candidateSlots).toEqual(slots);
             request.flush(payload({ poll: pollPayload() }));
             httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-            httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
         });
 
         it('vote_shouldPutTheWholeBallot_andReturnThePoll', () => {
@@ -478,7 +478,7 @@ describe('EventService', () => {
 
             expect(event?.poll?.fixedSlotId).toBe('s2');
             httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-            httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
         });
 
         it('fixDate_shouldNotRefresh_whenRefused', () => {
@@ -559,7 +559,7 @@ describe('EventService', () => {
             expect(req.request.method).toBe('DELETE');
             req.flush(null);
             httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
-            httpMock.expectOne(`${apiUrl}/me/feed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
         });
     });
 });
