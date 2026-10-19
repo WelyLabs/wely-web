@@ -1,0 +1,102 @@
+<h2 mat-dialog-title>Modifier l'événement</h2>
+<mat-dialog-content>
+  <form class="form" id="event-edit-form" (ngSubmit)="save()">
+    <label class="field">
+      <span>Titre</span>
+      <input name="title" required [ngModel]="title()" (ngModelChange)="title.set($event)">
+    </label>
+
+    @if (polling) {
+      <p class="hint"><mat-icon>how_to_vote</mat-icon>La date se décide par le sondage : fixe un créneau depuis l'événement.</p>
+    } @else if (allDay) {
+      <div class="row two">
+        <label class="field">
+          <span>Du</span>
+          <input name="startDay" type="date" required [ngModel]="startDay()" (ngModelChange)="startDay.set($event)">
+        </label>
+        <label class="field">
+          <span>Au</span>
+          <input name="endDay" type="date" required [min]="startDay()" [ngModel]="endDay()" (ngModelChange)="endDay.set($event)">
+        </label>
+      </div>
+    } @else {
+      <div class="row">
+        <label class="field">
+          <span>Début</span>
+          <input name="startDay" type="date" required [ngModel]="startDay()" (ngModelChange)="startDay.set($event)">
+        </label>
+        <label class="field">
+          <span>&nbsp;</span>
+          <input name="startTime" type="time" required aria-label="Heure de début" [ngModel]="startTime()" (ngModelChange)="startTime.set($event)">
+        </label>
+      </div>
+      <div class="row">
+        <label class="field">
+          <span>Fin</span>
+          <input name="endDay" type="date" required [min]="startDay()" [ngModel]="endDay()" (ngModelChange)="endDay.set($event)">
+        </label>
+        <label class="field">
+          <span>&nbsp;</span>
+          <input name="endTime" type="time" required aria-label="Heure de fin" [ngModel]="endTime()" (ngModelChange)="endTime.set($event)">
+        </label>
+      </div>
+    }
+    @if (!polling && !datesValid()) {
+      <p class="error" role="alert">La fin doit venir après le début.</p>
+    } @else if (pastDate()) {
+      <p class="error" role="alert">{{ pastDateMessage }}</p>
+    } @else if (datesChanged()) {
+      <p class="hint">Les participants seront prévenus dans le fil du groupe.</p>
+    }
+
+    <div class="field">
+      <span>Lieu</span>
+      <div class="location">
+        <input name="location" [required]="!surprise" aria-label="Lieu"
+          [placeholder]="surprise ? 'À choisir plus tard' : 'Adresse ou lieu de rendez-vous'"
+          [ngModel]="location()" (ngModelChange)="onLocationTyped($event)">
+        <button type="button" class="map-toggle" [class.open]="pickingLocation()" [class.pinned]="pickedPlace()"
+          [attr.aria-expanded]="pickingLocation()" (click)="toggleLocationPicker()"
+          [attr.aria-label]="pickingLocation() ? 'Fermer la carte' : 'Choisir sur la carte'">
+          <mat-icon>map</mat-icon>
+        </button>
+      </div>
+    </div>
+    @if (pickingLocation()) {
+      @defer (on immediate) {
+        <app-location-picker [value]="pickedPlace()" (picked)="onPlacePicked($event)" />
+      } @placeholder {
+        <div class="location-placeholder"></div>
+      }
+    }
+
+    <label class="field">
+      <span>Description</span>
+      <textarea name="description" rows="3" placeholder="Ce qui est prévu, quoi apporter…"
+        [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+    </label>
+
+    @if (choosesVisibility) {
+      <div class="field">
+        <span>Qui le voit</span>
+        <div class="visibility-choices" role="radiogroup" aria-label="Visibilité">
+          @for (option of visibilityOptions; track option.value) {
+            <button type="button" role="radio" class="visibility-chip" [class.active]="visibility() === option.value"
+              [attr.aria-checked]="visibility() === option.value" (click)="visibility.set(option.value)">
+              <mat-icon>{{ option.icon }}</mat-icon>{{ option.label }}
+            </button>
+          }
+        </div>
+        <small class="muted">{{ visibilityHint() }}</small>
+      </div>
+    }
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">Annuler</button>
+  <button mat-flat-button type="submit" form="event-edit-form" [disabled]="!valid() || saving()">Enregistrer</button>
+</mat-dialog-actions>

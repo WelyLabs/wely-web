@@ -41,6 +41,9 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
 import { HandOverDialogComponent, HandOverDialogData, HandOverDialogResult } from '../hand-over-dialog/hand-over-dialog';
 import { Call, CallMedia, isLive } from '../../models/call.model';
 import { allDayLocalRange } from '../../core/ui/all-day';
+import { EventEditDialogComponent } from '../event-edit-dialog/event-edit-dialog';
+import { EventInviteDialogComponent, EventInviteDialogData } from '../event-invite-dialog/event-invite-dialog';
+import { invitationError } from '../../models/event-invitation';
 
 /**
  * What the page is for, given who looks and when.
@@ -193,6 +196,23 @@ export class EventDetailsComponent implements OnInit {
     const me = this.me();
     return me !== null && (this.participants()?.participantIds ?? []).includes(me.id);
   });
+
+  /** Invited and not answered yet: the page offers to join or to decline. */
+  readonly invited = computed(() => {
+    const me = this.me();
+    return me !== null && !this.joined() && !this.isOrganizer()
+      && (this.participants()?.invitedIds ?? []).includes(me.id);
+  });
+
+  /** The organizer invites friends one by one, but not to a community's event, a birthday, or what is over. */
+  readonly canInvite = computed(() => {
+    const event = this.event();
+    return this.isOrganizer() && event !== null && !event.communityId && event.kind !== 'BIRTHDAY'
+      && this.phase() !== 'past';
+  });
+
+  /** How many invitations wait for an answer, as the organizer sees them. */
+  readonly pendingInvitations = computed(() => this.participants()?.invitedIds?.length ?? 0);
 
   /** The date is still being voted on: the event's dates are only its earliest proposal. */
   readonly polling = computed(() => this.event()?.poll?.status === 'OPEN');
@@ -523,6 +543,117 @@ export class EventDetailsComponent implements OnInit {
       return;
     }
     this.logger.error('EventDetailsComponent', 'Could not leave the event', error);
+  }
+
+  /** The organizer rewrites the event in a dialog; the page shows it as stored. */
+  editEvent(): void {
+    const event = this.event();
+    if (!event || !this.isOrganizer()) {
+      return;
+    }
+    this.dialog.open<EventEditDialogComponent, FeedEvent, FeedEvent>(EventEditDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw',
+      data: event,
+      autoFocus: false,
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(updated => {
+        if (updated) {
+          this.event.set(updated);
+          this.notifications.showInfo('Événement modifié');
+        }
+      });
+  }
+
+  /** The organizer invites friends one by one; the invitations are read again once the dialog closes. */
+  inviteFriends(): void {
+    const event = this.event();
+    if (!event || !this.canInvite()) {
+      return;
+    }
+    const participants = this.participants();
+    const data: EventInviteDialogData = {
+      event,
+      participantIds: participants?.participantIds ?? [],
+      invitedIds: participants?.invitedIds ?? [],
+    };
+    this.dialog.open<EventInviteDialogComponent, EventInviteDialogData, string[]>(EventInviteDialogComponent, {
+      width: '480px',
+      maxWidth: '95vw',
+      data,
+      autoFocus: false,
+    }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadParticipants(event.id));
+  }
+
+  /** The organizer deletes the event for everyone, once confirmed; whoever takes part, the event goes. */
+  deleteEvent(): void {
+    const event = this.event();
+    if (!event || !this.isOrganizer() || this.busy()) {
+      return;
+    }
+    const data: ConfirmDialogData = {
+      title: "Supprimer l'événement ?",
+      message: 'Les participants ne le verront plus. Ses photos, ses dépenses et sa discussion disparaissent avec lui. Cette action est définitive.',
+      confirmText: 'Supprimer pour tout le monde',
+      cancelText: 'Annuler',
+      isDestructive: true
+    };
+    this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+      width: '400px',
+      maxWidth: '95vw',
+      data,
+      panelClass: 'confirm-dialog-panel'
+    }).afterClosed()
+      .pipe(
+        filter(confirmed => confirmed === true),
+        switchMap(() => {
+          this.busy.set(true);
+          return this.eventService.deleteEvent(event.id);
+        }),
+        takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.notifications.showInfo('Événement supprimé');
+          this.navigationService.back('/calendar');
+        },
+        error: (error: unknown) => {
+          this.busy.set(false);
+          this.logger.error('EventDetailsComponent', 'Could not delete the event', error);
+          this.notifications.showInfo("L'événement n'a pas pu être supprimé. Réessaie dans un instant.");
+        }
+      });
+  }
+
+  /**
+   * The invitee declines: off the invited, so a private event is no longer theirs to see and the
+   * page goes back; any other stays readable.
+   */
+  declineInvitation(): void {
+    const event = this.event();
+    const me = this.me();
+    if (!event || !me || this.busy()) {
+      return;
+    }
+    this.busy.set(true);
+    this.eventService.withdrawInvitation(event.id, me.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notifications.showInfo('Invitation déclinée');
+        if (event.visibility === 'PRIVATE') {
+          this.navigationService.back('/calendar');
+        } else {
+          this.loadParticipants(event.id);
+        }
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.notifications.showInfo(invitationError(error));
+      }
+    });
   }
 
   /** The organizer picked a picture: it is cropped in a dialog, which uploads it. */

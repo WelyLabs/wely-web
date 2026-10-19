@@ -83,6 +83,36 @@
     <div #heroEnd class="hero-end"></div>
 
     <main class="content">
+      @if (isOrganizer()) {
+        <div class="organizer-actions" role="toolbar" aria-label="Gérer l'événement">
+          <button type="button" class="outline-button edit-event" (click)="editEvent()">
+            <mat-icon>edit</mat-icon>Modifier
+          </button>
+          @if (canInvite()) {
+            <button type="button" class="outline-button invite-friends" (click)="inviteFriends()">
+              <mat-icon>person_add</mat-icon>Inviter des amis
+              @if (pendingInvitations() > 0) {
+                <span class="count" [attr.aria-label]="pendingInvitations() + ' en attente'">{{ pendingInvitations() }}</span>
+              }
+            </button>
+          }
+          <button type="button" class="outline-button danger delete-event" (click)="deleteEvent()" [disabled]="busy()">
+            <mat-icon>delete</mat-icon>Supprimer
+          </button>
+        </div>
+      }
+      @if (invited()) {
+        <section class="card invitation-banner" aria-label="Invitation">
+          <mat-icon>mail</mat-icon>
+          <div>
+            <strong>{{ organizerName() || "L'organisateur" }} t'invite</strong>
+            <span>Rejoins l'événement, ou décline l'invitation.</span>
+          </div>
+          <button type="button" class="text-button decline-invitation" (click)="declineInvitation()" [disabled]="busy()">
+            Décliner
+          </button>
+        </section>
+      }
       <!-- A clash with the viewer's own agenda; a poll has no date yet, and a past event is over. -->
       @if (phase() !== 'past' && !polling()) {
         <app-event-conflicts [event]="event" [meId]="meId()" (rescheduled)="onRescheduled($event)" />

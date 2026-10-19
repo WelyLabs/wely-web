@@ -8,6 +8,7 @@ import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON, DELETED_USER_LABEL } from
 import { AvatarService } from '../../../services/avatar.service';
 import { DeletedUsersService } from '../../../services/deleted-users.service';
 import { invitationPath, invitationTokenIn } from '../../../models/community.model';
+import { eventInvitationIn, eventInvitationPath } from '../../../models/event-invitation';
 
 /** What a bubble shows: one message, from the viewer or from someone else. */
 export interface ChatBubbleMessage {
@@ -61,19 +62,27 @@ export class ChatBubbleComponent {
   readonly color = computed(() =>
     this.deletedSender() ? DELETED_USER_AVATAR_COLOR : avatarColor(this.message().senderId ?? this.author()));
   /**
-   * A community invitation the message links to: shown as a card with a button rather than a bare
-   * link, with the words that came before the link.
+   * A community or event invitation the message links to: shown as a card with a button rather than
+   * a bare link, with the words that came before the link.
    */
   readonly invitation = computed(() => {
     const text = this.message().text;
     const token = invitationTokenIn(text);
-    if (!token) {
-      return null;
+    if (token) {
+      return { kind: 'community' as const, link: invitationPath(token), intro: introOf(text, /https?:\/\/|\/communities\/invite\//) };
     }
-    const intro = text.slice(0, text.search(/https?:\/\/|\/communities\/invite\//)).replace(/\s*:\s*$/, '').trim();
-    return { link: invitationPath(token), intro };
+    const eventId = eventInvitationIn(text);
+    if (eventId) {
+      return { kind: 'event' as const, link: eventInvitationPath(eventId), intro: introOf(text, /https?:\/\/|\/event\//) };
+    }
+    return null;
   });
   /** The author's photo; the coloured initials stand in until it arrives, or when there is none. */
   readonly picture = computed(() =>
     this.message().isMe || this.message().system || this.deletedSender() ? null : this.avatars.url(this.message().senderId)());
+}
+
+/** The words before the link, without the colon that introduced it. */
+function introOf(text: string, link: RegExp): string {
+  return text.slice(0, text.search(link)).replace(/\s*:\s*$/, '').trim();
 }

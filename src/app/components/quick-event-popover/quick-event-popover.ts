@@ -39,7 +39,7 @@ interface PickedCover {
 export const VISIBILITY_OPTIONS: readonly { value: Visibility; label: string; icon: string; hint: string }[] = [
     { value: 'FRIENDS', label: 'Amis', icon: 'group', hint: 'Vos amis le voient dans leur fil' },
     { value: 'PUBLIC', label: 'Public', icon: 'public', hint: 'Tout le monde le voit' },
-    { value: 'PRIVATE', label: 'Privé', icon: 'lock', hint: 'Vos amis ne voient que « occupé »' }
+    { value: 'PRIVATE', label: 'Privé', icon: 'lock', hint: 'Seuls vos invités le voient ; vos amis n’y lisent que « occupé »' }
 ];
 
 const pad = (value: number) => value.toString().padStart(2, '0');

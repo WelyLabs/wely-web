@@ -116,6 +116,18 @@ export interface EventParticipants {
   participantIds: string[];
   /** The viewer's friends among the participants. */
   friendsGoingIds: string[];
+  /** Pending invitations: every one for the organizer, the viewer's own for an invitee, none otherwise. */
+  invitedIds?: string[];
+}
+
+/** What the organizer may rewrite; the date moves through ScheduleService.reschedule. */
+export interface EventUpdateRequest {
+  title: string;
+  location: string;
+  coordinates?: Coordinates | null;
+  description?: string | null;
+  /** Left out on a community event, which keeps its community's. */
+  visibility?: Visibility;
 }
 
 export interface FriendCalendarEntry {
@@ -306,6 +318,24 @@ export class EventService {
   /** Deletes the event: its organizer, or an admin of the community it was published in. */
   deleteEvent(eventId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${eventId}`).pipe(tap(() => this.refreshEvents()));
+  }
+
+  /** Rewrites the event's details; its organizer only. */
+  updateEvent(eventId: string, request: EventUpdateRequest): Observable<FeedEvent> {
+    return this.http.put<EventPayload>(`${this.apiUrl}/${eventId}`, request).pipe(
+      map((event) => this.toFeedEvent(event)),
+      tap(() => this.refreshEvents()),
+    );
+  }
+
+  /** Invites a friend, who then sees the event, private or not: who takes part and is invited, as the organizer sees it. */
+  inviteFriend(eventId: string, userId: string): Observable<EventParticipants> {
+    return this.http.post<EventParticipants>(`${this.apiUrl}/${eventId}/invitations`, { userId });
+  }
+
+  /** The organizer takes an invitation back, or the invitee declines it. */
+  withdrawInvitation(eventId: string, userId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${eventId}/invitations/${userId}`).pipe(tap(() => this.refreshEvents()));
   }
 
   /** A community's upcoming events, soonest first; members only. */

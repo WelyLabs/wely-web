@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { EventService, FeedEvent, FriendOverview, Poll, ProfileSummary } from './event.service';
+import { EventParticipants, EventService, FeedEvent, FriendOverview, Poll, ProfileSummary } from './event.service';
 import { environment } from '../../environments/environment';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -556,6 +556,44 @@ describe('EventService', () => {
             service.deleteEvent('1').subscribe();
 
             const req = httpMock.expectOne(`${apiUrl}/1`);
+            expect(req.request.method).toBe('DELETE');
+            req.flush(null);
+            httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
+        });
+
+        it('updateEvent_shouldPutTheDetails_thenRefreshTheLists', () => {
+            let event: FeedEvent | undefined;
+            service.updateEvent('1', { title: 'Dîner', location: 'Lyon', visibility: 'PRIVATE' })
+                .subscribe(updated => event = updated);
+
+            const req = httpMock.expectOne(`${apiUrl}/1`);
+            expect(req.request.method).toBe('PUT');
+            expect(req.request.body).toEqual({ title: 'Dîner', location: 'Lyon', visibility: 'PRIVATE' });
+            req.flush(payload({ title: 'Dîner' }));
+            httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);
+            httpMock.expectOne(`${apiUrl}/me/feed?rank=affinity`).flush([]);
+
+            expect(event?.title).toBe('Dîner');
+            expect(event?.startDate).toBeInstanceOf(Date);
+        });
+
+        it('inviteFriend_shouldPostTheFriend_andAnswerWithTheInvitations', () => {
+            let participants: EventParticipants | undefined;
+            service.inviteFriend('1', 'lea').subscribe(answer => participants = answer);
+
+            const req = httpMock.expectOne(`${apiUrl}/1/invitations`);
+            expect(req.request.method).toBe('POST');
+            expect(req.request.body).toEqual({ userId: 'lea' });
+            req.flush({ count: 1, participantIds: ['me'], friendsGoingIds: [], invitedIds: ['lea'] });
+
+            expect(participants?.invitedIds).toEqual(['lea']);
+        });
+
+        it('withdrawInvitation_shouldDeleteIt_thenRefreshTheLists', () => {
+            service.withdrawInvitation('1', 'lea').subscribe();
+
+            const req = httpMock.expectOne(`${apiUrl}/1/invitations/lea`);
             expect(req.request.method).toBe('DELETE');
             req.flush(null);
             httpMock.expectOne(`${apiUrl}/me/subscribed`).flush([]);

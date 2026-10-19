@@ -149,6 +149,23 @@ describe('ChatBubbleComponent', () => {
     expect(fixture.componentInstance.invitation()?.intro).toBe('');
   });
 
+  it('template_shouldShowAnEventInvitationAsACard_linkingToTheEvent', () => {
+    const element = render({ text: "Je t'invite à « Dîner » le samedi 25 octobre à 20:00 sur Wely : "
+        + 'http://localhost/event/6713a0f1c2?invitation', time: '2026-10-12T19:05:00', isMe: false,
+      senderName: 'lea', senderId: 'lea' });
+
+    expect(element.querySelector('.invitation-head')?.textContent).toContain('Invitation à un événement');
+    expect(element.querySelector('.invitation p')?.textContent).toBe("Je t'invite à « Dîner » le samedi 25 octobre à 20:00 sur Wely");
+    expect(element.querySelector('.invitation-cta')?.getAttribute('href')).toBe('/event/6713a0f1c2');
+    expect(element.querySelector('.invitation-cta')?.textContent).toContain("Voir l'événement");
+  });
+
+  it('invitation_shouldBeNull_forAPlainLinkToAnEvent', () => {
+    render({ text: 'Regarde : http://localhost/event/6713a0f1c2', time: '2026-10-12T19:05:00', isMe: true });
+
+    expect(fixture.componentInstance.invitation()).toBeNull();
+  });
+
   it('invitation_shouldBeNull_forAnOrdinaryMessage', () => {
     render({ text: 'On se voit samedi ?', time: '2026-10-12T19:05:00', isMe: true });
 
