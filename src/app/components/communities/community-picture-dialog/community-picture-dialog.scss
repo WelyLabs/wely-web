@@ -1,0 +1,149 @@
+.dialog-container {
+    padding: 24px;
+    width: min(480px, 100%);
+
+    @media (max-width: 600px) {
+        padding: 16px;
+    }
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+}
+
+.close-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--bg-subtle);
+        color: var(--text-primary);
+    }
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.cropper-area {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+
+    ::ng-deep image-cropper {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+// Same rounded square as the badge on the community's page.
+.preview {
+    display: grid;
+    place-items: center;
+    width: 128px;
+    height: 128px;
+    border-radius: 32px;
+    object-fit: cover;
+
+    &.initials {
+        color: #fff;
+        font-size: 44px;
+        font-weight: 800;
+    }
+}
+
+.upload-area {
+    width: 100%;
+    padding: 20px;
+    border: 2px dashed var(--border-default);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--primary-blue);
+    }
+
+    mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+.text-button {
+    border: none;
+    background: none;
+    color: var(--primary-blue);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.error-message {
+    margin: 12px 0 0;
+    color: var(--danger, #dc2626);
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-default);
+
+    .spacer {
+        flex: 1;
+    }
+
+    button {
+        border-radius: 12px;
+        font-weight: 600;
+    }
+
+    .remove-button {
+        color: var(--danger, #dc2626);
+    }
+
+    .save-button {
+        background: var(--accent-gradient);
+        color: white;
+
+        &:disabled {
+            opacity: 0.6;
+        }
+    }
+}

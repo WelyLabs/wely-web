@@ -1,6 +1,10 @@
 <a class="card" [routerLink]="['/communities', community().communityId]">
   <div class="top">
-    <span class="badge-avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+    @if (community().pictureUrl; as pictureUrl) {
+      <img class="badge-avatar" [src]="pictureUrl" alt="">
+    } @else {
+      <span class="badge-avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+    }
     <div class="titles">
       <h3>{{ community().name }}</h3>
       <span class="meta">

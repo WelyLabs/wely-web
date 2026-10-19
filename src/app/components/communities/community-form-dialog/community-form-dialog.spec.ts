@@ -9,7 +9,7 @@ import { Community } from '../../../models/community.model';
 
 const existing: Community = {
   communityId: 'c1', name: 'Club', description: 'Voitures', interests: ['auto'], visibility: 'PRIVATE',
-  createdAt: '2026-10-01T10:00:00Z', memberCount: 2, role: 'ADMIN', friendMembers: [], friendMemberCount: 0,
+  createdAt: '2026-10-01T10:00:00Z', memberCount: 2, role: 'ADMIN', friendMembers: [], friendMemberCount: 0, pictureUrl: null,
 };
 
 describe('CommunityFormDialogComponent', () => {

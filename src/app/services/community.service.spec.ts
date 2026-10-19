@@ -59,6 +59,7 @@ describe('CommunityService', () => {
     ['revoke', () => service.revoke('c1', 'tok'), 'DELETE', `${api}/c1/invitations/tok`, null],
     ['invitation', () => service.invitation('tok'), 'GET', `${api}/invitations/tok`, null],
     ['accept', () => service.accept('tok'), 'POST', `${api}/invitations/tok/accept`, {}],
+    ['removePicture', () => service.removePicture('c1'), 'DELETE', `${api}/c1/picture`, null],
   ])('%s calls the right endpoint', (_name, call, method, url, body) => {
     (call() as Observable<unknown>).subscribe();
     const req = http.expectOne(url);
@@ -66,6 +67,19 @@ describe('CommunityService', () => {
     if (body !== null) {
       expect(req.request.body).toEqual(body);
     }
+    req.flush(null);
+  });
+
+  it('uploads the picture as the multipart part « file »', () => {
+    const picture = new Blob(['jpeg'], { type: 'image/jpeg' });
+
+    service.uploadPicture('c1', picture).subscribe();
+
+    const req = http.expectOne(`${api}/c1/picture`);
+    expect(req.request.method).toBe('POST');
+    const body = req.request.body as FormData;
+    expect(body.get('file')).toBeInstanceOf(Blob);
+    expect((body.get('file') as File).name).toBe('picture.jpg');
     req.flush(null);
   });
 });
