@@ -7,6 +7,7 @@ import { finalize } from 'rxjs';
 
 import { Community, communityErrorMessage } from '../../../models/community.model';
 import { EventService, FeedEvent } from '../../../services/event.service';
+import { EVENT_IN_PAST_MESSAGE, isEventInPast, startsInPast } from '../../../core/ui/past-date';
 
 /** `YYYY-MM-DD` of a local date, as an `<input type="date">` takes it. */
 function localDate(date: Date): string {
@@ -47,9 +48,13 @@ export class CommunityEventDialogComponent {
     return end <= this.start() ? new Date(end.getTime() + 24 * 3600 * 1000) : end;
   });
 
+  /** A start already behind: said under the dates rather than left as a greyed-out button. */
+  readonly pastDate = computed(() => !Number.isNaN(this.start().getTime()) && startsInPast(this.start()));
+  readonly pastDateMessage = EVENT_IN_PAST_MESSAGE;
+
   readonly valid = computed(() =>
     this.title().trim().length > 0 && this.location().trim().length > 0
-    && !Number.isNaN(this.start().getTime()) && this.start().getTime() > Date.now());
+    && !Number.isNaN(this.start().getTime()) && !this.pastDate());
 
   save(): void {
     if (!this.valid() || this.saving()) {
@@ -70,7 +75,8 @@ export class CommunityEventDialogComponent {
       .subscribe({
         next: (event) => this.dialogRef.close(event),
         error: (err: HttpErrorResponse) =>
-          this.error.set(communityErrorMessage(err.error?.code) ?? "L'événement n'a pas pu être publié."),
+          this.error.set(isEventInPast(err) ? EVENT_IN_PAST_MESSAGE
+            : communityErrorMessage(err.error?.code) ?? "L'événement n'a pas pu être publié."),
       });
   }
 

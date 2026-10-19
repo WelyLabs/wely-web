@@ -1510,6 +1510,16 @@ describe('CalendarComponent', () => {
             expect(component.isSelectingRange()).toBe(false);
         });
 
+        it('submitEvent_shouldSayTheDateIsPast_whenTheServerRefusesIt', () => {
+            (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() =>
+                new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-038' } })));
+            component.openNewEvent(new Date(2030, 0, 10));
+
+            component.submitEvent({ title: 'Apéro', startDate: new Date(2030, 0, 10, 18), location: '' });
+
+            expect(component.createError()).toContain('déjà passée');
+        });
+
         it('submitEvent_shouldExplainInvalidSlots', () => {
             (eventServiceMock.createEvent as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() =>
                 new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-014' } })));

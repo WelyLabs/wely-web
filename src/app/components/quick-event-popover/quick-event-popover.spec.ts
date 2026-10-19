@@ -29,6 +29,14 @@ describe('QuickEventPopoverComponent', () => {
         description: ''
     });
 
+    // The fixtures are set from June 2025: today is pinned before them, as a new event is never past.
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(2025, 4, 1, 8));
+    });
+
+    afterEach(() => vi.useRealTimers());
+
     beforeEach(async () => {
         dialogOpen = vi.fn().mockReturnValue({ afterClosed: () => of(undefined) });
         await TestBed.configureTestingModule({
@@ -389,6 +397,45 @@ describe('QuickEventPopoverComponent', () => {
             open(at(16, 19), at(16, 19));
 
             expect(fixture.nativeElement.querySelector('.field-error')?.textContent).toContain('après le début');
+        });
+
+        it('pastDate_shouldBlockTheSaveAndSaySo_whenTheStartIsAlreadyBehind', () => {
+            vi.setSystemTime(at(16, 20));
+            open(at(16, 19), at(16, 21));
+            component.update('title', 'Afterwork');
+            const save = vi.fn();
+            component.save.subscribe(save);
+
+            component.onSave();
+            fixture.detectChanges();
+
+            expect(component.pastDate()).toBe(true);
+            expect(save).not.toHaveBeenCalled();
+            expect(fixture.nativeElement.querySelector('.field-error')?.textContent).toContain('déjà passée');
+        });
+
+        it('pastDate_shouldAllowAStartJustBehind_andAnAllDayEventToday', () => {
+            vi.setSystemTime(at(16, 19, 3));
+            open(at(16, 19), at(16, 21));
+            expect(component.pastDate()).toBe(false);
+
+            vi.setSystemTime(at(16, 23));
+            component.toggleAllDay();
+            expect(component.pastDate()).toBe(false);
+            component.onStartChange('date', '2026-10-15');
+            expect(component.pastDate()).toBe(true);
+        });
+
+        it('pastSlots_shouldBlockAPollWithASlotAlreadyStarted', () => {
+            vi.setSystemTime(at(16, 20));
+            open(at(16, 19), at(16, 21));
+            component.update('title', 'Afterwork');
+            component.togglePollMode();
+            component.addSlot();
+
+            expect(component.pastDate()).toBe(false);
+            expect(component.pastSlots()).toBe(true);
+            expect(component.canSave()).toBe(false);
         });
 
         it('template_shouldAskForTheEndDay_onlyForAMultiDayEvent', () => {
@@ -883,6 +930,7 @@ describe('QuickEventPopoverComponent schedule conflicts', () => {
 
     beforeEach(async () => {
         vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 9, 1, 8));
         checkConflicts = vi.fn().mockReturnValue(of([bowling]));
         TestBed.resetTestingModule();
         await TestBed.configureTestingModule({

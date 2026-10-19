@@ -18,6 +18,7 @@ import { ScheduleService } from '../../services/schedule.service';
 import { FriendSummary } from '../../models/friendship.model';
 import { readOutingProposal } from '../../core/ui/outing-proposal';
 import { allDayLocalRange, daysCovered } from '../../core/ui/all-day';
+import { EVENT_IN_PAST_MESSAGE, isEventInPast } from '../../core/ui/past-date';
 import {
   BirthdayOccurrence, BirthdayTone, SURPRISE_END_HOUR, SURPRISE_START_HOUR, birthdayEmoji, birthdayTone, isBirthdayToday,
   parseLocalDate, surpriseDescription, surpriseTitle
@@ -1535,8 +1536,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
           return;
         }
         const invalidPoll = err instanceof HttpErrorResponse && err.error?.code === POLL_INVALID_CODE;
-        this.createError.set(invalidPoll
-          ? 'Les créneaux proposés ne sont pas valides : chacun doit être à venir et différent des autres.'
+        this.createError.set(isEventInPast(err) ? EVENT_IN_PAST_MESSAGE
+          : invalidPoll ? 'Les créneaux proposés ne sont pas valides : chacun doit être à venir et différent des autres.'
           : 'L\'événement n\'a pas pu être créé. Réessayez dans un instant.');
         this.logger.error('CalendarComponent', 'Error creating event:', err);
       }

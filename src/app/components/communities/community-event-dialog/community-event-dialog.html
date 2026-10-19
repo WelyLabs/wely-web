@@ -21,6 +21,9 @@
         <input name="end" type="time" required [ngModel]="endTime()" (ngModelChange)="endTime.set($event)">
       </label>
     </div>
+    @if (pastDate()) {
+      <p class="error" role="alert">{{ pastDateMessage }}</p>
+    }
     <label class="field">
       <span>Lieu</span>
       <input name="location" required placeholder="Adresse ou lieu de rendez-vous"

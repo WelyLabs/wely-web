@@ -1,4 +1,5 @@
-import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
@@ -13,6 +14,7 @@ describe('CommunityEventDialogComponent', () => {
   let events: { createEvent: ReturnType<typeof vi.fn> };
   let dialogRef: { close: ReturnType<typeof vi.fn> };
   let dialog: CommunityEventDialogComponent;
+  let fixture: ComponentFixture<CommunityEventDialogComponent>;
 
   beforeEach(() => {
     events = { createEvent: vi.fn().mockReturnValue(of({ id: 'e1' })) };
@@ -25,7 +27,7 @@ describe('CommunityEventDialogComponent', () => {
         { provide: MAT_DIALOG_DATA, useValue: community },
       ],
     });
-    const fixture = TestBed.createComponent(CommunityEventDialogComponent);
+    fixture = TestBed.createComponent(CommunityEventDialogComponent);
     fixture.detectChanges();
     dialog = fixture.componentInstance;
   });
@@ -76,6 +78,25 @@ describe('CommunityEventDialogComponent', () => {
 
     dialog.save();
     expect(events.createEvent).not.toHaveBeenCalled();
+  });
+
+  it('says why a date already past cannot be published', () => {
+    fill();
+    expect(dialog.pastDate()).toBe(false);
+    dialog.day.set('2000-01-01');
+    fixture.detectChanges();
+
+    expect(dialog.pastDate()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('déjà passée');
+  });
+
+  it('words the server refusing a past date', () => {
+    events.createEvent.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-038' } })));
+    fill();
+
+    dialog.save();
+
+    expect(dialog.error()).toContain('déjà passée');
   });
 
   it('words a refusal', () => {

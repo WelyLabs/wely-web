@@ -55,6 +55,8 @@
                     }
                     @if (invalidRange()) {
                         <small class="field-error">La fin doit venir après le début.</small>
+                    } @else if (pastDate()) {
+                        <small class="field-error" role="alert">{{ pastDateMessage }}</small>
                     }
                 </div>
             </div>
@@ -124,6 +126,9 @@
                     }
                     @if (invalidSlots()) {
                         <small class="field-error">Un créneau est en double ou finit avant de commencer.</small>
+                    }
+                    @if (pastSlots()) {
+                        <small class="field-error" role="alert">Un créneau est déjà passé : propose des dates à venir.</small>
                     }
                 </div>
             }

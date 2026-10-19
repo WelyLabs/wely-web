@@ -14,6 +14,7 @@ import { LocationPickerComponent } from '../location-picker/location-picker';
 import { EventCoverDialogComponent, EventCoverDialogData, EventCoverDialogResult } from '../event-cover-dialog/event-cover-dialog';
 import { Place } from '../../models/place.model';
 import { allDayWireRange } from '../../core/ui/all-day';
+import { EVENT_IN_PAST_MESSAGE, startsInPast } from '../../core/ui/past-date';
 
 /** A proposed date of a poll. */
 export interface ProposedSlot {
@@ -118,6 +119,7 @@ export class QuickEventPopoverComponent {
     readonly data = input.required<EventCreateRequest>();
     /** Why the last save failed, shown above the buttons. */
     readonly error = input<string | null>(null);
+    readonly pastDateMessage = EVENT_IN_PAST_MESSAGE;
     /** While the event is being created: the button waits instead of sending it twice. */
     readonly saving = input(false);
 
@@ -246,8 +248,14 @@ export class QuickEventPopoverComponent {
         const keys = slots.map(slot => `${slot.start.getTime()}-${slot.end.getTime()}`);
         return slots.some(slot => slot.end <= slot.start) || new Set(keys).size !== keys.length;
     });
-    readonly canSave = computed(() => !!this.draft().title.trim() && !this.invalidRange() && !this.saving()
-        && (!this.pollMode() || (!this.tooFewSlots() && !this.invalidSlots())));
+    /** A fixed date already behind: all day, once the last day is over; otherwise once it started. */
+    readonly pastDate = computed(() => !this.pollMode() && (this.allDay()
+        ? this.endDay() < toDateValue(new Date())
+        : startsInPast(this.draft().startDate)));
+    /** A proposed slot already started: a poll is on dates to come. */
+    readonly pastSlots = computed(() => this.pollMode() && this.candidates().some(slot => slot.start.getTime() < Date.now()));
+    readonly canSave = computed(() => !!this.draft().title.trim() && !this.invalidRange() && !this.pastDate() && !this.saving()
+        && (!this.pollMode() || (!this.tooFewSlots() && !this.invalidSlots() && !this.pastSlots())));
 
     private readonly schedule = inject(ScheduleService);
 
