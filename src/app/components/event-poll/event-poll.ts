@@ -9,6 +9,7 @@ import { LoggerService } from '../../core/logging/logger.service';
 import { avatarColor } from '../../core/ui/avatar';
 import { DELETED_USER_AVATAR_COLOR, DELETED_USER_ICON } from '../../core/ui/deleted-user';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
+import { EVENT_IN_PAST_MESSAGE, isEventInPast, startsInPast } from '../../core/ui/past-date';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 
 /** Someone who voted, as the avatars show them. */
@@ -160,7 +161,7 @@ export class EventPollComponent {
 
   /** The organizer fixes the event on this slot, once confirmed. */
   fix(slot: PollSlot): void {
-    if (!this.isOrganizer() || this.fixing()) {
+    if (!this.isOrganizer() || this.fixing() || this.isPast(slot)) {
       return;
     }
     const data: ConfirmDialogData = {
@@ -189,10 +190,17 @@ export class EventPollComponent {
       },
       error: (error: unknown) => {
         this.fixing.set(null);
-        this.error.set(this.closed(error) ? 'Le sondage est déjà clos.' : 'La date n’a pas pu être fixée. Réessaie dans un instant.');
+        this.error.set(this.closed(error) ? 'Le sondage est déjà clos.'
+          : isEventInPast(error) ? EVENT_IN_PAST_MESSAGE
+          : 'La date n’a pas pu être fixée. Réessaie dans un instant.');
         this.logger.error('EventPollComponent', 'Could not fix the date', error);
       }
     });
+  }
+
+  /** A slot gone by while the poll stayed open: the date can no longer be fixed on it. */
+  isPast(slot: PollSlot): boolean {
+    return startsInPast(slot.start);
   }
 
   avatarColor(id: string): string {

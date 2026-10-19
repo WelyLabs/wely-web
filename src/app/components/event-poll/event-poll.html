@@ -47,10 +47,16 @@
       </div>
 
       @if (isOrganizer()) {
-        <button type="button" class="fix-button" [disabled]="fixing() !== null" [appPendingTrail]="fixing() === row.slot.id"
-          (click)="fix(row.slot)">
-          <mat-icon>event_available</mat-icon>Fixer cette date
-        </button>
+        @if (isPast(row.slot)) {
+          <button type="button" class="fix-button" disabled>
+            <mat-icon>history</mat-icon>Créneau passé
+          </button>
+        } @else {
+          <button type="button" class="fix-button" [disabled]="fixing() !== null" [appPendingTrail]="fixing() === row.slot.id"
+            (click)="fix(row.slot)">
+            <mat-icon>event_available</mat-icon>Fixer cette date
+          </button>
+        }
       }
     </div>
   }

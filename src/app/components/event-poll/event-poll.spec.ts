@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject, of, throwError } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventService, FeedEvent, Poll } from '../../services/event.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
@@ -70,6 +70,14 @@ describe('EventPollComponent', () => {
         fixture.componentRef.setInput('voterOf', voterOf);
         fixture.detectChanges();
     }
+
+    // The slots are set on 20 and 21 October 2026: today is pinned before them.
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(2026, 9, 1, 8));
+    });
+
+    afterEach(() => vi.useRealTimers());
 
     beforeEach(() => {
         eventService = { vote: vi.fn(), fixDate: vi.fn() };
@@ -247,6 +255,28 @@ describe('EventPollComponent', () => {
 
         expect(component.error()).toContain('pas pu être fixée');
         expect(component.fixing()).toBeNull();
+    });
+
+    it('fix_shouldNotOfferASlotAlreadyPast', () => {
+        vi.setSystemTime(new Date(2026, 9, 20, 21));
+        create({ isOrganizer: true });
+
+        component.fix(poll().slots[0]);
+
+        expect(dialog.open).not.toHaveBeenCalled();
+        const buttons = el().querySelectorAll<HTMLButtonElement>('.fix-button');
+        expect(buttons[0].disabled).toBe(true);
+        expect(buttons[0].textContent).toContain('Créneau passé');
+        expect(buttons[1].textContent).toContain('Fixer cette date');
+    });
+
+    it('fix_shouldSayTheDateIsPast_whenTheServerRefusesIt', () => {
+        eventService.fixDate.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-038' } })));
+        create({ isOrganizer: true });
+
+        component.fix(poll().slots[0]);
+
+        expect(component.error()).toContain('déjà passée');
     });
 
     it('fix_shouldBeRefused_toSomeoneElse', () => {

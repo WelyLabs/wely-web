@@ -199,6 +199,15 @@ describe('EventConflictsComponent', () => {
     expect(component.moving()).toBeNull();
   });
 
+  it('should say a move into the past is refused', () => {
+    schedule.reschedule.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { code: 'EVT-BUS-038' } })));
+    create();
+
+    component.choose(bowling, anHourLater);
+
+    expect(component.error()).toContain('déjà passée');
+  });
+
   it('should fall back on a generic message for any other failure', () => {
     schedule.reschedule.mockReturnValue(throwError(() => new Error('network')));
     create();

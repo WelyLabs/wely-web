@@ -9,12 +9,14 @@ import { NotificationService } from '../../services/notification.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { PendingTrailDirective } from '../../core/ui/pending-trail.directive';
 import { rangeLabel, shiftLabel } from '../../core/ui/schedule-labels';
+import { EVENT_IN_PAST_CODE, EVENT_IN_PAST_MESSAGE } from '../../core/ui/past-date';
 
 /** What a refused move means for the organizer, by the server's error code. */
 const MOVE_ERRORS: Readonly<Record<string, string>> = {
   'EVT-BUS-017': 'Ce créneau n\'est plus possible : choisis-en un autre.',
   'EVT-BUS-018': 'Le sondage de date est encore ouvert : fixe la date dans le sondage.',
-  'EVT-BUS-019': 'La date a changé entre-temps : recharge la page avant de la déplacer.'
+  'EVT-BUS-019': 'La date a changé entre-temps : recharge la page avant de la déplacer.',
+  [EVENT_IN_PAST_CODE]: EVENT_IN_PAST_MESSAGE
 };
 const MOVE_FAILED = 'La sortie n\'a pas pu être décalée. Réessaie dans un instant.';
 
