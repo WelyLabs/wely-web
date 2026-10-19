@@ -24,6 +24,8 @@ import { Conversation, ConversationType, Message, MessageType } from '../../mode
 import { User } from '../../models/user.model';
 import { MatDialog } from '@angular/material/dialog';
 import { EventCoverDialogComponent } from '../event-cover-dialog/event-cover-dialog';
+import { EventEditDialogComponent } from '../event-edit-dialog/event-edit-dialog';
+import { EventInviteDialogComponent } from '../event-invite-dialog/event-invite-dialog';
 import { DeletedUsersService } from '../../services/deleted-users.service';
 import { deletedUsersStub } from '../../../testing/deleted-users.stub';
 
@@ -93,6 +95,8 @@ describe('EventDetailsComponent', () => {
         removeCover: ReturnType<typeof vi.fn>;
         leave: ReturnType<typeof vi.fn>;
         calendarFileUrl: ReturnType<typeof vi.fn>;
+        deleteEvent: ReturnType<typeof vi.fn>;
+        withdrawInvitation: ReturnType<typeof vi.fn>;
     };
     let notifications: { showInfo: ReturnType<typeof vi.fn> };
     let dialog: { open: ReturnType<typeof vi.fn> };
@@ -157,7 +161,9 @@ describe('EventDetailsComponent', () => {
             toggleSubscription: vi.fn().mockReturnValue(of(event())),
             removeCover: vi.fn().mockReturnValue(of(undefined)),
             leave: vi.fn().mockReturnValue(of({ deleted: false, event: event() })),
-            calendarFileUrl: vi.fn().mockReturnValue(of('/api/v1/events-service/public/calendar/tok.ics'))
+            calendarFileUrl: vi.fn().mockReturnValue(of('/api/v1/events-service/public/calendar/tok.ics')),
+            deleteEvent: vi.fn().mockReturnValue(of(undefined)),
+            withdrawInvitation: vi.fn().mockReturnValue(of(undefined))
         };
         notifications = { showInfo: vi.fn() };
         dialog = { open: vi.fn().mockReturnValue({ afterClosed: () => of(undefined) }) };
@@ -1291,6 +1297,207 @@ describe('EventDetailsComponent', () => {
             component.onRescheduled(moved);
 
             expect(component.event()).toBe(moved);
+        });
+    });
+
+    describe('organizing and invitations', () => {
+        const dialogAnswers = (...answers: unknown[]) => {
+            let index = 0;
+            dialog.open.mockImplementation(() => {
+                const answer = answers[Math.min(index++, answers.length - 1)];
+                return { afterClosed: () => of(answer) };
+            });
+        };
+        const asOrganizer = (overrides: Partial<FeedEvent> = {}, invitedIds: string[] = []) => {
+            eventService.getEvent.mockReturnValue(of(event({ organizerId: 'me', ...overrides })));
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['me'], invitedIds })));
+        };
+        const asInvitee = (overrides: Partial<FeedEvent> = {}) => {
+            eventService.getEvent.mockReturnValue(of(event({ visibility: 'PRIVATE', ...overrides })));
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org'], invitedIds: ['me'] })));
+        };
+        const el = () => fixture.nativeElement as HTMLElement;
+
+        it('template_shouldOfferTheOrganizerToEditInviteAndDelete', () => {
+            asOrganizer({}, ['f1', 'u2']);
+            create();
+
+            expect(el().querySelector('.edit-event')).not.toBeNull();
+            expect(el().querySelector('.delete-event')).not.toBeNull();
+            expect(el().querySelector('.invite-friends')?.textContent).toContain('Inviter des amis');
+            expect(el().querySelector('.invite-friends .count')?.textContent?.trim()).toBe('2');
+        });
+
+        it('template_shouldOfferNoneOfIt_toSomeoneElse', () => {
+            create();
+
+            expect(el().querySelector('.organizer-actions')).toBeNull();
+            expect(component.canInvite()).toBe(false);
+        });
+
+        it('canInvite_shouldBeFalse_forACommunityEventOrOneThatIsOver', () => {
+            asOrganizer({ communityId: 'c1' });
+            create();
+            expect(component.canInvite()).toBe(false);
+            expect(el().querySelector('.invite-friends')).toBeNull();
+        });
+
+        it('canInvite_shouldBeFalse_onceTheEventIsOver', () => {
+            asOrganizer({ startDate: at('2026-10-01T19:00:00'), endDate: at('2026-10-01T22:00:00') });
+            create();
+
+            expect(component.canInvite()).toBe(false);
+            expect(el().querySelector('.edit-event')).not.toBeNull();
+        });
+
+        it('editEvent_shouldShowTheEventAsStored_whenTheDialogSaves', () => {
+            asOrganizer();
+            const saved = event({ organizerId: 'me', title: 'Soirée jeux de société' });
+            dialogAnswers(saved);
+            create();
+
+            (el().querySelector('.edit-event') as HTMLButtonElement).click();
+
+            expect(dialog.open).toHaveBeenCalledWith(EventEditDialogComponent, expect.objectContaining({
+                data: expect.objectContaining({ id: 'e1' })
+            }));
+            expect(component.event()).toBe(saved);
+            expect(notifications.showInfo).toHaveBeenCalledWith('Événement modifié');
+        });
+
+        it('editEvent_shouldKeepTheEvent_whenCancelled', () => {
+            asOrganizer();
+            create();
+            const before = component.event();
+
+            component.editEvent();
+
+            expect(component.event()).toBe(before);
+            expect(notifications.showInfo).not.toHaveBeenCalled();
+        });
+
+        it('editEvent_shouldDoNothing_forSomeoneElse', () => {
+            create();
+
+            component.editEvent();
+
+            expect(dialog.open).not.toHaveBeenCalled();
+        });
+
+        it('inviteFriends_shouldPassWhoTakesPartAndIsInvited_thenReadTheInvitationsAgain', () => {
+            asOrganizer({}, ['f1']);
+            create();
+            eventService.getParticipants.mockClear();
+
+            component.inviteFriends();
+
+            expect(dialog.open).toHaveBeenCalledWith(EventInviteDialogComponent, expect.objectContaining({
+                data: expect.objectContaining({ participantIds: ['me'], invitedIds: ['f1'] })
+            }));
+            expect(eventService.getParticipants).toHaveBeenCalledWith('e1');
+        });
+
+        it('inviteFriends_shouldDoNothing_whenInvitingIsNotOffered', () => {
+            create();
+
+            component.inviteFriends();
+
+            expect(dialog.open).not.toHaveBeenCalled();
+        });
+
+        it('deleteEvent_shouldDeleteForEveryoneOnceConfirmed_thenGoBack', () => {
+            asOrganizer();
+            dialogAnswers(true);
+            create();
+
+            (el().querySelector('.delete-event') as HTMLButtonElement).click();
+
+            expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.objectContaining({
+                data: expect.objectContaining({ confirmText: 'Supprimer pour tout le monde', isDestructive: true })
+            }));
+            expect(eventService.deleteEvent).toHaveBeenCalledWith('e1');
+            expect(notifications.showInfo).toHaveBeenCalledWith('Événement supprimé');
+            expect(navigation.back).toHaveBeenCalledWith('/calendar');
+        });
+
+        it('deleteEvent_shouldKeepTheEvent_whenNotConfirmed', () => {
+            asOrganizer();
+            dialogAnswers(false);
+            create();
+
+            component.deleteEvent();
+
+            expect(eventService.deleteEvent).not.toHaveBeenCalled();
+        });
+
+        it('deleteEvent_shouldSaySo_whenTheDeletionFails', () => {
+            asOrganizer();
+            dialogAnswers(true);
+            eventService.deleteEvent.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+            create();
+
+            component.deleteEvent();
+
+            expect(component.busy()).toBe(false);
+            expect(navigation.back).not.toHaveBeenCalled();
+            expect(notifications.showInfo).toHaveBeenCalledWith(expect.stringContaining("n'a pas pu être supprimé"));
+        });
+
+        it('deleteEvent_shouldDoNothing_forSomeoneElse', () => {
+            create();
+
+            component.deleteEvent();
+
+            expect(dialog.open).not.toHaveBeenCalled();
+        });
+
+        it('template_shouldShowTheInvitation_toAnInviteeNotTakingPartYet', () => {
+            asInvitee();
+            create();
+
+            expect(component.invited()).toBe(true);
+            expect(component.phase()).toBe('guest');
+            expect(el().querySelector('.invitation-banner')?.textContent).toContain("t'invite");
+        });
+
+        it('invited_shouldBeFalse_onceJoined', () => {
+            eventService.getParticipants.mockReturnValue(of(participants({ participantIds: ['org', 'me'], invitedIds: ['me'] })));
+            create();
+
+            expect(component.invited()).toBe(false);
+        });
+
+        it('declineInvitation_shouldLeaveAPrivateEvent_whichIsNoLongerReadable', () => {
+            asInvitee();
+            create();
+
+            (el().querySelector('.decline-invitation') as HTMLButtonElement).click();
+
+            expect(eventService.withdrawInvitation).toHaveBeenCalledWith('e1', 'me');
+            expect(notifications.showInfo).toHaveBeenCalledWith('Invitation déclinée');
+            expect(navigation.back).toHaveBeenCalledWith('/calendar');
+        });
+
+        it('declineInvitation_shouldStayOnAnEventStillVisible', () => {
+            asInvitee({ visibility: 'FRIENDS' });
+            create();
+            eventService.getParticipants.mockClear();
+
+            component.declineInvitation();
+
+            expect(navigation.back).not.toHaveBeenCalled();
+            expect(eventService.getParticipants).toHaveBeenCalledWith('e1');
+        });
+
+        it('declineInvitation_shouldExplainAFailure', () => {
+            asInvitee();
+            eventService.withdrawInvitation.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404, error: { code: 'EVT-BUS-001' } })));
+            create();
+
+            component.declineInvitation();
+
+            expect(component.busy()).toBe(false);
+            expect(notifications.showInfo).toHaveBeenCalledWith("Cet événement n'existe plus.");
         });
     });
 });

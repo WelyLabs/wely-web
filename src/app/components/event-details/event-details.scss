@@ -738,3 +738,59 @@ button.avatar {
     font-size: 13px;
     font-weight: 700;
 }
+
+.organizer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .outline-button {
+        gap: 6px;
+        padding-inline: 14px;
+    }
+
+    .danger {
+        color: var(--danger);
+    }
+
+    .count {
+        min-width: 20px;
+        height: 20px;
+        padding-inline: 6px;
+        border-radius: 10px;
+        background: var(--brand-blue);
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-grid;
+        place-items: center;
+    }
+}
+
+.invitation-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 35%, transparent);
+
+    > mat-icon {
+        color: var(--brand-blue);
+        flex-shrink: 0;
+    }
+
+    > div {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        span {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+    }
+
+    .text-button {
+        align-self: center;
+    }
+}

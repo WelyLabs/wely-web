@@ -34,11 +34,15 @@
       }
       @if (invitation(); as invite) {
         <div class="invitation">
-          <span class="invitation-head"><mat-icon>groups</mat-icon>Invitation à une communauté</span>
+          @if (invite.kind === 'event') {
+            <span class="invitation-head"><mat-icon>event</mat-icon>Invitation à un événement</span>
+          } @else {
+            <span class="invitation-head"><mat-icon>groups</mat-icon>Invitation à une communauté</span>
+          }
           @if (invite.intro) {
             <p>{{ invite.intro }}</p>
           }
-          <a class="invitation-cta" [routerLink]="invite.link">Voir l'invitation</a>
+          <a class="invitation-cta" [routerLink]="invite.link">{{ invite.kind === 'event' ? "Voir l'événement" : "Voir l'invitation" }}</a>
         </div>
       } @else if (message().text) {
         <p>{{ message().text }}</p>
