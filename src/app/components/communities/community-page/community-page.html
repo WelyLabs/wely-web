@@ -12,7 +12,21 @@
   } @else {
     @let c = community()!;
     <section class="hero">
-      <span class="badge-avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+      @if (c.role === 'ADMIN') {
+        <button type="button" class="badge-avatar editable" [style.background]="color()" (click)="changePicture()"
+          aria-label="Changer l'image de la communauté">
+          @if (c.pictureUrl) {
+            <img [src]="c.pictureUrl" alt="">
+          } @else {
+            {{ initials() }}
+          }
+          <span class="badge-edit" aria-hidden="true"><mat-icon>photo_camera</mat-icon></span>
+        </button>
+      } @else if (c.pictureUrl) {
+        <img class="badge-avatar" [src]="c.pictureUrl" [alt]="'Image de ' + c.name">
+      } @else {
+        <span class="badge-avatar" [style.background]="color()" aria-hidden="true">{{ initials() }}</span>
+      }
       <div class="hero-text">
         <h1>{{ c.name }}</h1>
         <p class="meta">
@@ -59,6 +73,7 @@
           <mat-menu #menu="matMenu">
             @if (c.role === 'ADMIN') {
               <button mat-menu-item (click)="edit()"><mat-icon>edit</mat-icon>Modifier</button>
+              <button mat-menu-item (click)="changePicture()"><mat-icon>image</mat-icon>Changer l'image</button>
               <button mat-menu-item (click)="remove()"><mat-icon>delete</mat-icon>Supprimer la communauté</button>
             }
             <button mat-menu-item (click)="leave()"><mat-icon>logout</mat-icon>Quitter la communauté</button>

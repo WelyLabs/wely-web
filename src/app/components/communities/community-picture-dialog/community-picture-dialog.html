@@ -1,0 +1,54 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2>Image de la communauté</h2>
+    <button class="close-button" type="button" aria-label="Fermer" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="content">
+    @if (file(); as file) {
+      <div class="cropper-area">
+        <image-cropper [imageFile]="file" [maintainAspectRatio]="true" [aspectRatio]="1" format="jpeg"
+          [imageQuality]="85" [resizeToWidth]="pictureSize" [onlyScaleDown]="true" (imageCropped)="imageCropped($event)"
+          (loadImageFailed)="loadImageFailed()" class="cropper"></image-cropper>
+      </div>
+      <button type="button" class="text-button" (click)="fileInput.click()">Choisir une autre image</button>
+    } @else {
+      <div class="current">
+        @if (community.pictureUrl) {
+          <img class="preview" [src]="community.pictureUrl" [alt]="'Image de ' + community.name">
+        } @else {
+          <span class="preview initials" [style.background]="color" aria-hidden="true">{{ initials }}</span>
+        }
+      </div>
+      <div class="upload-area" role="button" tabindex="0" (click)="fileInput.click()"
+        (keydown.enter)="fileInput.click()" (keydown.space)="fileInput.click()">
+        <mat-icon>add_photo_alternate</mat-icon>
+        <span>{{ community.pictureUrl ? 'Choisir une nouvelle image' : 'Choisir une image' }}</span>
+      </div>
+    }
+
+    <label class="visually-hidden" for="community-picture-input">Choisir une image</label>
+    <input id="community-picture-input" type="file" accept="image/*" class="visually-hidden" tabindex="-1" #fileInput
+      (change)="fileChangeEvent($event)">
+  </div>
+
+  @if (errorMessage()) {
+    <p class="error-message" role="alert">{{ errorMessage() }}</p>
+  }
+
+  <div class="actions">
+    @if (canRemove()) {
+      <button mat-button type="button" class="remove-button" (click)="remove()" [disabled]="saving()">
+        <mat-icon>delete</mat-icon>Retirer l'image
+      </button>
+    }
+    <span class="spacer"></span>
+    <button mat-button type="button" (click)="close()" [disabled]="saving()">Annuler</button>
+    <button mat-flat-button type="button" class="save-button" (click)="save()" [disabled]="!blob() || saving()"
+      [appPendingTrail]="saving()">
+      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </div>
+</div>

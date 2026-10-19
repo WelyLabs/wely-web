@@ -15,6 +15,7 @@ const community = (overrides: Partial<Community> = {}): Community => ({
   role: null,
   friendMembers: [],
   friendMemberCount: 0,
+  pictureUrl: null,
   ...overrides,
 });
 
@@ -66,5 +67,19 @@ describe('CommunityCardComponent', () => {
 
   it('shows a member pill for a plain member', () => {
     expect(render(community({ role: 'MEMBER' })).nativeElement.querySelector('.role-pill.member')).toBeTruthy();
+  });
+
+  it('shows the community\'s picture instead of its initials', () => {
+    const el: HTMLElement = render(community({ pictureUrl: 'https://media/c1.jpg' })).nativeElement;
+
+    expect(el.querySelector('img.badge-avatar')?.getAttribute('src')).toBe('https://media/c1.jpg');
+    expect(el.querySelector('span.badge-avatar')).toBeNull();
+  });
+
+  it('shows the initials without a picture', () => {
+    const el: HTMLElement = render(community()).nativeElement;
+
+    expect(el.querySelector('span.badge-avatar')?.textContent).toContain('CA');
+    expect(el.querySelector('img.badge-avatar')).toBeNull();
   });
 });

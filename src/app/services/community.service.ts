@@ -49,6 +49,18 @@ export class CommunityService {
     return this.http.delete<void>(`${this.apiUrl}/${communityId}`);
   }
 
+  /** Admins only: the picture, already cropped square and scaled down. */
+  uploadPicture(communityId: string, picture: Blob): Observable<Community> {
+    const form = new FormData();
+    form.append('file', picture, 'picture.jpg');
+    return this.http.post<Community>(`${this.apiUrl}/${communityId}/picture`, form);
+  }
+
+  /** Admins only: the community goes back to its initials. */
+  removePicture(communityId: string): Observable<Community> {
+    return this.http.delete<Community>(`${this.apiUrl}/${communityId}/picture`);
+  }
+
   join(communityId: string): Observable<Community> {
     return this.http.post<Community>(`${this.apiUrl}/${communityId}/join`, {});
   }

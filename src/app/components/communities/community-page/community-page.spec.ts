@@ -21,7 +21,7 @@ vi.mock('rsocket-websocket-client', () => import('../../../../testing/rsocket-we
 const community = (overrides: Partial<Community> = {}): Community => ({
   communityId: 'c1', name: 'Club Auto', description: 'Voitures', interests: ['auto'], visibility: 'PUBLIC',
   createdAt: '2026-10-01T10:00:00Z', memberCount: 3, role: 'MEMBER',
-  friendMembers: [{ userId: 'lea', userName: 'lea', hashtag: 1 }], friendMemberCount: 1, ...overrides,
+  friendMembers: [{ userId: 'lea', userName: 'lea', hashtag: 1 }], friendMemberCount: 1, pictureUrl: null, ...overrides,
 });
 const member = (userId: string, role: CommunityMember['role'] = 'MEMBER'): CommunityMember => ({
   userId, userName: userId, hashtag: 1, profilePicUrl: null, role, joinedAt: '2026-10-02T10:00:00Z',
@@ -339,6 +339,27 @@ describe('CommunityPageComponent', () => {
       expect(page.canDelete(page.communityEvents()[0])).toBe(true);
     });
 
+    it('lets an admin change the picture from the badge', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const badge = el.querySelector('button.badge-avatar') as HTMLButtonElement;
+      dialogsClose(community({ role: 'ADMIN', pictureUrl: 'https://media/new.jpg' }));
+
+      badge.click();
+      fixture.detectChanges();
+
+      expect(dialog.open.mock.calls[0][1].data.communityId).toBe('c1');
+      expect(page.community()?.pictureUrl).toBe('https://media/new.jpg');
+      expect(el.querySelector('button.badge-avatar img')?.getAttribute('src')).toBe('https://media/new.jpg');
+    });
+
+    it('keeps the community as it was when the picture dialog is cancelled', () => {
+      dialogsClose(undefined);
+
+      page.changePicture();
+
+      expect(page.community()?.pictureUrl).toBeNull();
+    });
+
     it('edits the community', () => {
       dialogsClose(community({ role: 'ADMIN', name: 'Club Rétro' }));
 
@@ -410,6 +431,25 @@ describe('CommunityPageComponent', () => {
       page.revoke(invitation);
 
       expect(notifications.showInfo).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('picture', () => {
+    it('shows a member the picture, not as a button', () => {
+      communities['get'].mockReturnValue(of(community({ pictureUrl: 'https://media/c1.jpg' })));
+      open();
+      const el: HTMLElement = fixture.nativeElement;
+
+      expect(el.querySelector('img.badge-avatar')?.getAttribute('src')).toBe('https://media/c1.jpg');
+      expect(el.querySelector('button.badge-avatar')).toBeNull();
+    });
+
+    it('shows a member the initials without a picture', () => {
+      open();
+      const el: HTMLElement = fixture.nativeElement;
+
+      expect(el.querySelector('span.badge-avatar')?.textContent).toContain('CA');
+      expect(el.querySelector('button.badge-avatar')).toBeNull();
     });
   });
 

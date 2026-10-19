@@ -27,6 +27,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../confirm-dialog/
 import { CommunityFormDialogComponent } from '../community-form-dialog/community-form-dialog';
 import { CommunityEventDialogComponent } from '../community-event-dialog/community-event-dialog';
 import { CommunityInviteDialogComponent } from '../community-invite-dialog/community-invite-dialog';
+import { CommunityPictureDialogComponent } from '../community-picture-dialog/community-picture-dialog';
 
 type Tab = 'events' | 'members' | 'invitations';
 
@@ -211,6 +212,14 @@ export class CommunityPageComponent {
   edit(): void {
     this.dialog
       .open(CommunityFormDialogComponent, { width: '520px', maxWidth: '95vw', data: this.community() })
+      .afterClosed()
+      .subscribe((updated?: Community) => updated && this.community.set(updated));
+  }
+
+  /** Admins only: the dialog uploads or removes the picture itself, and closes with the stored community. */
+  changePicture(): void {
+    this.dialog
+      .open(CommunityPictureDialogComponent, { width: '480px', maxWidth: '95vw', data: this.community() })
       .afterClosed()
       .subscribe((updated?: Community) => updated && this.community.set(updated));
   }

@@ -21,6 +21,8 @@ export interface Community {
   /** A few of the viewer's friends who are members; friendMemberCount says how many in all. */
   friendMembers: UserNodeDTO[];
   friendMemberCount: number;
+  /** A signed URL of its picture, valid one hour; null when it has none: the initials stand in. */
+  pictureUrl: string | null;
 }
 
 export interface CommunityRequest {
@@ -113,6 +115,12 @@ export function communityErrorMessage(code: string | undefined): string | null {
       return "Cette personne n'est pas membre de la communauté.";
     case 'SCL-BUS-019':
       return 'Réservé aux membres : rejoignez la communauté pour voir son contenu.';
+    case 'SCL-BUS-020':
+      return "Ce fichier n'est pas une image que l'on peut utiliser (JPEG, PNG, GIF ou BMP).";
+    case 'SCL-BUS-021':
+      return 'Cette image est trop lourde : 10 Mo au maximum.';
+    case 'SCL-TEC-004':
+      return "L'image n'a pas pu être enregistrée. Réessayez dans un instant.";
     case 'EVT-BUS-024':
       return 'Seuls les membres de la communauté peuvent voir et publier ses événements.';
     default:

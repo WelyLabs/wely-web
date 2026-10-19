@@ -10,7 +10,7 @@ import { Community } from '../../../models/community.model';
 
 const community = (id: string, interests: string[] = [], role: Community['role'] = null): Community => ({
   communityId: id, name: id, description: null, interests, visibility: 'PUBLIC', createdAt: '2026-10-01T10:00:00Z',
-  memberCount: 1, role, friendMembers: [], friendMemberCount: 0,
+  memberCount: 1, role, friendMembers: [], friendMemberCount: 0, pictureUrl: null,
 });
 
 describe('CommunitiesPageComponent', () => {

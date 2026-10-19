@@ -27,7 +27,8 @@ describe('community.model', () => {
 
   it('words every community error code in French', () => {
     for (const code of ['SCL-BUS-010', 'SCL-BUS-011', 'SCL-BUS-012', 'SCL-BUS-013', 'SCL-BUS-014', 'SCL-BUS-015',
-      'SCL-BUS-016', 'SCL-BUS-017', 'SCL-BUS-018', 'SCL-BUS-019', 'EVT-BUS-024']) {
+      'SCL-BUS-016', 'SCL-BUS-017', 'SCL-BUS-018', 'SCL-BUS-019', 'SCL-BUS-020', 'SCL-BUS-021', 'SCL-TEC-004',
+      'EVT-BUS-024']) {
       expect(communityErrorMessage(code)).toBeTruthy();
     }
     expect(communityErrorMessage('SCL-BUS-014')).toContain('expiré');
