@@ -24,6 +24,7 @@ import {
 } from '../models/chat.model';
 import { UserService } from './user.service';
 import { LoggerService } from '../core/logging/logger.service';
+import { describeRSocketProblem, parseRSocketError } from '../core/rsocket/rsocket-problem';
 
 /** What the server expects on `chat.send`; the sender is taken from the token. */
 interface ChatInput {
@@ -45,7 +46,10 @@ const SCOPE = 'ChatService';
 /** RSocket metadata prefix for a bearer token, per the well-known auth encoding. */
 const BEARER_AUTH_TYPE = 0x81;
 
-/** wely-chat's RSocket errors carry the problem's detail rather than its code: the ones the app acts on, mapped back. */
+/**
+ * Codes for the plain-text details an older wely-chat sent on RSocket instead of a JSON problem:
+ * the ones the app acts on, mapped back.
+ */
 const RSOCKET_DETAIL_CODES: readonly [detail: string, code: string][] = [
   ['This account has been deleted.', CHAT_ACCOUNT_DELETED_CODE],
   ['this conversation can be read, not written to', CONVERSATION_READ_ONLY_CODE],
@@ -59,8 +63,12 @@ export function chatErrorCode(error: unknown): string | null {
   if (!(error instanceof Error)) {
     return null;
   }
-  const known = RSOCKET_DETAIL_CODES.find(([detail]) => error.message.includes(detail));
-  return known?.[1] ?? /CHT-[A-Z]{3}-\d{3}/.exec(error.message)?.[0] ?? null;
+  const problem = parseRSocketError(error);
+  if (problem.code) {
+    return problem.code;
+  }
+  const known = RSOCKET_DETAIL_CODES.find(([detail]) => problem.detail.includes(detail));
+  return known?.[1] ?? /CHT-[A-Z]{3}-\d{3}/.exec(problem.detail)?.[0] ?? null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -282,7 +290,7 @@ export class ChatService implements OnDestroy {
                 observer.complete();
               },
               onError: (error: Error) => {
-                this.logger.error(SCOPE, 'message delivery failed', error);
+                this.logger.error(SCOPE, `message delivery failed${describeRSocketProblem(parseRSocketError(error))}`, error);
                 observer.next({ ...optimistic, pending: false, failed: true });
                 observer.error(error);
               },
@@ -342,7 +350,8 @@ export class ChatService implements OnDestroy {
       )
       .subscribe({
         next: (message) => this.messages$$.next(message),
-        error: (error) => this.logger.error(SCOPE, 'message stream gave up', error),
+        error: (error: unknown) =>
+          this.logger.error(SCOPE, `message stream gave up${describeRSocketProblem(parseRSocketError(error))}`, error),
       });
   }
 
@@ -391,7 +400,7 @@ export class ChatService implements OnDestroy {
       return throwError(() => error);
     }
     const wait = Math.min(1_000 * 2 ** (attempt - 1), 30_000);
-    this.logger.warn(SCOPE, `${route} failed, retrying in ${wait}ms`, error);
+    this.logger.warn(SCOPE, `${route} failed, retrying in ${wait}ms${describeRSocketProblem(parseRSocketError(error))}`, error);
     return timer(wait);
   }
 

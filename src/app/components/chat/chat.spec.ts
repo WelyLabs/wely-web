@@ -23,6 +23,7 @@ import { PhotoViewerData } from '../photo-viewer/photo-viewer';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DeletedUsersService } from '../../services/deleted-users.service';
 import { deletedUsersStub } from '../../../testing/deleted-users.stub';
+import { rsocketApplicationError, rsocketProblemJson } from '../../../testing/rsocket-error';
 
 // The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
 // the module rather than redefining an object, so the service and the test work on the same
@@ -856,6 +857,27 @@ describe('ChatComponent', () => {
             expect(component.readOnly()).toBe(true);
             expect(component.error()).toBeNull();
             expect(fixture.nativeElement.querySelector('.read-only-notice')).not.toBeNull();
+        });
+
+        it('onSendMessage_shouldSwitchToReadOnly_whenTheRsocketJsonProblemCodeIsChtBus012', () => {
+            // The detail no longer matches the old plain text: only the code can tell.
+            chatServiceMock.sendMessage.mockReturnValue(throwError(() => rsocketApplicationError(
+                rsocketProblemJson('CHT-BUS-012', 409, 'Conversation is read-only'))));
+
+            component.onSendMessage('still there?');
+
+            expect(component.readOnly()).toBe(true);
+            expect(component.error()).toBeNull();
+        });
+
+        it('onSendMessage_shouldReportAnotherRsocketJsonProblem_withTheUsualMessage', () => {
+            chatServiceMock.sendMessage.mockReturnValue(throwError(() => rsocketApplicationError(
+                rsocketProblemJson('CHT-BUS-003', 403, 'Not a participant'))));
+
+            component.onSendMessage('still there?');
+
+            expect(component.readOnly()).toBe(false);
+            expect(component.error()).toBe("Erreur lors de l'envoi du message");
         });
 
         it('onSendMessage_shouldReportOtherFailures', () => {

@@ -25,6 +25,8 @@ export const rsocketStub = {
   streamSubscribers: [] as StubSubscriber[],
   /** Whether requestResponse acknowledges or rejects. */
   responseBehaviour: 'success' as 'success' | 'failure',
+  /** What requestResponse rejects with on failure; a plain error when unset. */
+  responseError: null as Error | null,
   /** Payload returned on a successful acknowledgement. */
   responsePayload: { data: { id: 'server-id-1' } } as unknown,
   /** Set when the client is constructed; null once closed. */
@@ -38,6 +40,7 @@ export const rsocketStub = {
     this.requestedDemand = [];
     this.streamSubscribers = [];
     this.responseBehaviour = 'success';
+    this.responseError = null;
     this.responsePayload = { data: { id: 'server-id-1' } };
     this.connected = false;
     this.connectAttempts = 0;
@@ -55,7 +58,7 @@ const socket = {
   requestResponse: () => ({
     subscribe: (subscriber: StubSubscriber) => {
       if (rsocketStub.responseBehaviour === 'failure') {
-        subscriber.onError?.(new Error('delivery refused'));
+        subscriber.onError?.(rsocketStub.responseError ?? new Error('delivery refused'));
       } else {
         subscriber.onComplete?.(rsocketStub.responsePayload);
       }

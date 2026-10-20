@@ -9,6 +9,8 @@ import { ChatService, PendingMessage, chatErrorCode, upsertById } from './chat.s
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 import { Message, MessageType } from '../models/chat.model';
+import { LoggerService } from '../core/logging/logger.service';
+import { rsocketApplicationError, rsocketProblemJson } from '../../testing/rsocket-error';
 
 // The RSocket modules are replaced by the shared stub in src/testing. The factory re-exports
 // the module rather than redefining an object, so the service and the test work on the same
@@ -197,6 +199,26 @@ describe('ChatService', () => {
     expect(seen.at(-1)?.failed).toBe(true);
   });
 
+  it('sendMessage_shouldExposeTheProblemCode_andLogItsRequestId_whenTheServerSendsAJsonProblem', async () => {
+    const logger = TestBed.inject(LoggerService);
+    const logged = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    rsocketStub.responseBehaviour = 'failure';
+    rsocketStub.responseError = rsocketApplicationError(
+      rsocketProblemJson('CHT-BUS-003', 403, 'Not a participant of this conversation', 'req-7'));
+
+    let failure: unknown;
+    await new Promise<void>((resolve) => {
+      service.sendMessage('conv-1', 'hello', 'friend-1').subscribe({
+        error: (error: unknown) => { failure = error; resolve(); },
+        complete: resolve,
+      });
+    });
+
+    expect(chatErrorCode(failure)).toBe('CHT-BUS-003');
+    expect(logged).toHaveBeenCalledWith(
+      'ChatService', 'message delivery failed [code=CHT-BUS-003, status=403, requestId=req-7]', failure);
+  });
+
   it('refuse d’envoyer si aucun utilisateur n’est chargé', async () => {
     userService.getCurrentUserValue.mockReturnValue(null);
 
@@ -266,6 +288,18 @@ describe('ChatService', () => {
     vi.useRealTimers();
   });
 
+  it('initializeStream_shouldStopRetrying_whenAJsonProblemSaysTheAccountIsDeleted', () => {
+    vi.useFakeTimers();
+    service.initializeStream();
+
+    rsocketStub.streamSubscribers[0].onError?.(rsocketApplicationError(
+      rsocketProblemJson('CHT-BUS-011', 403, 'Account gone')));
+    vi.advanceTimersByTime(60_000);
+
+    expect(rsocketStub.streamSubscribers).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
   it('initializeStream_shouldRetry_afterAnotherFailure', () => {
     vi.useFakeTimers();
     service.initializeStream();
@@ -295,6 +329,15 @@ describe('chatErrorCode', () => {
   it('chatErrorCode_shouldReadTheCodeOfARestProblem', () => {
     expect(chatErrorCode(new HttpErrorResponse({ status: 409, error: { code: 'CHT-BUS-012' } }))).toBe('CHT-BUS-012');
     expect(chatErrorCode(new HttpErrorResponse({ status: 502, error: null }))).toBeNull();
+  });
+
+  it('chatErrorCode_shouldReadTheCodeOfAnRsocketJsonProblem', () => {
+    expect(chatErrorCode(rsocketApplicationError(rsocketProblemJson('CHT-BUS-012', 409, 'Read only'))))
+      .toBe('CHT-BUS-012');
+  });
+
+  it('chatErrorCode_shouldMapTheKnownPlainTextDetails_ofAWrappedApplicationError', () => {
+    expect(chatErrorCode(rsocketApplicationError('This account has been deleted.'))).toBe('CHT-BUS-011');
   });
 
   it('chatErrorCode_shouldMapTheKnownRsocketDetails_toTheirCodes', () => {

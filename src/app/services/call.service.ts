@@ -20,6 +20,7 @@ import { UserService } from './user.service';
 import { SocialService } from './social.service';
 import { NotificationService } from './notification.service';
 import { LoggerService } from '../core/logging/logger.service';
+import { describeRSocketProblem, parseRSocketError } from '../core/rsocket/rsocket-problem';
 import { CallSession, CallSignaling, LocalPublication, RemoteTrackEvent } from './call-session';
 import { Ringtone } from './ringtone';
 import { SpeakerDetector, layerFor } from './speaker-detector';
@@ -112,7 +113,8 @@ export class CallService {
     this.listening = true;
     this.chat.openStream<CallEvent>('call.events').subscribe({
       next: event => this.onEvent(event),
-      error: error => this.logger.error(SCOPE, 'call events gave up', error),
+      error: (error: unknown) =>
+        this.logger.error(SCOPE, `call events gave up${describeRSocketProblem(parseRSocketError(error))}`, error),
     });
   }
 
