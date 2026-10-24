@@ -14,6 +14,10 @@ export interface Environment {
   readonly rsocketUrl: string;
   /** Keycloak base URL; production overrides it at container start. */
   readonly keycloakUrl: string;
+  /** Realm of this environment: one Keycloak serves them all, one realm each. */
+  readonly keycloakRealm: string;
+  /** Client of this environment, named wely-<service>-<env>-client. */
+  readonly keycloakClientId: string;
   /**
    * Whether to attempt a silent SSO check on load. Disabled locally, where the
    * silent-check iframe cannot reach a same-site Keycloak.

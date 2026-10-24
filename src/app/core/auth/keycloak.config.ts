@@ -8,11 +8,15 @@ function isSubstituted(value: string | undefined): value is string {
 /**
  * Keycloak connection settings.
  *
- * <p>The URL comes from the runtime-injected value when present, so the same built
- * image serves dev and prod, and falls back to the build-time environment otherwise.
+ * <p>All three come from the runtime-injected values when present, so the same built image
+ * serves every environment, and fall back to the build-time environment otherwise. One
+ * Keycloak now serves them all with one realm each (wely-dev, wely-prod), and a client named
+ * after its service and environment, so none of this can be a constant in the bundle.
  */
 export const KEYCLOAK_CONFIG = {
   url: isSubstituted(window.KEYCLOAK_URL) ? window.KEYCLOAK_URL : environment.keycloakUrl,
-  realm: 'wely-realm',
-  clientId: 'wely-client',
+  realm: isSubstituted(window.KEYCLOAK_REALM) ? window.KEYCLOAK_REALM : environment.keycloakRealm,
+  clientId: isSubstituted(window.KEYCLOAK_CLIENT_ID)
+    ? window.KEYCLOAK_CLIENT_ID
+    : environment.keycloakClientId,
 } as const;

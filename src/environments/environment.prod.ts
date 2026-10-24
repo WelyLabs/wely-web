@@ -7,5 +7,7 @@ export const environment: Environment = {
   rsocketUrl: '/rsocket',
   // Substituted into index.html at container start by entrypoint.sh.
   keycloakUrl: 'https://auth.welylabs.app',
+  keycloakRealm: 'wely-prod',
+  keycloakClientId: 'wely-web-prod-client',
   keycloakSilentCheckSso: true,
 };

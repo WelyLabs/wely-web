@@ -42,6 +42,10 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script>
     window.KEYCLOAK_URL = '${KEYCLOAK_URL}';
+    // One Keycloak serves every environment, one realm each, so the realm and the client are
+    // injected like the URL rather than built into the bundle.
+    window.KEYCLOAK_REALM = '${KEYCLOAK_REALM}';
+    window.KEYCLOAK_CLIENT_ID = '${KEYCLOAK_CLIENT_ID}';
   </script>
   <!-- The theme last chosen on this browser, set before the first paint: applied by Angular
        only, a dark theme flashed white on every load. ThemeService takes over once started;

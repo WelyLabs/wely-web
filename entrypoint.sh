@@ -19,6 +19,18 @@ else
     echo "Warning: KEYCLOAK_URL environment variable is not set"
 fi
 
+# The realm and the client, injected the same way: one Keycloak, one realm per environment.
+for VAR in KEYCLOAK_REALM KEYCLOAK_CLIENT_ID; do
+    eval "VALUE=\$$VAR"
+    if [ -n "$VALUE" ]; then
+        echo "Injecting $VAR: $VALUE"
+        ESCAPED=$(echo "$VALUE" | sed 's/[&/\]/\\&/g')
+        sed -i "s|\${$VAR}|$ESCAPED|g" /usr/share/nginx/html/index.html
+    else
+        echo "Warning: $VAR environment variable is not set"
+    fi
+done
+
 # Replace PUBLIC_URL, the site's own origin, in the link-preview tags of index.html.
 # Unset, it becomes empty rather than staying a literal "${PUBLIC_URL}": the URLs turn
 # relative, which browsers still resolve and only link-preview crawlers ignore.
