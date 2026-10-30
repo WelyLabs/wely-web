@@ -163,11 +163,11 @@ describe('weekLabel', () => {
 });
 
 describe('feedBadge', () => {
-    it('should print the month and a two-digit day, as the feed card does', () => {
-        expect(feedBadge(new Date(2026, 9, 1), 4)).toEqual({ month: 'OCT', day: '05' });
+    it('should print the month and the day, as the feed card does', () => {
+        expect(feedBadge(new Date(2026, 9, 1), 4)).toEqual({ month: 'Oct', day: '5' });
     });
 
     it('should roll over to the next month', () => {
-        expect(feedBadge(new Date(2026, 9, 30), 4)).toEqual({ month: 'NOV', day: '03' });
+        expect(feedBadge(new Date(2026, 9, 30), 4)).toEqual({ month: 'Nov', day: '3' });
     });
 });
