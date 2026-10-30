@@ -9,7 +9,9 @@
     gap: 24px;
     height: 100%;
     padding: 0;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+    transition-duration: 0.3s;
+    transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: hidden;
     position: relative; // Ensure positioning context
     user-select: none;
@@ -50,7 +52,9 @@
         z-index: 1050; // Above calendar but below details-section (1100)
         opacity: 0;
         pointer-events: none;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.3s;
+        transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 
         &.visible {
             opacity: 1;
@@ -64,7 +68,9 @@
     display: flex;
     flex-direction: column;
     padding: 24px;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+    transition-duration: 0.4s;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
     background: transparent;
     min-width: 0; // Prevent content from forcing width expansion
     max-width: 100%; // Enforce containment
@@ -93,7 +99,7 @@
         h2 {
             margin: 0;
             font-size: 32px;
-            font-weight: 800;
+            font-weight: 600;
             color: var(--text-primary);
             letter-spacing: -1px;
 
@@ -135,10 +141,12 @@
                     padding: 8px 24px;
                     border-radius: 10px;
                     font-size: 14px;
-                    font-weight: 700;
+                    font-weight: 500;
                     color: var(--text-secondary);
                     cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                    transition-duration: 0.3s;
+                    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 
                     @media (max-width: 768px) {
                         padding: 6px 12px;
@@ -168,7 +176,8 @@
                     justify-content: center;
                     cursor: pointer;
                     color: var(--text-secondary);
-                    transition: all 0.2s;
+                    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                    transition-duration: 0.2s;
 
                     &:hover {
                         background: color-mix(in srgb, var(--text-primary) 5%, transparent);
@@ -191,7 +200,7 @@
         .weekday-name {
             text-align: center;
             font-size: 12px;
-            font-weight: 800;
+            font-weight: 600;
             color: var(--text-tertiary);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -226,7 +235,9 @@
             }
 
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.3s;
+            transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
             border-radius: 20px;
             position: relative;
 
@@ -256,7 +267,7 @@
                     align-items: center;
                     justify-content: center;
                     font-size: 16px;
-                    font-weight: 700;
+                    font-weight: 500;
                     border-radius: 50%;
                 }
 
@@ -293,7 +304,7 @@
                         &.more {
                             background: none;
                             color: var(--text-secondary);
-                            font-weight: 600;
+                            font-weight: 500;
                         }
                     }
                 }
@@ -352,7 +363,7 @@
                 height: 80px;
                 box-sizing: border-box;
                 font-size: 11px;
-                font-weight: 800;
+                font-weight: 600;
                 color: var(--text-tertiary);
                 text-align: right;
                 padding-right: 12px;
@@ -409,7 +420,7 @@
 
                     .day-label {
                         font-size: 11px;
-                        font-weight: 700;
+                        font-weight: 500;
                         text-transform: uppercase;
                         color: var(--text-tertiary);
                         letter-spacing: 0.5px;
@@ -417,7 +428,7 @@
 
                     .date-label {
                         font-size: 20px;
-                        font-weight: 800;
+                        font-weight: 600;
                         color: var(--text-primary);
                         width: 36px;
                         height: 36px;
@@ -425,7 +436,8 @@
                         align-items: center;
                         justify-content: center;
                         border-radius: 50%;
-                        transition: all 0.2s;
+                        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                        transition-duration: 0.2s;
                     }
                 }
 
@@ -498,7 +510,7 @@
 
                             .selection-time {
                                 font-size: 11px;
-                                font-weight: 700;
+                                font-weight: 500;
                                 color: var(--primary-blue);
                             }
                         }
@@ -533,7 +545,8 @@
                                 align-items: center;
                                 gap: 8px;
                                 cursor: pointer;
-                                transition: all 0.2s;
+                                transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                                transition-duration: 0.2s;
                                 box-shadow: var(--shadow-sm);
                                 border: 1px solid var(--border-default);
                                 z-index: 10;
@@ -554,7 +567,7 @@
 
                                 .event-title {
                                     font-size: 12px;
-                                    font-weight: 700;
+                                    font-weight: 500;
                                     color: var(--text-primary);
                                     white-space: nowrap;
                                     overflow: hidden;
@@ -604,12 +617,12 @@
                         margin: 0;
                         font-size: 24px;
                         min-width: 40px;
-                        font-weight: 800;
+                        font-weight: 600;
                     }
 
                     &::after {
                         content: attr(data-dayname);
-                        font-weight: 800;
+                        font-weight: 600;
                         color: var(--text-primary);
                         font-size: 16px;
                         text-transform: uppercase;
@@ -630,7 +643,9 @@
     border-radius: 32px;
     box-shadow: var(--shadow-premium);
     margin: 0;
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+    transition-duration: 0.6s;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
     border: none;
     flex: 0;
     width: 0;
@@ -709,7 +724,7 @@
 
         h3 {
             margin: 0;
-            font-weight: 800;
+            font-weight: 600;
             font-size: 20px;
             color: var(--text-primary);
             text-transform: capitalize;
@@ -725,7 +740,8 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.2s;
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.2s;
 
             // 40px: a finger-sized target on phones, where it is the obvious way out.
             @media (max-width: 1023px) {
@@ -755,7 +771,7 @@
             p {
                 color: var(--text-tertiary);
                 font-size: 16px;
-                font-weight: 600;
+                font-weight: 500;
                 margin-bottom: 24px;
             }
 
@@ -764,13 +780,14 @@
                 color: white;
                 border-radius: 16px;
                 padding: 12px 28px;
-                font-weight: 700;
+                font-weight: 500;
                 border: none;
                 cursor: pointer;
-                transition: transform 0.2s;
+                transition-property: background;
+                transition-duration: 0.2s;
 
                 &:hover {
-                    transform: scale(1.05);
+                    background: #000;
                 }
             }
         }
@@ -782,7 +799,9 @@
             display: flex;
             gap: 20px;
             align-items: center;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.3s;
+            transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
             position: relative;
             border: 1px solid transparent;
@@ -791,7 +810,6 @@
 
             &:hover {
                 background: var(--bg-card);
-                transform: scale(1.02);
                 border-color: var(--border-default);
                 box-shadow: var(--shadow-md);
             }
@@ -807,7 +825,7 @@
             }
 
             .event-time {
-                font-weight: 800;
+                font-weight: 600;
                 color: var(--text-tertiary);
                 font-size: 11px;
                 min-width: 60px;
@@ -820,7 +838,7 @@
 
                 h4 {
                     margin: 0 0 4px 0;
-                    font-weight: 800;
+                    font-weight: 600;
                     color: var(--text-primary);
                     font-size: 16px;
                 }
@@ -893,7 +911,7 @@
 
             .title-input {
                 font-size: 24px;
-                font-weight: 800;
+                font-weight: 600;
                 letter-spacing: -0.5px;
                 padding: 8px 0;
             }
@@ -910,7 +928,7 @@
                 gap: 12px;
                 cursor: pointer;
                 font-size: 15px;
-                font-weight: 600;
+                font-weight: 500;
                 color: var(--text-secondary);
 
                 input {
@@ -935,9 +953,10 @@
                 padding: 14px;
                 border-radius: 16px;
                 font-size: 16px;
-                font-weight: 700;
+                font-weight: 500;
                 cursor: pointer;
-                transition: all 0.2s;
+                transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                transition-duration: 0.2s;
                 border: none;
 
                 &.cancel-btn {
@@ -959,7 +978,6 @@
                     }
 
                     &:not(:disabled):hover {
-                        transform: scale(1.02);
                         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
                     }
                 }
@@ -980,10 +998,11 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-weight: 700;
+            font-weight: 500;
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s;
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.2s;
 
             mat-icon {
                 font-size: 20px;

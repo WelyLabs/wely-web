@@ -104,7 +104,7 @@
         cursor: pointer;
 
         .slot-day {
-            font-weight: 700;
+            font-weight: 500;
             text-transform: capitalize;
         }
     }
@@ -141,7 +141,7 @@
         border: none;
         background: transparent;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--primary-blue);
         cursor: pointer;
 
@@ -161,5 +161,5 @@
     background: var(--brand-tint-orange);
     color: var(--orange-ink);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
 }

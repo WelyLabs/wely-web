@@ -46,7 +46,7 @@
     background: var(--brand-tint);
     color: var(--mention-color);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
 
     &.colored {
         background: var(--mention-color);
@@ -95,7 +95,7 @@
 
     .suggestion-name {
         font-size: 14px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--text-primary);
     }
 

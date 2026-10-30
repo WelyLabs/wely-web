@@ -16,7 +16,7 @@
     h2 {
         margin: 0;
         font-size: 22px;
-        font-weight: 700;
+        font-weight: 500;
         background: var(--accent-gradient);
         -webkit-background-clip: text;
         background-clip: text;
@@ -92,7 +92,7 @@
     background: none;
     color: var(--primary-blue);
     font: inherit;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
 }
 
@@ -112,7 +112,7 @@
 
     button {
         border-radius: 12px;
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .save-button {

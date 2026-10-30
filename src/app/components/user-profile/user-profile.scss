@@ -37,12 +37,12 @@
 h2 {
     margin: 0;
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 500;
 }
 
 a {
     color: var(--primary-blue);
-    font-weight: 600;
+    font-weight: 500;
     text-decoration: none;
 
     &:hover {
@@ -98,7 +98,7 @@ a {
         background: var(--primary-blue);
         color: white;
         font-size: 38px;
-        font-weight: 700;
+        font-weight: 500;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -141,7 +141,7 @@ a {
     h1 {
         margin: 0;
         font-size: 32px;
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: -0.02em;
     }
 
@@ -164,7 +164,7 @@ a {
     background: var(--bg-card);
     font: inherit;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-primary);
     display: inline-flex;
     align-items: center;
@@ -202,7 +202,7 @@ a {
     padding: 5px 12px;
     border-radius: 999px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
 
     &.tint-0 {
         background: color-mix(in srgb, var(--brand-blue) 10%, var(--bg-card));
@@ -285,7 +285,7 @@ a {
 
 .overline {
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-secondary);
 }
 
@@ -304,7 +304,7 @@ a {
 
     .stat-value {
         font-size: 44px;
-        font-weight: 800;
+        font-weight: 600;
         line-height: 1;
         letter-spacing: -0.03em;
         background: var(--accent-gradient);
@@ -315,7 +315,7 @@ a {
 
     .stat-label {
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .stat-hint {
@@ -412,14 +412,14 @@ a {
 
     .month {
         font-size: 12px;
-        font-weight: 700;
+        font-weight: 500;
         text-transform: uppercase;
         color: var(--orange-ink);
     }
 
     .day {
         font-size: 24px;
-        font-weight: 800;
+        font-weight: 600;
         line-height: 1;
     }
 }
@@ -446,7 +446,7 @@ a {
     background: var(--brand-tint);
     color: var(--blue-ink);
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 500;
 }
 
 /* Souvenirs --------------------------------------------------------------------------------- */
@@ -472,12 +472,7 @@ a {
         object-fit: cover;
     }
 
-    &:hover img {
-        transform: scale(1.04);
-    }
-
     img {
-        transition: transform 0.3s ease;
     }
 }
 
@@ -542,7 +537,7 @@ a {
     overflow: hidden;
     color: white;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -591,7 +586,7 @@ a {
     border-radius: 14px;
     background: var(--success-tint);
     color: var(--success-ink);
-    font-weight: 700;
+    font-weight: 500;
 
     &.owes {
         background: color-mix(in srgb, var(--brand-orange) 12%, transparent);
