@@ -20,7 +20,7 @@
     h2 {
         margin: 0;
         font-size: 18px;
-        font-weight: 800;
+        font-weight: 600;
     }
 }
 
@@ -62,7 +62,7 @@
     gap: 2px;
     margin-left: auto;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--primary-blue);
 
     mat-icon {
@@ -98,7 +98,7 @@
     border: 2px solid var(--bg-card);
     color: white;
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -132,7 +132,7 @@
     border-radius: 12px;
     background: var(--bg-canvas);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-primary);
     cursor: pointer;
 
@@ -169,7 +169,7 @@
     border-radius: 12px;
     background: transparent;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--primary-blue);
     cursor: pointer;
 

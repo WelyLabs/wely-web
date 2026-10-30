@@ -42,8 +42,8 @@ export function buildWeek(today: Date): PreviewDay[] {
 export function feedBadge(today: Date, daysAhead: number): { month: string; day: string } {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysAhead);
     return {
-        month: date.toLocaleString('en-US', { month: 'short' }).toUpperCase(),
-        day: String(date.getDate()).padStart(2, '0')
+        month: date.toLocaleString('en-US', { month: 'short' }),
+        day: String(date.getDate())
     };
 }
 

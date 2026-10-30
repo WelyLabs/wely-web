@@ -9,7 +9,9 @@
     background: var(--bg-canvas);
     margin: 0; // Seamless side integration
     height: 100vh;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+    transition-duration: 0.3s;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
     overflow: visible;
     display: flex;
     flex-direction: column;
@@ -26,7 +28,7 @@
 
         .logo-text {
             margin: 0;
-            font-weight: 800;
+            font-weight: 600;
             font-size: 20px;
             letter-spacing: -0.8px;
             color: var(--text-primary);
@@ -63,7 +65,9 @@
             height: 48px;
             display: flex;
             align-items: center;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.2s;
+            transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
             text-decoration: none;
             padding: 0 16px;
             font-weight: 500;
@@ -86,7 +90,7 @@
             &.active {
                 background: var(--text-primary);
                 color: white;
-                font-weight: 600;
+                font-weight: 500;
 
                 mat-icon {
                     color: white;
@@ -116,7 +120,9 @@
         margin-top: auto;
         position: relative;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.3s;
+        transition-timing-function: ease;
 
         &:hover {
             background: color-mix(in srgb, var(--brand-blue) 5%, transparent);
@@ -131,10 +137,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 14px;
             flex-shrink: 0;
-            transition: all 0.3s ease;
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.3s;
+            transition-timing-function: ease;
             overflow: hidden;
             position: relative;
 
@@ -153,7 +161,6 @@
         }
 
         &:hover .avatar {
-            transform: scale(1.05);
             box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-blue) 40%, transparent);
         }
 
@@ -165,7 +172,7 @@
 
             .name {
                 font-size: 14px;
-                font-weight: 600;
+                font-weight: 500;
                 color: var(--text-primary);
                 white-space: nowrap;
                 overflow: hidden;
@@ -196,7 +203,9 @@
                     align-items: center;
                     justify-content: center;
                     color: var(--text-secondary);
-                    transition: all 0.2s ease;
+                    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                    transition-duration: 0.2s;
+                    transition-timing-function: ease;
                     flex-shrink: 0;
 
                     mat-icon {
@@ -226,7 +235,9 @@
             opacity: 0;
             visibility: hidden;
             transform: translateY(8px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.3s;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
             z-index: 1000;
 
@@ -245,7 +256,9 @@
                 background: transparent;
                 border: none;
                 cursor: pointer;
-                transition: all 0.2s ease;
+                transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                transition-duration: 0.2s;
+                transition-timing-function: ease;
                 font-size: 14px;
                 font-weight: 500;
                 color: var(--text-primary);
@@ -345,7 +358,9 @@
         font-size: 10px;
         gap: 2px; // Tighter gap
         flex: 1;
-        transition: all 0.2s ease;
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.2s;
+        transition-timing-function: ease;
 
         mat-icon {
             font-size: 24px;
@@ -387,7 +402,7 @@
             background: var(--accent-gradient);
             color: white;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 500;
             box-sizing: border-box;
 
             img {
@@ -456,7 +471,9 @@
         opacity: 0;
         position: relative;
         z-index: 10001;
-        transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.5s;
+        transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 
         .mobile-user-header {
             display: flex;
@@ -476,7 +493,7 @@
                 align-items: center;
                 justify-content: center;
                 font-size: 18px;
-                font-weight: 700;
+                font-weight: 500;
                 overflow: hidden;
                 box-shadow: 0 4px 12px var(--brand-glow);
 
@@ -494,7 +511,7 @@
 
                 .name {
                     font-size: 15px;
-                    font-weight: 700;
+                    font-weight: 500;
                     color: var(--text-primary);
                     white-space: nowrap;
                     overflow: hidden;
@@ -533,7 +550,9 @@
                         align-items: center;
                         justify-content: center;
                         color: var(--primary-blue);
-                        transition: all 0.2s ease;
+                        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                        transition-duration: 0.2s;
+                        transition-timing-function: ease;
 
                         mat-icon {
                             font-size: 14px;
@@ -565,7 +584,9 @@
                 color: var(--text-primary);
                 font-size: 14px;
                 font-weight: 500;
-                transition: all 0.2s ease;
+                transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+                transition-duration: 0.2s;
+                transition-timing-function: ease;
                 text-decoration: none;
                 text-align: left;
 
@@ -629,7 +650,7 @@
     background: var(--danger);
     color: white;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 18px;
     text-align: center;
     box-sizing: border-box;

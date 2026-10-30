@@ -13,7 +13,7 @@
 
     h1 {
         font-size: 34px;
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: -0.02em;
         margin: 0 0 4px;
         color: var(--text-primary);
@@ -22,7 +22,7 @@
     .subtitle {
         margin: 0;
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--text-secondary);
     }
 }
@@ -38,7 +38,7 @@
     h2 {
         margin: 0;
         font-size: 18px;
-        font-weight: 700;
+        font-weight: 500;
         color: var(--text-primary);
     }
 
@@ -166,7 +166,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-primary);
 
     mat-icon {
@@ -195,13 +195,13 @@
 .error {
     margin: 16px 0 0;
     color: var(--danger-ink);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .subheading {
     margin: 20px 0 4px;
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-secondary);
 }
 
@@ -225,7 +225,7 @@
 }
 
 .setting-label {
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-primary);
 }
 
@@ -271,7 +271,7 @@
     background: transparent;
     color: var(--danger-ink);
     font: inherit;
-    font-weight: 700;
+    font-weight: 500;
     cursor: pointer;
     transition: background 0.2s ease;
 
@@ -308,7 +308,7 @@
     background: transparent;
     color: var(--text-secondary);
     font: inherit;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
 
     &:disabled {
@@ -326,7 +326,7 @@
     h3 {
         margin: 0 0 4px;
         font-size: 16px;
-        font-weight: 700;
+        font-weight: 500;
         color: var(--text-primary);
     }
 

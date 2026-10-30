@@ -87,7 +87,9 @@
         align-items: center;
         gap: 12px;
         box-shadow: var(--shadow-md);
-        transition: all 0.3s ease;
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.3s;
+        transition-timing-function: ease;
 
         &:focus-within {
             background: var(--bg-card);
@@ -142,7 +144,9 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.2s;
+        transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
         box-shadow: 0 4px 10px color-mix(in srgb, var(--primary-blue) 30%, transparent);
 
         mat-icon {
@@ -153,7 +157,7 @@
         }
 
         &:hover:not(:disabled) {
-            transform: scale(1.1) rotate(-10deg);
+            filter: brightness(1.08);
         }
 
         &:disabled {
@@ -173,7 +177,7 @@
     padding: 16px;
     color: var(--text-tertiary);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
 
     .mini-spinner {
         width: 16px;
@@ -205,7 +209,7 @@
 
         span {
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 500;
         }
     }
 }
@@ -233,7 +237,7 @@
 
     p {
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 500;
         max-width: 240px;
     }
 }

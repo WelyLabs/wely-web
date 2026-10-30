@@ -40,7 +40,7 @@
   }
 
   .name {
-    font-weight: 600;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -63,7 +63,7 @@
 .initials {
   display: grid;
   place-items: center;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
 }
 
@@ -140,7 +140,7 @@
     align-items: center;
     gap: 8px;
     font: inherit;
-    font-weight: 600;
+    font-weight: 500;
     padding: 6px 12px;
     border-radius: 999px;
 
