@@ -34,7 +34,7 @@
     h2 {
         margin: 0;
         font-size: 24px;
-        font-weight: 700;
+        font-weight: 500;
         background: var(--accent-gradient);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -43,7 +43,9 @@
 
     .close-button {
         color: var(--text-secondary);
-        transition: all 0.2s ease;
+        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+        transition-duration: 0.2s;
+        transition-timing-function: ease;
         border-radius: 50%;
         // 40px: a finger-sized target; it was 32.
         width: 40px;
@@ -89,7 +91,8 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+    transition-duration: 0.2s;
 
     &:hover {
         border-color: var(--primary-blue);
@@ -159,14 +162,16 @@
     button {
         border-radius: 12px;
         padding: 10px 24px;
-        font-weight: 600;
+        font-weight: 500;
 
         // Save button with gradient (matching edit-profile-dialog)
         &[color="primary"] {
             background: var(--accent-gradient);
             color: white;
             box-shadow: 0 4px 12px var(--brand-glow);
-            transition: all 0.3s ease;
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+            transition-duration: 0.3s;
+            transition-timing-function: ease;
 
             &:hover:not(:disabled) {
                 transform: translateY(-2px);

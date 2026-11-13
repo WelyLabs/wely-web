@@ -14,7 +14,7 @@
 .brand {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   background-clip: text;
@@ -24,7 +24,7 @@
 h1 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .detail {
@@ -41,7 +41,7 @@ h1 {
   background: var(--accent-gradient);
   color: #fff;
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 
   &:focus-visible {

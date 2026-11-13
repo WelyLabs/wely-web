@@ -14,7 +14,7 @@
     h2 {
         margin: 0;
         font-size: 22px;
-        font-weight: 700;
+        font-weight: 500;
         background: var(--accent-gradient);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -50,7 +50,7 @@
     align-items: center;
     justify-content: space-between;
     margin: 4px 0 8px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-primary);
 }
 
@@ -67,7 +67,7 @@
         border-radius: 999px;
         font: inherit;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--text-secondary);
         cursor: pointer;
 
@@ -122,7 +122,7 @@
         overflow: hidden;
         color: white;
         font-size: 11px;
-        font-weight: 700;
+        font-weight: 500;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -163,7 +163,7 @@
 .remaining {
     margin: 10px 0 0;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--danger-ink);
 
     &.done {
@@ -195,7 +195,7 @@ mat-dialog-actions {
 
     button {
         border-radius: 12px;
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .save-button {

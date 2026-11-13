@@ -211,7 +211,9 @@ mat-icon,
   border-radius: 16px;
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
 
   &:hover {
     box-shadow: var(--shadow-lg);
@@ -333,7 +335,9 @@ mat-icon,
     margin: 4px 0 !important;
     padding: 10px 16px !important;
     min-height: 44px !important;
-    transition: all 0.2s ease !important;
+    transition-property: background, color, border-color, box-shadow, transform, opacity, filter !important;
+    transition-duration: 0.2s !important;
+    transition-timing-function: ease !important;
 
     &:hover {
       background: color-mix(in srgb, var(--text-primary) 4%, transparent) !important;
@@ -348,7 +352,7 @@ mat-icon,
     }
 
     span {
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       font-size: 14px !important;
       color: var(--text-primary) !important;
     }

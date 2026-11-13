@@ -12,7 +12,7 @@
 
   > span {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-secondary);
 
     em {
@@ -70,7 +70,7 @@
   padding: 4px 4px 4px 10px;
   border-radius: 999px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   background: color-mix(in srgb, var(--brand-blue) 12%, transparent);
   color: var(--brand-blue);
 
@@ -125,7 +125,7 @@
 .error {
   margin: 0;
   color: var(--danger);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 @media (max-width: 480px) {

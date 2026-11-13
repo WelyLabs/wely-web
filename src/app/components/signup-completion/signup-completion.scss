@@ -43,7 +43,7 @@
   h2 {
     margin: 8px 0 4px;
     font-size: 22px;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   p {
@@ -64,7 +64,7 @@
 
   li.current {
     color: var(--text-primary);
-    font-weight: 700;
+    font-weight: 500;
   }
 
   li.done {
@@ -78,7 +78,7 @@
   gap: 8px;
 
   label {
-    font-weight: 700;
+    font-weight: 500;
     font-size: 14px;
   }
 
@@ -127,7 +127,7 @@
   color: white;
   font: inherit;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 
   &:disabled {

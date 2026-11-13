@@ -9,7 +9,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 20px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
 
@@ -40,7 +40,7 @@
   border-radius: 20px;
   color: #fff;
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 600;
   object-fit: cover;
 
   img {
@@ -94,7 +94,7 @@
   h1 {
     margin: 0 0 6px;
     font-size: 28px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--text-primary);
   }
@@ -134,7 +134,7 @@
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   background: color-mix(in srgb, var(--text-primary) 6%, transparent);
   color: var(--text-secondary);
 }
@@ -144,7 +144,7 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--brand-blue);
 }
 
@@ -165,7 +165,7 @@
   border: 2px solid var(--bg-card);
   color: #fff;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
 
   &.big {
     flex: none;
@@ -199,7 +199,7 @@
     border-radius: 10px;
     background: transparent;
     font: inherit;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-secondary);
     cursor: pointer;
 
@@ -212,7 +212,7 @@
 
   .count {
     margin-left: 4px;
-    font-weight: 600;
+    font-weight: 500;
     opacity: 0.6;
   }
 }
@@ -227,7 +227,7 @@
   h2 {
     margin: 0;
     font-size: 18px;
-    font-weight: 800;
+    font-weight: 600;
     color: var(--text-primary);
   }
 
@@ -266,13 +266,13 @@
 
   .day {
     font-size: 22px;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1;
   }
 
   .month {
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 500;
     text-transform: uppercase;
   }
 }
@@ -286,7 +286,7 @@
   display: inline-block;
   margin-bottom: 6px;
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
 
@@ -334,7 +334,7 @@
   color: var(--text-secondary);
   font: inherit;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 
   mat-icon {
@@ -383,7 +383,7 @@
   color: var(--brand-blue);
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -456,7 +456,7 @@
 
   .expired {
     color: var(--danger);
-    font-weight: 600;
+    font-weight: 500;
   }
 }
 
@@ -464,7 +464,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   background: color-mix(in srgb, var(--brand-orange) 15%, transparent);
   color: var(--brand-orange);
 }

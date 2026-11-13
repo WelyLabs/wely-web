@@ -33,7 +33,7 @@
     border-radius: 50%;
     color: white;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -115,7 +115,7 @@
     max-width: 85%;
     text-align: center;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-secondary);
 }
 
@@ -136,7 +136,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   opacity: 0.85;
 
   mat-icon {
@@ -154,6 +154,6 @@
   background: var(--bg-card);
   color: var(--brand-blue);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   text-decoration: none;
 }
