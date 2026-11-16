@@ -207,6 +207,18 @@ describe('UserService', () => {
         expect(service.getCurrentUserValue()).toMatchObject({ birthDate: '1995-03-12', registrationCompleted: true });
     });
 
+    it('completeRegistration_shouldPutTheNames_andUpdateThemOnTheCurrentUser', async () => {
+        service['currentUserSubject'].next({ ...MOCK_USER, firstName: '', lastName: '', registrationCompleted: false });
+
+        const saved = firstValueFrom(service.completeRegistration({ firstName: 'Léa', lastName: 'Martin', birthDate: '1995-03-12' }));
+        const request = httpMock.expectOne(`${apiUrl}/profile/registration`);
+        expect(request.request.body).toEqual({ firstName: 'Léa', lastName: 'Martin', birthDate: '1995-03-12' });
+        request.flush({ ...MOCK_USER, firstName: 'Léa', lastName: 'Martin', birthDate: '1995-03-12', registrationCompleted: true });
+        await saved;
+
+        expect(service.getCurrentUserValue()).toMatchObject({ firstName: 'Léa', lastName: 'Martin', registrationCompleted: true });
+    });
+
     it('completeRegistration_shouldLeaveTheCurrentUser_whenRefused', async () => {
         service['currentUserSubject'].next({ ...MOCK_USER, registrationCompleted: false });
 

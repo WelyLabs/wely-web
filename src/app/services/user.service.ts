@@ -33,8 +33,10 @@ export interface FriendProfile {
 
 /** What finishing the signup sends; the steps added later bring their own fields. */
 export interface RegistrationCompletion {
-    /** `YYYY-MM-DD`. */
-    birthDate: string;
+    /** `YYYY-MM-DD`. Each field optional: a pass sends the ones the profile misses, at least one. */
+    birthDate?: string;
+    firstName?: string;
+    lastName?: string;
 }
 
 /** What the profile form may change; the email stays with Auth0. */
@@ -150,13 +152,14 @@ export class UserService {
     }
 
     /**
-     * Finishes the signup, and later changes the birth date: wely-users answers with the profile
-     * as stored, which becomes the current user.
+     * Fills what the signup still misses, and later changes the birth date alone:
+     * wely-users answers with the profile as stored, which becomes the current user.
      */
     completeRegistration(completion: RegistrationCompletion): Observable<User> {
         return this.http.put<User>(`${this.apiUrl}/profile/registration`, completion).pipe(
             tap(saved => this.updateCurrentUser({
-                birthDate: saved.birthDate ?? completion.birthDate,
+                // The fields sent, as stored (trimmed): those left out keep their current value.
+                ...completion,
                 registrationCompleted: saved.registrationCompleted ?? true
             }))
         );

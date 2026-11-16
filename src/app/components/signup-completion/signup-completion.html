@@ -3,19 +3,34 @@
     <div class="signup-head">
       <span class="signup-mark" aria-hidden="true">🎉</span>
       <h2 id="signup-title">Finalise ton inscription</h2>
-      <p>{{ firstName() ? 'Bienvenue ' + firstName() + ' ! ' : 'Bienvenue ! ' }}Encore un détail et c'est parti.</p>
+      <p>{{ user().firstName ? 'Bienvenue ' + user().firstName + ' ! ' : 'Bienvenue ! ' }}{{ steps().length > 1 ? 'Encore quelques détails' : 'Encore un détail' }} et c'est parti.</p>
     </div>
 
-    @if (steps.length > 1) {
+    @if (steps().length > 1) {
       <ol class="signup-steps" aria-label="Étapes">
-        @for (item of steps; track item.id; let i = $index) {
-          <li [class.done]="i < stepIndex()" [class.current]="i === stepIndex()">{{ item.title }}</li>
+        @for (item of steps(); track item.id; let i = $index) {
+          <li [class.done]="i < stepIndex()" [class.current]="i === stepIndex()"
+            [attr.aria-current]="i === stepIndex() ? 'step' : null">{{ item.title }}</li>
         }
       </ol>
     }
 
     <form class="signup-step" (submit)="next(); $event.preventDefault()">
       @switch (step().id) {
+        @case ('names') {
+          <fieldset class="signup-names">
+            <legend>{{ step().title }}</legend>
+            <label for="signup-first-name">Prénom</label>
+            <input id="signup-first-name" type="text" required autocomplete="given-name" [maxLength]="maxNameLength"
+              [value]="givenFirstName()" (input)="onFirstName($event)"
+              [attr.aria-invalid]="touched() && !!firstNameError()" aria-describedby="signup-names-hint">
+            <label for="signup-last-name">Nom</label>
+            <input id="signup-last-name" type="text" required autocomplete="family-name" [maxLength]="maxNameLength"
+              [value]="givenLastName()" (input)="onLastName($event)"
+              [attr.aria-invalid]="touched() && !!lastNameError()" aria-describedby="signup-names-hint">
+          </fieldset>
+          <small id="signup-names-hint" class="signup-hint"><mat-icon>badge</mat-icon>{{ step().hint }}</small>
+        }
         @case ('birthDate') {
           <label for="signup-birth-date">{{ step().title }}</label>
           <input id="signup-birth-date" type="date" required [min]="bounds.min" [max]="bounds.max"
