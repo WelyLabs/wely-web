@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService as Auth0Service } from '@auth0/auth0-angular';
+import { AuthService as Auth0Service, GenericError } from '@auth0/auth0-angular';
 import { BehaviorSubject, ReplaySubject, of, throwError } from 'rxjs';
-import { auth0Config, initializeAuth, isOwnApiRequest, loginLocales } from './auth-init.factory';
+import { auth0Config, initializeAuth, isOwnApiRequest, loginLocales, refusalReason } from './auth-init.factory';
 import { AuthService } from './auth.service';
 import { UserService } from '../../services/user.service';
 import { LoggerService } from '../logging/logger.service';
@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('initializeAuth', () => {
     let auth0: { isLoading$: BehaviorSubject<boolean>; error$: ReplaySubject<Error> };
-    let authService: { isLoggedIn: ReturnType<typeof vi.fn>; accessToken: ReturnType<typeof vi.fn>; markStartupFailed: ReturnType<typeof vi.fn> };
+    let authService: { isLoggedIn: ReturnType<typeof vi.fn>; accessToken: ReturnType<typeof vi.fn>; markStartupFailed: ReturnType<typeof vi.fn>; markSignInRefused: ReturnType<typeof vi.fn> };
     let userService: { loadAndSetCurrentUser: ReturnType<typeof vi.fn> };
 
     const run = () => TestBed.runInInjectionContext(() => initializeAuth());
@@ -21,7 +21,8 @@ describe('initializeAuth', () => {
         authService = {
             isLoggedIn: vi.fn().mockResolvedValue(true),
             accessToken: vi.fn().mockResolvedValue('token'),
-            markStartupFailed: vi.fn()
+            markStartupFailed: vi.fn(),
+            markSignInRefused: vi.fn()
         };
         userService = { loadAndSetCurrentUser: vi.fn().mockReturnValue(of({})) };
         TestBed.configureTestingModule({
@@ -82,6 +83,24 @@ describe('initializeAuth', () => {
     });
 });
 
+describe('refusalReason', () => {
+    it('refusalReason_shouldGiveTheActionsSentence_whenAccessIsDenied', () => {
+        const denied = new GenericError('access_denied', 'Confirmez votre adresse e-mail.');
+
+        expect(refusalReason(denied)).toBe('Confirmez votre adresse e-mail.');
+    });
+
+    it('refusalReason_shouldFallBackToASentence_whenAuth0SaysNothing', () => {
+        expect(refusalReason(new GenericError('access_denied', ''))).toBe('La connexion a été refusée.');
+    });
+
+    it('refusalReason_shouldBeNull_forABreakdown', () => {
+        // A service that did not answer is not a service that said no.
+        expect(refusalReason(new GenericError('server_error', 'boom'))).toBeNull();
+        expect(refusalReason(new Error('offline'))).toBeNull();
+    });
+});
+
 describe('isOwnApiRequest', () => {
     it('isOwnApiRequest_shouldSignCallsToOurApi', () => {
         expect(isOwnApiRequest(`${environment.apiUrl}/events-service/events`)).toBe(true);
@@ -118,5 +137,51 @@ describe('loginLocales', () => {
     it('loginLocales_shouldBeFrenchAlone_forAFrenchOrMissingLanguage', () => {
         expect(loginLocales('fr-FR')).toBe('fr');
         expect(loginLocales('')).toBe('fr');
+    });
+});
+
+describe('initializeAuth, when Auth0 refuses', () => {
+    let auth0: { isLoading$: BehaviorSubject<boolean>; error$: ReplaySubject<Error> };
+    let authService: { isLoggedIn: ReturnType<typeof vi.fn>; accessToken: ReturnType<typeof vi.fn>;
+        markStartupFailed: ReturnType<typeof vi.fn>; markSignInRefused: ReturnType<typeof vi.fn> };
+
+    const run = () => TestBed.runInInjectionContext(() => initializeAuth());
+
+    beforeEach(() => {
+        TestBed.resetTestingModule();
+        auth0 = { isLoading$: new BehaviorSubject(false), error$: new ReplaySubject(1) };
+        authService = {
+            isLoggedIn: vi.fn().mockResolvedValue(true),
+            accessToken: vi.fn().mockResolvedValue('token'),
+            markStartupFailed: vi.fn(),
+            markSignInRefused: vi.fn()
+        };
+        TestBed.configureTestingModule({
+            providers: [
+                { provide: Auth0Service, useValue: auth0 },
+                { provide: AuthService, useValue: authService },
+                { provide: UserService, useValue: { loadAndSetCurrentUser: vi.fn().mockReturnValue(of({})) } },
+                { provide: LoggerService, useValue: { debug: vi.fn(), error: vi.fn() } }
+            ]
+        });
+    });
+
+    it('initializeAuth_shouldReportARefusal_ratherThanAStartupFailure', async () => {
+        auth0.error$.next(new GenericError('access_denied', 'Confirmez votre adresse e-mail.'));
+
+        await run();
+
+        expect(authService.markSignInRefused).toHaveBeenCalledWith('Confirmez votre adresse e-mail.');
+        // The outage screen would tell the user the service is down, which it is not.
+        expect(authService.markStartupFailed).not.toHaveBeenCalled();
+    });
+
+    it('initializeAuth_shouldStillReportAStartupFailure_whenAuth0Breaks', async () => {
+        auth0.error$.next(new GenericError('server_error', 'boom'));
+
+        await run();
+
+        expect(authService.markStartupFailed).toHaveBeenCalled();
+        expect(authService.markSignInRefused).not.toHaveBeenCalled();
     });
 });

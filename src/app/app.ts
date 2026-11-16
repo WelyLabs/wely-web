@@ -5,12 +5,13 @@ import { RouterOutlet } from '@angular/router';
 import { filter, from, switchMap, tap } from 'rxjs';
 import { UserService } from './services/user.service';
 import { AuthService } from './core/auth/auth.service';
+import { SignInRefusedComponent } from './components/shared/sign-in-refused/sign-in-refused';
 import { StartupErrorComponent } from './components/shared/startup-error/startup-error';
 import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, StartupErrorComponent],
+  imports: [RouterOutlet, StartupErrorComponent, SignInRefusedComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -25,6 +26,7 @@ export class App implements OnInit {
 
   /** Auth0 could not be initialised: there is no session to follow or profile to load. */
   protected readonly startupFailed = this.authService.startupFailed;
+  protected readonly signInRefused = this.authService.signInRefused;
 
   protected readonly title = signal('calendar-app');
 

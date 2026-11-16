@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { AuthConfig, AuthService as Auth0Service } from '@auth0/auth0-angular';
+import { AuthConfig, AuthService as Auth0Service, GenericError } from '@auth0/auth0-angular';
 import { filter, firstValueFrom, map, race } from 'rxjs';
 import { AUTH_CONFIG } from './auth.config';
 import { UserService } from '../../services/user.service';
@@ -9,6 +9,8 @@ import { LoggerService } from '../logging/logger.service';
 
 const SCOPE = 'AuthInit';
 const DEFAULT_LOCALE = 'fr';
+/** Shown when Auth0 refuses without saying why, which it is not supposed to do. */
+const UNSAID_REFUSAL = 'La connexion a été refusée.';
 
 /** The browser language first, French when the login page does not offer it. */
 export function loginLocales(language = navigator.language): string {
@@ -44,6 +46,21 @@ export function auth0Config(): AuthConfig {
     };
 }
 
+/**
+ * The reason Auth0 refused the sign-in, or null when it simply failed.
+ *
+ * `access_denied` is the post-login Action saying no — an unverified address, a wrong audience —
+ * and it carries a sentence written for the user. That is not a breakdown, and showing the
+ * "the service did not answer" screen for it is how asking someone to confirm their mail ends up
+ * looking like an outage.
+ */
+export function refusalReason(error: unknown): string | null {
+    if (!(error instanceof GenericError) || error.error !== 'access_denied') {
+        return null;
+    }
+    return error.error_description || UNSAID_REFUSAL;
+}
+
 /** Waits for the SDK to restore the session or finish the login redirect, then preloads the profile. */
 export async function initializeAuth(): Promise<void> {
     const auth0 = inject(Auth0Service);
@@ -58,6 +75,12 @@ export async function initializeAuth(): Promise<void> {
         auth0.isLoading$.pipe(filter(loading => !loading), map(() => null))
     ));
     if (failure) {
+        const refused = refusalReason(failure);
+        if (refused) {
+            logger.debug(SCOPE, `Auth0 refused the sign-in: ${refused}`);
+            authService.markSignInRefused(refused);
+            return;
+        }
         logger.error(SCOPE, 'Auth0 initialisation failed', failure);
         authService.markStartupFailed();
         return;
