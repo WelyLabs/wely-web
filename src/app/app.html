@@ -1,4 +1,6 @@
-@if (startupFailed()) {
+@if (signInRefused(); as reason) {
+  <app-sign-in-refused [reason]="reason" />
+} @else if (startupFailed()) {
   <app-startup-error />
 } @else {
   <router-outlet></router-outlet>

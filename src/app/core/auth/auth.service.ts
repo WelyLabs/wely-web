@@ -39,6 +39,7 @@ export class AuthService {
     private readonly replacePage = inject(REPLACE_PAGE);
 
     private readonly startupFailedState = signal(false);
+    private readonly signInRefusedState = signal<string | null>(null);
     private readonly sessionEndedState = signal(false);
 
     /** The last access token the SDK handed out, for callers that cannot wait for one. */
@@ -50,8 +51,16 @@ export class AuthService {
     /** True once the account is deleted and the page is being replaced: nothing may start a login any more. */
     readonly sessionEnded = this.sessionEndedState.asReadonly();
 
+    /** Why Auth0 refused the sign-in, in the post-login Action's own words; null when it did not. */
+    readonly signInRefused = this.signInRefusedState.asReadonly();
+
     markStartupFailed(): void {
         this.startupFailedState.set(true);
+    }
+
+    /** A refusal is not a breakdown: the service answered, and said no for a reason worth showing. */
+    markSignInRefused(reason: string): void {
+        this.signInRefusedState.set(reason);
     }
 
     /** Whether the user is signed in, once the SDK has restored the session. */

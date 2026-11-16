@@ -8,12 +8,15 @@ import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('App', () => {
-  let authServiceMock: { isLoggedIn: ReturnType<typeof vi.fn>; startupFailed: ReturnType<typeof signal<boolean>> };
+  let authServiceMock: { isLoggedIn: ReturnType<typeof vi.fn>; startupFailed: ReturnType<typeof signal<boolean>>;
+    signInRefused: ReturnType<typeof signal<string | null>> };
   let userServiceMock: { loadAndSetCurrentUser: ReturnType<typeof vi.fn> };
   let themeMock: { sync: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    authServiceMock = { isLoggedIn: vi.fn().mockResolvedValue(true), startupFailed: signal(false) };
+    authServiceMock = {
+      isLoggedIn: vi.fn().mockResolvedValue(true), startupFailed: signal(false), signInRefused: signal<string | null>(null)
+    };
     userServiceMock = { loadAndSetCurrentUser: vi.fn().mockReturnValue(of({})) };
     themeMock = { sync: vi.fn() };
 
@@ -60,5 +63,15 @@ describe('App', () => {
     expect(element.querySelector('router-outlet')).toBeNull();
     expect(authServiceMock.isLoggedIn).not.toHaveBeenCalled();
     expect(userServiceMock.loadAndSetCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it('should show the refusal screen rather than the outage one, when Auth0 said no', () => {
+    authServiceMock.signInRefused.set('Confirmez votre adresse e-mail avant de vous connecter.');
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Confirmez votre adresse e-mail');
+    expect(text).not.toContain('Le service d\'authentification');
   });
 });
