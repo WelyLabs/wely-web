@@ -13,10 +13,10 @@ import { UserService } from './user.service';
 const SCOPE = 'AccountDeletionService';
 
 /**
- * A sign-in older than this no longer confirms a deletion. wely-users refuses past five minutes;
+ * A sign-in older than this no longer confirms a deletion. wely-users refuses past thirty minutes;
  * the minute of margin keeps this device from sending a request the server is about to reject.
  */
-export const FRESH_AUTH_MS = 4 * 60_000;
+export const FRESH_AUTH_MS = 29 * 60_000;
 
 const GONE = 410;
 const FORBIDDEN = 403;

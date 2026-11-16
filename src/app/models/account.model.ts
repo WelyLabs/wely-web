@@ -13,7 +13,7 @@ export interface DeletedUsersResponse {
     deletedIds: string[];
 }
 
-/** Deleting the account needs a sign-in younger than five minutes. */
+/** Deleting the account needs a sign-in younger than thirty minutes. */
 export const REAUTHENTICATION_REQUIRED_CODE = 'USR-BUS-010';
 /** A demo account cannot be deleted. */
 export const ACCOUNT_PROTECTED_CODE = 'USR-BUS-011';
