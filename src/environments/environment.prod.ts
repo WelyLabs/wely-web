@@ -7,6 +7,6 @@ export const environment: Environment = {
   rsocketUrl: '/rsocket',
   // Substituted into index.html at container start by entrypoint.sh, which wins over these.
   authDomain: 'dev-8k6vch1dvh1qxrdz.eu.auth0.com',
-  authClientId: 'SET_ME_wely-web-dev',
+  authClientId: 'a3HWp7xp83GIpuOyxjAoGfKHvFW44PK7',
   authAudience: 'wely-api-dev',
 };
