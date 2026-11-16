@@ -9,18 +9,8 @@ if [ -z "$DNS_RESOLVER" ]; then
 fi
 echo "Discovered DNS resolver: $DNS_RESOLVER"
 
-# Replace KEYCLOAK_URL in index.html
-if [ -n "$KEYCLOAK_URL" ]; then
-    echo "Injecting KEYCLOAK_URL: $KEYCLOAK_URL"
-    # Escape special characters for sed
-    ESCAPED_URL=$(echo "$KEYCLOAK_URL" | sed 's/[&/\]/\\&/g')
-    sed -i "s|\${KEYCLOAK_URL}|$ESCAPED_URL|g" /usr/share/nginx/html/index.html
-else
-    echo "Warning: KEYCLOAK_URL environment variable is not set"
-fi
-
-# The realm and the client, injected the same way: one Keycloak, one realm per environment.
-for VAR in KEYCLOAK_REALM KEYCLOAK_CLIENT_ID; do
+# The Auth0 settings, injected into index.html: one image serves every environment.
+for VAR in AUTH_DOMAIN AUTH_CLIENT_ID AUTH_AUDIENCE; do
     eval "VALUE=\$$VAR"
     if [ -n "$VALUE" ]; then
         echo "Injecting $VAR: $VALUE"

@@ -17,7 +17,7 @@
 # The unprivileged nginx image runs as uid 101 and listens on 8080, rather than needing root to
 # bind port 80. The Service keeps exposing 80 externally.
 #
-# entrypoint.sh rewrites index.html in place to inject KEYCLOAK_URL, and `sed -i` does that by
+# entrypoint.sh rewrites index.html in place to inject AUTH_DOMAIN, and `sed -i` does that by
 # creating a temp file *in the same directory* before renaming it over the original. COPY --chown
 # sets ownership on the copied files but leaves /usr/share/nginx/html itself owned by root, so
 # uid 101 could write index.html and still not create the temp file beside it. That failed at

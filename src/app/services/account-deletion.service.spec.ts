@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService as Auth0Service } from '@auth0/auth0-angular';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AccountDeletionService, DELETION_REQUESTED_AT_KEY, DELETION_USER_ID_KEY } from './account-deletion.service';
-import { REPLACE_PAGE } from '../core/auth/auth.service';
+import { AuthService, REPLACE_PAGE } from '../core/auth/auth.service';
 import { LoggerService } from '../core/logging/logger.service';
 import { PushService } from './push.service';
 import { UserService } from './user.service';
@@ -16,17 +16,15 @@ describe('AccountDeletionService', () => {
   let service: AccountDeletionService;
   let users: { getDeletionEligibility: ReturnType<typeof vi.fn>; deleteAccount: ReturnType<typeof vi.fn> };
   let push: { disable: ReturnType<typeof vi.fn>; clearShownNotifications: ReturnType<typeof vi.fn> };
-  let keycloak: { login: ReturnType<typeof vi.fn>; clearToken: ReturnType<typeof vi.fn>; getKeycloakInstance: ReturnType<typeof vi.fn> };
+  let auth0: { loginWithRedirect: ReturnType<typeof vi.fn>; logout: ReturnType<typeof vi.fn> };
   let logger: { warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
   let replacePage: ReturnType<typeof vi.fn>;
 
   const refusal = (status: number, code?: string) =>
     throwError(() => new HttpErrorResponse({ status, error: code ? { code } : null }));
-  /** The token as Keycloak signed it: auth_time on Keycloak's clock, timeSkew the device's lead over it, in seconds. */
-  const signedInAt = (authTimeMs: number | null, timeSkew = 0) => keycloak.getKeycloakInstance.mockReturnValue({
-    tokenParsed: authTimeMs === null ? { exp: NOW / 1000 + 300 } : { auth_time: authTimeMs / 1000 },
-    timeSkew
-  });
+  /** The sign-in time the access token carries, in milliseconds. */
+  const signedInAt = (authenticatedAtMs: number | null) =>
+    vi.spyOn(TestBed.inject(AuthService), 'authenticatedAt').mockReturnValue(authenticatedAtMs);
   const remember = (requestedAt: number, userId = camille.id) => {
     sessionStorage.setItem(DELETION_REQUESTED_AT_KEY, String(requestedAt));
     sessionStorage.setItem(DELETION_USER_ID_KEY, userId);
@@ -37,20 +35,20 @@ describe('AccountDeletionService', () => {
     vi.setSystemTime(NOW);
     users = { getDeletionEligibility: vi.fn(() => of({ allowed: true })), deleteAccount: vi.fn(() => of(null)) };
     push = { disable: vi.fn().mockResolvedValue(true), clearShownNotifications: vi.fn().mockResolvedValue(undefined) };
-    keycloak = { login: vi.fn().mockResolvedValue(undefined), clearToken: vi.fn(), getKeycloakInstance: vi.fn() };
+    auth0 = { loginWithRedirect: vi.fn(() => of(undefined)), logout: vi.fn(() => of(undefined)) };
     logger = { warn: vi.fn(), error: vi.fn() };
     replacePage = vi.fn();
-    signedInAt(NOW);
     TestBed.configureTestingModule({
       providers: [
         { provide: UserService, useValue: users },
         { provide: PushService, useValue: push },
-        { provide: KeycloakService, useValue: keycloak },
+        { provide: Auth0Service, useValue: auth0 },
         { provide: LoggerService, useValue: logger },
         { provide: REPLACE_PAGE, useValue: replacePage }
       ]
     });
     service = TestBed.inject(AccountDeletionService);
+    signedInAt(NOW);
   });
 
   afterEach(() => {
@@ -81,15 +79,18 @@ describe('AccountDeletionService', () => {
 
       expect(sessionStorage.getItem(DELETION_REQUESTED_AT_KEY)).toBe(String(NOW));
       expect(sessionStorage.getItem(DELETION_USER_ID_KEY)).toBe('b-camille');
-      expect(keycloak.login).toHaveBeenCalledWith(expect.objectContaining({
-        prompt: 'login', redirectUri: `${window.location.origin}/preferences?account=delete`
+      expect(auth0.loginWithRedirect).toHaveBeenCalledWith(expect.objectContaining({
+        appState: { target: '/preferences?account=delete' },
+        authorizationParams: expect.objectContaining({ prompt: 'login' })
       }));
     });
 
     it('start_shouldPassTheUsernameAsLoginHint', async () => {
       await service.start(camille);
 
-      expect(keycloak.login).toHaveBeenCalledWith(expect.objectContaining({ loginHint: 'camille' }));
+      expect(auth0.loginWithRedirect).toHaveBeenCalledWith(expect.objectContaining({
+        authorizationParams: expect.objectContaining({ login_hint: 'camille' })
+      }));
     });
 
     it('start_shouldNotReauthenticate_whenTheMarkerCannotBeWritten', async () => {
@@ -98,7 +99,7 @@ describe('AccountDeletionService', () => {
       });
 
       expect(await service.start(camille)).toBe(false);
-      expect(keycloak.login).not.toHaveBeenCalled();
+      expect(auth0.loginWithRedirect).not.toHaveBeenCalled();
     });
 
     it('start_shouldNotReauthenticate_whenSessionStorageIsBlocked', async () => {
@@ -107,7 +108,7 @@ describe('AccountDeletionService', () => {
       });
 
       expect(await service.start(camille)).toBe(false);
-      expect(keycloak.login).not.toHaveBeenCalled();
+      expect(auth0.loginWithRedirect).not.toHaveBeenCalled();
     });
   });
 
@@ -159,15 +160,6 @@ describe('AccountDeletionService', () => {
 
       expect(service.pendingStep(camille.id, 'delete')).toBe('confirm');
     });
-
-    it('pendingStep_shouldBeConfirm_whenTheDeviceClockIsAheadOfKeycloak', () => {
-      // The device runs 5 minutes ahead: the request is stamped 14:05 there, Keycloak signs the login at 14:00:30.
-      const keycloakNow = NOW - 300_000;
-      remember(NOW - 30_000);
-      signedInAt(keycloakNow + 30_000, 300);
-
-      expect(service.pendingStep(camille.id, 'delete')).toBe('confirm');
-    });
   });
 
   describe('confirm', () => {
@@ -195,7 +187,7 @@ describe('AccountDeletionService', () => {
 
       expect(await service.confirm()).toBe('deleted');
 
-      expect(keycloak.clearToken).toHaveBeenCalled();
+      expect(auth0.logout).toHaveBeenCalledWith({ openUrl: false });
       expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
       expect(sessionStorage.getItem('wely.accountDeletion.requestedAt')).toBeNull();
     });

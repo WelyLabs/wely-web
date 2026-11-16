@@ -22,7 +22,7 @@ export const USER_DELETED_CODE = 'USR-BUS-012';
 /** Account deletion is switched off on this deployment. */
 export const ACCOUNT_DELETION_DISABLED_CODE = 'USR-BUS-014';
 
-/** The query parameter that carries the account flow across the Keycloak round trip. */
+/** The query parameter that carries the account flow across the Auth0 round trip. */
 export const ACCOUNT_QUERY_PARAM = 'account';
 /** Back on /preferences after re-authenticating to delete the account. */
 export const ACCOUNT_DELETE_INTENT = 'delete';

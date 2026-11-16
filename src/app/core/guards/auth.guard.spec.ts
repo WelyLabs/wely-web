@@ -1,63 +1,44 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { KeycloakService } from 'keycloak-angular';
+import { signal } from '@angular/core';
+import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { authGuard } from './auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('authGuard', () => {
-    let keycloakMock: any;
-    let routerMock: any;
+    let authServiceMock: {
+        isLoggedIn: ReturnType<typeof vi.fn>;
+        login: ReturnType<typeof vi.fn>;
+        startupFailed: ReturnType<typeof signal<boolean>>;
+    };
+    const run = (url: string) => TestBed.runInInjectionContext(() =>
+        authGuard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot));
 
     beforeEach(() => {
-        keycloakMock = {
-            isLoggedIn: vi.fn(),
-            login: vi.fn()
-        };
-        routerMock = {};
-
-        TestBed.configureTestingModule({
-            providers: [
-                { provide: KeycloakService, useValue: keycloakMock },
-                { provide: Router, useValue: routerMock }
-            ]
-        });
+        authServiceMock = { isLoggedIn: vi.fn(), login: vi.fn().mockResolvedValue(undefined), startupFailed: signal(false) };
+        TestBed.configureTestingModule({ providers: [{ provide: AuthService, useValue: authServiceMock }] });
     });
 
-    it('should return true if user is logged in', async () => {
-        keycloakMock.isLoggedIn.mockResolvedValue(true);
+    it('authGuard_shouldAllow_whenLoggedIn', async () => {
+        authServiceMock.isLoggedIn.mockResolvedValue(true);
 
-        const result = await TestBed.runInInjectionContext(() =>
-            authGuard({} as any, { url: '/test' } as any)
-        );
-
-        expect(result).toBe(true);
+        expect(await run('/test')).toBe(true);
+        expect(authServiceMock.login).not.toHaveBeenCalled();
     });
 
-    it('should call login and return false if user is NOT logged in', async () => {
-        keycloakMock.isLoggedIn.mockResolvedValue(false);
-        keycloakMock.login.mockResolvedValue({});
+    it('authGuard_shouldLoginBackToTheRoute_whenNotLoggedIn', async () => {
+        authServiceMock.isLoggedIn.mockResolvedValue(false);
 
-        const result = await TestBed.runInInjectionContext(() =>
-            authGuard({} as any, { url: '/protected' } as any)
-        );
-
-        expect(keycloakMock.login).toHaveBeenCalledWith(expect.objectContaining({
-            redirectUri: expect.stringContaining('/protected')
-        }));
-        expect(result).toBe(false);
+        expect(await run('/protected?x=1')).toBe(false);
+        expect(authServiceMock.login).toHaveBeenCalledWith('/protected?x=1');
     });
 
-    it('should neither redirect to Keycloak nor allow access once startup has failed', async () => {
-        // Redirecting to a Keycloak that just failed would loop between the two.
-        TestBed.inject(AuthService).markStartupFailed();
+    it('authGuard_shouldNeitherRedirectNorAllow_onceStartupHasFailed', async () => {
+        // Redirecting to an Auth0 that just failed would loop between the two.
+        authServiceMock.startupFailed.set(true);
 
-        const result = await TestBed.runInInjectionContext(() =>
-            authGuard({} as any, { url: '/calendar' } as any)
-        );
-
-        expect(result).toBe(false);
-        expect(keycloakMock.login).not.toHaveBeenCalled();
-        expect(keycloakMock.isLoggedIn).not.toHaveBeenCalled();
+        expect(await run('/calendar')).toBe(false);
+        expect(authServiceMock.login).not.toHaveBeenCalled();
+        expect(authServiceMock.isLoggedIn).not.toHaveBeenCalled();
     });
 });

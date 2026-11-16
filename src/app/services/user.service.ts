@@ -3,7 +3,7 @@ import { LoggerService } from '../core/logging/logger.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, BehaviorSubject, catchError, from, map, of, switchMap, tap } from 'rxjs';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../core/auth/auth.service';
 import { User } from '../models/user.model';
 import { AccountDeletionEligibility } from '../models/account.model';
 
@@ -37,7 +37,7 @@ export interface RegistrationCompletion {
     birthDate: string;
 }
 
-/** What the profile form may change; the email stays with Keycloak. */
+/** What the profile form may change; the email stays with Auth0. */
 export interface ProfileUpdate {
     userName: string;
     firstName: string;
@@ -50,7 +50,7 @@ export interface ProfileUpdate {
 export class UserService {
     private readonly logger = inject(LoggerService);
     private http = inject(HttpClient);
-    private keycloak = inject(KeycloakService);
+    private readonly authService = inject(AuthService);
 
     private apiUrl = `${environment.apiUrl}/user-service`;
 
@@ -81,7 +81,7 @@ export class UserService {
      * Get the current access token synchronously
      */
     getAccessToken(): string {
-        return this.keycloak.getKeycloakInstance().token!;
+        return this.authService.getToken();
     }
 
     /**
@@ -132,9 +132,9 @@ export class UserService {
 
     /**
      * Saves the caller's username and names; wely-users answers with the profile as stored (the
-     * username lowercased, as Keycloak keeps it). The current user follows, and the token is
+     * username lowercased). The current user follows, and the token is
      * refreshed at once: its preferred_username is the name wely-chat signs messages with.
-     * A failed refresh is not the save failing: the scheduled one will catch up.
+     * A failed refresh is not the save failing: the next token request catches up.
      */
     updateProfile(update: ProfileUpdate): Observable<User> {
         return this.http.put<User>(`${this.apiUrl}/profile`, update).pipe(
@@ -143,7 +143,7 @@ export class UserService {
                 firstName: saved.firstName,
                 lastName: saved.lastName
             })),
-            switchMap(saved => from(this.keycloak.updateToken(-1)).pipe(
+            switchMap(saved => from(this.authService.accessToken(true)).pipe(
                 map(() => saved),
                 catchError(() => of(saved))))
         );

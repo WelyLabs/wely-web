@@ -4,8 +4,8 @@ export const environment: Environment = {
   production: false,
   apiUrl: 'http://localhost:8081/api/v1',
   rsocketUrl: 'ws://localhost:8081/rsocket',
-  keycloakUrl: 'http://localhost:8080',
-  keycloakRealm: 'wely-local',
-  keycloakClientId: 'wely-web-local-client',
-  keycloakSilentCheckSso: false,
+  authDomain: 'dev-8k6vch1dvh1qxrdz.eu.auth0.com',
+  // Placeholder until the wely-web-dev application exists in the tenant; entrypoint.sh overrides it in the cluster.
+  authClientId: 'SET_ME_wely-web-dev',
+  authAudience: 'wely-api-dev',
 };

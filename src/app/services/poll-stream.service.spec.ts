@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../core/auth/auth.service';
 import { Subscription } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { environment } from '../../environments/environment';
@@ -17,19 +17,19 @@ const pollJson = (status: 'OPEN' | 'CLOSED', yes: string[] = []) => JSON.stringi
 describe('PollStreamService', () => {
     let service: PollStreamService;
     let fetchMock: ReturnType<typeof vi.fn>;
-    const getToken = vi.fn(() => Promise.resolve('token-1'));
+    const accessToken = vi.fn(() => Promise.resolve('token-1'));
     const url = `${environment.apiUrl}/events-service/events/e1/poll/stream`;
     let subscription: Subscription | undefined;
 
     beforeEach(() => {
         fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
-        getToken.mockClear();
+        accessToken.mockClear();
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({
             providers: [
                 PollStreamService,
-                { provide: KeycloakService, useValue: { getToken } },
+                { provide: AuthService, useValue: { accessToken } },
                 { provide: LoggerService, useValue: { warn: vi.fn(), error: vi.fn() } }
             ]
         });
@@ -114,7 +114,7 @@ describe('PollStreamService', () => {
 
     it('follow_shouldReconnectWithBackoff_andAFreshToken_whenTheStreamEnds', async () => {
         vi.useFakeTimers();
-        getToken.mockResolvedValueOnce('token-1').mockResolvedValueOnce('token-2');
+        accessToken.mockResolvedValueOnce('token-1').mockResolvedValueOnce('token-2');
         fetchMock
             .mockResolvedValueOnce(streamResponse([`data: ${pollJson('OPEN')}\n\n`]))
             .mockRejectedValueOnce(new TypeError('network down'))

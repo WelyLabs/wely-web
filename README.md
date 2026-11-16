@@ -23,7 +23,7 @@ Frontend de la plateforme [Wely Calendar](https://github.com/WelyLabs/wely-platf
 
 ## Stack
 
-Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwind CSS · RxJS 7 · **RSocket** (`rsocket-core`, `rsocket-websocket-client`) · `keycloak-angular` / `keycloak-js` · Vitest
+Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwind CSS · RxJS 7 · **RSocket** (`rsocket-core`, `rsocket-websocket-client`) · `@auth0/auth0-angular` · Vitest
 
 ---
 
@@ -50,7 +50,7 @@ Angular 21 (standalone components) · Angular Material · Angular CDK · Tailwin
 ```
 src/app/
 ├── core/                        infrastructure transverse
-│   ├── auth/                    AuthService · keycloak-init.factory · config
+│   ├── auth/                    AuthService · auth-init.factory · config
 │   ├── guards/                  authGuard
 │   ├── interceptors/            SessionInterceptor
 │   ├── storage/                 the app's wely.* keys in web storage
@@ -100,37 +100,31 @@ src/app/
 }
 ```
 
-La landing page est publique ; tout le reste passe par `authGuard`, qui délègue à Keycloak.
+La landing page est publique ; tout le reste passe par `authGuard`, qui délègue à Auth0.
 
 ---
 
 ## Authentification
 
-L'application s'authentifie en OIDC auprès de Keycloak via `keycloak-angular`.
+The app signs in with OIDC (authorization code + PKCE) against Auth0, through `@auth0/auth0-angular`. Every `/authorize` request carries `audience=wely-api-<env>`: without it Auth0 issues an opaque access token the services cannot validate. Scopes: `openid profile email offline_access`.
 
-### Rafraîchissement proactif du token
+### Tokens
 
-Plutôt que de rafraîchir le token après un 401, `AuthService` le renouvelle **avant expiration**, en calculant le délai à partir du claim `exp` :
+The SDK keeps the tokens in `localStorage` and renews the access token with a **rotating refresh token** whenever one is asked for and the cached one is about to expire: there is no refresh timer in the app. Silent iframe authentication is not used — without a custom auth domain, Auth0's cookies are third-party to the app and browsers block them.
 
-```typescript
-const expirationDate = keycloakInstance.tokenParsed.exp * 1000;
-const delay = expirationDate - Date.now() - 70_000;   // 70 s de marge
-this.refreshTimer = setTimeout(() => this.executeTokenUpdate(), Math.max(delay, 1000));
-```
+The SDK's HTTP interceptor attaches the token **only** to requests for our own gateway (`environment.apiUrl`), never to a third party such as the geocoder; signed-out calls go without it. RSocket and the SSE streams ask `AuthService` for the token themselves.
 
-Chaque rafraîchissement replanifie le suivant. L'utilisateur ne subit ni coupure ni requête rejouée.
-
-`SessionInterceptor` reste en filet de sécurité : il intercepte les 401 et les `invalid_grant` — token révoqué côté Keycloak, session expirée en arrière-plan — et redirige vers le login.
+`SessionInterceptor` is the safety net: a `401` from the API, or an `invalid_grant` when the refresh token expired or was revoked, sends the user back to the login.
 
 ### Account deletion
 
-The *Compte* card on `/preferences` asks wely-users whether the account may be deleted (`GET /user-service/profile/deletion`); the demo account sees the action disabled and is never sent to Keycloak.
+The *Compte* card on `/preferences` asks wely-users whether the account may be deleted (`GET /user-service/profile/deletion`); the demo account sees the action disabled and is never sent to Auth0.
 
 1. A destructive dialog lists the consequences and asks for the handle `name#1234`, typed back.
-2. `AccountDeletionService` stores the request (time and `businessId`) in `sessionStorage`, then `AuthService.reauthenticate()` calls `keycloak.login({ prompt: 'login' })`: Keycloak skips SSO and asks for the password again, so the new token carries a fresh `auth_time`.
-3. Back on `/preferences?account=delete` with a request under ten minutes old for the same account, the page offers the final step. wely-users checks `auth_time` itself (five minutes at most) and answers `403 USR-BUS-010` otherwise.
+2. `AccountDeletionService` stores the request (time and `businessId`) in `sessionStorage`, then `AuthService.reauthenticate()` redirects to Auth0 with `prompt=login` and the username as `login_hint`: Auth0 skips SSO and asks for the password again, so the new access token carries a fresh `authenticatedAt` claim (epoch seconds, set by the post-login Action — Auth0 does not put `auth_time` in access tokens).
+3. Back on `/preferences?account=delete` with a request under ten minutes old for the same account, the page offers the final step. wely-users checks `authenticatedAt` itself (five minutes at most) and answers `403 USR-BUS-010` otherwise.
 4. *Supprimer définitivement* unsubscribes Web Push and closes the notifications shown on the device while the identity is still valid, then sends `DELETE /user-service/profile`.
-5. On `202`, `AuthService.leaveAfterAccountDeletion()` stops the token refresh, removes every `wely.*` key from both web storages, clears the token and replaces the page with `/?account=deleted`. That landing skips the silent SSO check: the Keycloak session lives a few more seconds, and its code exchange would fail.
+5. On `202`, `AuthService.leaveAfterAccountDeletion()` removes every `wely.*` key from both web storages, clears the SDK's cached tokens (a local logout, no redirect) and replaces the page with `/?account=deleted`.
 
 If the `DELETE` fails with a network error, a `5xx` or `403 USR-BUS-010`, the app at once asks `GET /user-service/profile/deletion`: a `410 USR-BUS-012` there means the deletion went through. A `410 USR-BUS-012` on the caller's own profile endpoints, or a `410` on the notification stream, sends the account's other devices to the same landing.
 
@@ -138,7 +132,7 @@ Elsewhere, a deleted account reads *Utilisateur supprimé* with a neutral avatar
 
 ### Le claim `businessId`
 
-Le token émis par Keycloak porte un claim `businessId` injecté par un [mapper de protocole custom](https://github.com/WelyLabs/wely-identity). Le frontend n'a donc jamais à traduire un UUID Keycloak en identifiant métier : les services lisent l'identité directement dans le token.
+The access token carries a `businessId` claim, added by a [post-login Action](https://github.com/WelyLabs/wely-identity) that provisions the profile in wely-users on the first login and caches the id in the user's `app_metadata`. The front never translates an Auth0 subject (`auth0|…`) into an application id: the services read the identity straight from the token.
 
 ---
 
@@ -218,9 +212,11 @@ nginx sert `sw.js` sans cache, pour qu'un correctif arrive au prochain chargemen
 |---|---|---|
 | `apiUrl` | `http://localhost:8081/api/v1` | `/api/v1` |
 | `rsocketUrl` | `ws://localhost:8081/rsocket` | `/rsocket` |
-| `keycloakUrl` | `http://localhost:8080` | `https://auth.welylabs.app` |
+| `authDomain` | `dev-8k6vch1dvh1qxrdz.eu.auth0.com` | same |
+| `authClientId` | `SET_ME_wely-web-dev` (placeholder) | injected |
+| `authAudience` | `wely-api-dev` | injected |
 
-En production, l'URL Keycloak est **injectée au démarrage du conteneur** : `entrypoint.sh` substitue les variables dans `index.html` via `envsubst`, ce qui permet de déployer la même image sur plusieurs environnements sans rebuild.
+In the cluster, `AUTH_DOMAIN`, `AUTH_CLIENT_ID` and `AUTH_AUDIENCE` are **injected at container start**: `entrypoint.sh` substitutes them into `index.html`, so one image serves every environment without a rebuild.
 
 ---
 
@@ -231,7 +227,7 @@ npm ci --legacy-peer-deps
 npm start                  # http://localhost:4200
 ```
 
-La gateway (`:8081`) et Keycloak (`:8080`) doivent tourner — voir le [README racine](https://github.com/WelyLabs/wely-platform).
+The gateway (`:8081`) must be running, and the Auth0 SPA application must list `http://localhost:4200` as callback, logout and web origin URL — voir le [README racine](https://github.com/WelyLabs/wely-platform).
 
 ---
 

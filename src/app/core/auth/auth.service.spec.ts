@@ -1,35 +1,43 @@
 import { TestBed } from '@angular/core/testing';
+import { AuthService as Auth0Service } from '@auth0/auth0-angular';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { AuthService, REPLACE_PAGE } from './auth.service';
-import { KeycloakService } from 'keycloak-angular';
+import { LoggerService } from '../logging/logger.service';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+/** A JWT with the given payload; the signature is never checked client-side. */
+function jwt(payload: Record<string, unknown>): string {
+    const encode = (value: unknown) => btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+    return `${encode({ alg: 'RS256' })}.${encode(payload)}.signature`;
+}
 
 describe('AuthService', () => {
     let service: AuthService;
-    let keycloakMock: Partial<KeycloakService>;
+    let auth0: {
+        isAuthenticated$: BehaviorSubject<boolean>;
+        loginWithRedirect: ReturnType<typeof vi.fn>;
+        logout: ReturnType<typeof vi.fn>;
+        getAccessTokenSilently: ReturnType<typeof vi.fn>;
+    };
+    let logger: { warn: ReturnType<typeof vi.fn> };
     let replacePage: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         TestBed.resetTestingModule();
-        vi.useFakeTimers();
-        vi.clearAllMocks();
-
-        keycloakMock = {
-            getKeycloakInstance: vi.fn().mockReturnValue({
-                tokenParsed: { exp: (new Date().getTime() / 1000) + 1000 },
-                token: 'mock-token'
-            }),
-            updateToken: vi.fn().mockReturnValue(Promise.resolve(true)),
-            isLoggedIn: vi.fn().mockReturnValue(true),
-            login: vi.fn().mockReturnValue(Promise.resolve()),
-            logout: vi.fn().mockReturnValue(Promise.resolve()),
-            clearToken: vi.fn()
-        } as any; // Cast to any for the factory setup, but variable is Partial<KeycloakService>
+        auth0 = {
+            isAuthenticated$: new BehaviorSubject(true),
+            loginWithRedirect: vi.fn().mockReturnValue(of(undefined)),
+            logout: vi.fn().mockReturnValue(of(undefined)),
+            getAccessTokenSilently: vi.fn().mockReturnValue(of('mock-token'))
+        };
+        logger = { warn: vi.fn() };
         replacePage = vi.fn();
 
         TestBed.configureTestingModule({
             providers: [
                 AuthService,
-                { provide: KeycloakService, useValue: keycloakMock },
+                { provide: Auth0Service, useValue: auth0 },
+                { provide: LoggerService, useValue: logger },
                 { provide: REPLACE_PAGE, useValue: replacePage }
             ]
         });
@@ -37,145 +45,100 @@ describe('AuthService', () => {
     });
 
     afterEach(() => {
-        if (service) {
-            service.stopTokenRefresh();
-        }
         vi.restoreAllMocks();
-        vi.useRealTimers();
         localStorage.clear();
         sessionStorage.clear();
     });
 
-    it('should be created', () => {
-        expect(service).toBeTruthy();
+    it('isLoggedIn_shouldFollowTheSdk', async () => {
+        expect(await service.isLoggedIn()).toBe(true);
+        auth0.isAuthenticated$.next(false);
+        expect(await service.isLoggedIn()).toBe(false);
     });
 
-    it('should get token', () => {
+    it('login_shouldComeBackToTheGivenRoute', async () => {
+        await service.login('/calendar');
+
+        expect(auth0.loginWithRedirect).toHaveBeenCalledWith({ appState: { target: '/calendar' } });
+    });
+
+    it('login_shouldComeBackToTheCurrentRoute_byDefault', async () => {
+        await service.login();
+
+        expect(auth0.loginWithRedirect).toHaveBeenCalledWith({ appState: { target: window.location.pathname + window.location.search } });
+    });
+
+    it('signup_shouldOpenTheSignUpScreen', async () => {
+        await service.signup('/calendar');
+
+        expect(auth0.loginWithRedirect).toHaveBeenCalledWith({
+            appState: { target: '/calendar' }, authorizationParams: { screen_hint: 'signup' }
+        });
+    });
+
+    it('logout_shouldSignOutAtAuth0_andComeBackToTheOrigin', async () => {
+        await service.logout();
+
+        expect(auth0.logout).toHaveBeenCalledWith({ logoutParams: { returnTo: window.location.origin } });
+    });
+
+    it('accessToken_shouldAskTheSdk_andRememberTheToken', async () => {
+        expect(await service.accessToken()).toBe('mock-token');
+        expect(auth0.getAccessTokenSilently).toHaveBeenCalledWith({});
+        auth0.getAccessTokenSilently.mockReturnValue(new Subject());
+
         expect(service.getToken()).toBe('mock-token');
     });
 
-    it('should check if logged in', async () => {
-        const loggedIn = await service.isLoggedIn();
-        expect(loggedIn).toBe(true);
-        expect(keycloakMock.isLoggedIn).toHaveBeenCalled();
+    it('accessToken_shouldSkipTheCache_whenFreshIsAsked', async () => {
+        await service.accessToken(true);
+
+        expect(auth0.getAccessTokenSilently).toHaveBeenCalledWith({ cacheMode: 'off' });
     });
 
-    it('should login', async () => {
-        await service.login('redirect');
-        expect(keycloakMock.login).toHaveBeenCalledWith({ redirectUri: 'redirect' });
-    });
+    it('getToken_shouldBeEmpty_beforeAnyToken_andLogAFailedRefresh', async () => {
+        auth0.getAccessTokenSilently.mockReturnValue(throwError(() => new Error('login_required')));
 
-    it('should logout', async () => {
-        await service.logout();
-        expect(keycloakMock.logout).toHaveBeenCalled();
-    });
-
-    it('should schedule token refresh based on exp', () => {
-        const now = new Date().getTime();
-        const exp = (now + 200000) / 1000;
-
-        (keycloakMock.getKeycloakInstance as any).mockReturnValue({
-            tokenParsed: { exp: exp }
-        });
-
-        const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
-        service.scheduleTokenRefresh();
-
-        // Le comportement testé est le délai programmé, pas le message journalisé :
-        // 200s d'expiration moins la marge de 70s.
-        const scheduledDelay = setTimeoutSpy.mock.calls.at(-1)?.[1] as number;
-        expect(scheduledDelay).toBeGreaterThan(125_000);
-        expect(scheduledDelay).toBeLessThan(135_000);
-    });
-
-    it('should fallback to 60s check if no exp found', () => {
-        (keycloakMock.getKeycloakInstance as any).mockReturnValue({
-            tokenParsed: {}
-        });
-
-        const consoleSpy = vi.spyOn(console, 'warn');
-        service.scheduleTokenRefresh();
-
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No token expiration found'));
-    });
-
-    it('should execute token update and reschedule', async () => {
-        (keycloakMock.getKeycloakInstance as any).mockClear();
-
-        service.scheduleTokenRefresh();
-        expect(keycloakMock.getKeycloakInstance).toHaveBeenCalledTimes(1);
-
-        await vi.advanceTimersToNextTimerAsync();
-
-        expect(keycloakMock.updateToken).toHaveBeenCalledWith(70);
-        expect(keycloakMock.getKeycloakInstance).toHaveBeenCalledTimes(2);
-    });
-
-    it('should retry token update later on failure', async () => {
-        // 1. Setup failure mock
-        // Rejected when called, like the real updateToken: a promise rejected up front sits
-        // unhandled until the timer fires, which native promises report (zone.js's did not).
-        (keycloakMock.updateToken as any).mockImplementation(() => Promise.reject('error'));
-        (keycloakMock.getKeycloakInstance as any).mockClear();
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
-        // 2. Start refresh cycle
-        service.scheduleTokenRefresh();
-
-        // 3. Move to first update attempt (Timer 1)
-        await vi.runOnlyPendingTimersAsync();
-        expect(keycloakMock.updateToken).toHaveBeenCalledTimes(1);
-        expect(consoleSpy).toHaveBeenCalled();
-
-        // 4. Move to retry attempt (Timer 2, 30s later)
-        // We use runOnlyPendingTimersAsync to be exact
-        await vi.runOnlyPendingTimersAsync();
-
-        expect(keycloakMock.updateToken).toHaveBeenCalledTimes(2);
-    });
-
-    it('should stop token refresh', () => {
-        service.scheduleTokenRefresh();
-        service.stopTokenRefresh();
-
-        vi.runAllTimers();
-        expect(keycloakMock.updateToken).not.toHaveBeenCalled();
+        expect(service.getToken()).toBe('');
+        await vi.waitFor(() => expect(logger.warn).toHaveBeenCalled());
     });
 
     describe('account deletion', () => {
-        const instance = (tokenParsed: Record<string, unknown>, timeSkew: number | null = 0) =>
-            (keycloakMock.getKeycloakInstance as any).mockReturnValue({ tokenParsed, timeSkew, token: 'mock-token' });
+        const withToken = async (payload: Record<string, unknown>) => {
+            auth0.getAccessTokenSilently.mockReturnValue(of(jwt(payload)));
+            await service.accessToken();
+        };
 
-        it('reauthenticate_shouldForceAFullLogin_withPromptLoginAndTheRedirect', async () => {
-            await service.reauthenticate('https://app/preferences?account=delete');
+        it('reauthenticate_shouldForceAFullLogin_withPromptLoginAndTheRoute', async () => {
+            await service.reauthenticate('/preferences?account=delete');
 
-            expect(keycloakMock.login).toHaveBeenCalledWith({
-                prompt: 'login', redirectUri: 'https://app/preferences?account=delete', loginHint: undefined
+            expect(auth0.loginWithRedirect).toHaveBeenCalledWith({
+                appState: { target: '/preferences?account=delete' },
+                authorizationParams: { prompt: 'login', login_hint: undefined }
             });
         });
 
         it('reauthenticate_shouldPrefillTheUsername_whenAHintIsGiven', async () => {
-            await service.reauthenticate('https://app/preferences?account=delete', 'camille');
+            await service.reauthenticate('/preferences?account=delete', 'camille');
 
-            expect(keycloakMock.login).toHaveBeenCalledWith(expect.objectContaining({ loginHint: 'camille' }));
+            expect(auth0.loginWithRedirect).toHaveBeenCalledWith(expect.objectContaining({
+                authorizationParams: { prompt: 'login', login_hint: 'camille' }
+            }));
         });
 
-        it('authenticatedAt_shouldReadAuthTimeInMilliseconds', () => {
-            instance({ auth_time: 1_760_000_000 });
+        it('authenticatedAt_shouldReadTheClaimInMilliseconds', async () => {
+            await withToken({ authenticatedAt: 1_760_000_000 });
 
             expect(service.authenticatedAt()).toBe(1_760_000_000_000);
         });
 
-        it('authenticatedAt_shouldConvertToTheDeviceClock_withTheTimeSkew', () => {
-            // keycloak-js measures timeSkew as the device clock minus Keycloak's, in seconds.
-            instance({ auth_time: 1_760_000_000 }, 120);
+        it('authenticatedAt_shouldBeNull_whenTheTokenHasNoClaim', async () => {
+            await withToken({ exp: 1 });
 
-            expect(service.authenticatedAt()).toBe(1_760_000_120_000);
+            expect(service.authenticatedAt()).toBeNull();
         });
 
-        it('authenticatedAt_shouldBeNull_whenTheTokenHasNoAuthTime', () => {
-            instance({ exp: 1 });
-
+        it('authenticatedAt_shouldBeNull_withoutAToken', () => {
             expect(service.authenticatedAt()).toBeNull();
         });
 
@@ -183,34 +146,38 @@ describe('AuthService', () => {
             expect(service.sessionEnded()).toBe(false);
         });
 
-        it('leaveAfterAccountDeletion_shouldStopRefreshClearWelyStorageAndTheToken_thenReplaceThePage', () => {
+        it('leaveAfterAccountDeletion_shouldClearWelyStorageAndTheLocalSession_thenReplaceThePage', async () => {
+            await service.accessToken();
             localStorage.setItem('wely.theme', 'DARK');
-            localStorage.setItem('kc-callback-1', '{}');
+            localStorage.setItem('other', '{}');
             sessionStorage.setItem('wely.accountDeletion.requestedAt', '1');
-            service.scheduleTokenRefresh();
 
             service.leaveAfterAccountDeletion();
 
             expect(localStorage.getItem('wely.theme')).toBeNull();
-            expect(localStorage.getItem('kc-callback-1')).toBe('{}');
+            expect(localStorage.getItem('other')).toBe('{}');
             expect(sessionStorage.getItem('wely.accountDeletion.requestedAt')).toBeNull();
-            expect(keycloakMock.clearToken).toHaveBeenCalledTimes(1);
+            expect(auth0.logout).toHaveBeenCalledWith({ openUrl: false });
             expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
-            vi.runAllTimers();
-            expect(keycloakMock.updateToken).not.toHaveBeenCalled();
+            expect(service.sessionEnded()).toBe(true);
         });
 
-        it('leaveAfterAccountDeletion_shouldMarkTheSessionEnded', () => {
-            service.leaveAfterAccountDeletion();
+        it('leaveAfterAccountDeletion_shouldWaitForTheTokensToBeCleared', () => {
+            const cleared = new Subject<void>();
+            auth0.logout.mockReturnValue(cleared);
 
-            expect(service.sessionEnded()).toBe(true);
+            service.leaveAfterAccountDeletion();
+            expect(replacePage).not.toHaveBeenCalled();
+            cleared.complete();
+
+            expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
         });
 
         it('leaveAfterAccountDeletion_shouldDoNothing_whenCalledTwice', () => {
             service.leaveAfterAccountDeletion();
             service.leaveAfterAccountDeletion();
 
-            expect(keycloakMock.clearToken).toHaveBeenCalledTimes(1);
+            expect(auth0.logout).toHaveBeenCalledTimes(1);
             expect(replacePage).toHaveBeenCalledTimes(1);
         });
 
@@ -222,17 +189,14 @@ describe('AuthService', () => {
             service.leaveAfterAccountDeletion();
 
             expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
-            vi.restoreAllMocks();
         });
 
-        it('leaveAfterAccountDeletion_shouldStillLeave_whenTheTokenCannotBeCleared', () => {
-            (keycloakMock.clearToken as any).mockImplementation(() => {
-                throw new Error('not initialised');
-            });
-            vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        it('leaveAfterAccountDeletion_shouldStillLeave_whenTheTokensCannotBeCleared', () => {
+            auth0.logout.mockReturnValue(throwError(() => new Error('storage refused')));
 
             service.leaveAfterAccountDeletion();
 
+            expect(logger.warn).toHaveBeenCalled();
             expect(replacePage).toHaveBeenCalledWith('/?account=deleted');
         });
     });

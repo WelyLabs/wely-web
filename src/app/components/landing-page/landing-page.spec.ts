@@ -1,14 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { buildWeek, feedBadge, LandingPageComponent, weekLabel } from './landing-page';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../../core/auth/auth.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('LandingPageComponent', () => {
     let component: LandingPageComponent;
     let fixture: ComponentFixture<LandingPageComponent>;
-    let keycloakMock: { isLoggedIn: ReturnType<typeof vi.fn>; login: ReturnType<typeof vi.fn>; register: ReturnType<typeof vi.fn> };
+    let authMock: { isLoggedIn: ReturnType<typeof vi.fn>; login: ReturnType<typeof vi.fn>; signup: ReturnType<typeof vi.fn> };
     let routerMock: { navigate: ReturnType<typeof vi.fn> };
 
     /** Renders the page as opened with this query string. */
@@ -19,7 +19,7 @@ describe('LandingPageComponent', () => {
         }).overrideComponent(LandingPageComponent, {
             set: {
                 providers: [
-                    { provide: KeycloakService, useValue: keycloakMock },
+                    { provide: AuthService, useValue: authMock },
                     { provide: Router, useValue: routerMock },
                     { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } }
                 ]
@@ -32,10 +32,10 @@ describe('LandingPageComponent', () => {
     }
 
     beforeEach(async () => {
-        keycloakMock = {
+        authMock = {
             isLoggedIn: vi.fn().mockResolvedValue(false),
-            login: vi.fn().mockResolvedValue({}),
-            register: vi.fn().mockResolvedValue({})
+            login: vi.fn().mockResolvedValue(undefined),
+            signup: vi.fn().mockResolvedValue(undefined)
         };
         routerMock = {
             navigate: vi.fn().mockResolvedValue(true)
@@ -49,22 +49,22 @@ describe('LandingPageComponent', () => {
     });
 
     it('should navigate to calendar if already logged in when launching app', async () => {
-        keycloakMock.isLoggedIn.mockResolvedValue(true);
+        authMock.isLoggedIn.mockResolvedValue(true);
         await component.launchApp();
         expect(routerMock.navigate).toHaveBeenCalledWith(['/calendar']);
-        expect(keycloakMock.login).not.toHaveBeenCalled();
+        expect(authMock.login).not.toHaveBeenCalled();
     });
 
     it('should call login if not logged in when launching app', async () => {
-        keycloakMock.isLoggedIn.mockResolvedValue(false);
+        authMock.isLoggedIn.mockResolvedValue(false);
         await component.launchApp();
-        expect(keycloakMock.login).toHaveBeenCalledWith({ redirectUri: window.location.origin + '/calendar' });
+        expect(authMock.login).toHaveBeenCalledWith('/calendar');
         expect(routerMock.navigate).not.toHaveBeenCalled();
     });
 
-    it('should call register when signup is called', async () => {
+    it('should open the sign-up screen when signup is called', async () => {
         await component.signup();
-        expect(keycloakMock.register).toHaveBeenCalledWith({ redirectUri: window.location.origin + '/calendar' });
+        expect(authMock.signup).toHaveBeenCalledWith('/calendar');
     });
 
     it('should launch the app from the demo button and register from the secondary one', async () => {
@@ -74,8 +74,8 @@ describe('LandingPageComponent', () => {
         host.querySelector<HTMLButtonElement>('.hero .btn-secondary')!.click();
         await fixture.whenStable();
 
-        expect(keycloakMock.isLoggedIn).toHaveBeenCalled();
-        expect(keycloakMock.register).toHaveBeenCalled();
+        expect(authMock.isLoggedIn).toHaveBeenCalled();
+        expect(authMock.signup).toHaveBeenCalled();
     });
 
     it('should expose the three feature cards the template renders', () => {

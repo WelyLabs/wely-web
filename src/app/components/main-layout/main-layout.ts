@@ -9,8 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { KeycloakService } from 'keycloak-angular';
 import { UserService } from '../../services/user.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { CallService } from '../../services/call.service';
 import { CallOverlayComponent } from '../call/call-overlay/call-overlay';
 import { ClosenessCelebrationComponent } from '../closeness-celebration/closeness-celebration';
@@ -56,7 +56,7 @@ const NAV_SETTLE_MS = 350;
 export class MainLayoutComponent implements OnInit {
   private readonly logger = inject(LoggerService);
   private readonly breakpointObserver = inject(BreakpointObserver);
-  private readonly keycloak = inject(KeycloakService);
+  private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly chatService = inject(ChatService);
   private readonly callService = inject(CallService);
@@ -280,12 +280,12 @@ export class MainLayoutComponent implements OnInit {
    *
    * <p>Returns void rather than the promise: the template calls this from (click), where
    * Angular drops whatever is returned. An async method there leaves a floating promise, so a
-   * Keycloak outage during logout surfaced as an unhandled rejection in the console and nowhere
+   * Auth0 outage during logout surfaced as an unhandled rejection in the console and nowhere
    * else. The failure is now logged, and the method says it does not expect to be awaited.
    */
   logout(): void {
-    this.keycloak
-      .logout(window.location.origin)
+    this.authService
+      .logout()
       .catch((error: unknown) =>
         this.logger.error('MainLayoutComponent', 'Logout failed:', error),
       );

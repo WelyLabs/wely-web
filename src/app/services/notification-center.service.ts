@@ -1,6 +1,5 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { KeycloakService } from 'keycloak-angular';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { LoggerService } from '../core/logging/logger.service';
@@ -25,7 +24,6 @@ const byNewest = (a: AppNotification, b: AppNotification) => b.createdAt.localeC
 @Injectable({ providedIn: 'root' })
 export class NotificationCenterService {
   private readonly http = inject(HttpClient);
-  private readonly keycloak = inject(KeycloakService);
   private readonly logger = inject(LoggerService);
   private readonly authService = inject(AuthService);
   private readonly apiUrl = `${environment.apiUrl}/notifications-service`;
@@ -52,7 +50,7 @@ export class NotificationCenterService {
     }
     this.connection = sseStream({
       url: `${this.apiUrl}/notifications/stream`,
-      token: () => this.keycloak.getToken(),
+      token: () => this.authService.accessToken(),
       finalStatuses: [GONE],
       onOpen: () => this.refresh(),
       onRetry: (delay, reason) => this.logger.warn(SCOPE, `Stream lost, retrying in ${delay} ms`, reason)

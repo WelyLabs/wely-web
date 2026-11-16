@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, InjectionToken, inject } from '@angular/core';
 
 /**
- * Reloads the app without the OAuth response Keycloak left in the URL: replaying the same
+ * Reloads the app without the OAuth response Auth0 left in the URL: replaying the same
  * authorisation code would fail again.
  */
 export const RELOAD_WITHOUT_AUTH_RESPONSE = new InjectionToken<() => void>('RELOAD_WITHOUT_AUTH_RESPONSE', {
@@ -9,7 +9,7 @@ export const RELOAD_WITHOUT_AUTH_RESPONSE = new InjectionToken<() => void>('RELO
   factory: () => () => window.location.replace(window.location.origin + window.location.pathname)
 });
 
-/** Shown instead of the app when Keycloak could not be initialised. */
+/** Shown instead of the app when Auth0 could not be initialised. */
 @Component({
   selector: 'app-startup-error',
   templateUrl: './startup-error.html',

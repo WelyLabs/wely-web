@@ -1,7 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { KeycloakService } from 'keycloak-angular';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { environment } from '../../environments/environment';
 import { LoggerService } from '../core/logging/logger.service';
@@ -18,7 +17,7 @@ describe('NotificationCenterService', () => {
     let http: HttpTestingController;
     let fetchMock: ReturnType<typeof vi.fn>;
     let logger: { warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
-    let auth: { leaveAfterAccountDeletion: ReturnType<typeof vi.fn> };
+    let auth: { leaveAfterAccountDeletion: ReturnType<typeof vi.fn>; accessToken: () => Promise<string> };
 
     const at = (minute: number) => new Date(Date.UTC(2026, 9, 15, 12, minute)).toISOString();
     const page = (count: number, from = 59) =>
@@ -34,12 +33,11 @@ describe('NotificationCenterService', () => {
         fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
         logger = { warn: vi.fn(), error: vi.fn() };
-        auth = { leaveAfterAccountDeletion: vi.fn() };
+        auth = { leaveAfterAccountDeletion: vi.fn(), accessToken: () => Promise.resolve('tok') };
         TestBed.configureTestingModule({
             providers: [
                 provideHttpClient(),
                 provideHttpClientTesting(),
-                { provide: KeycloakService, useValue: { getToken: () => Promise.resolve('tok') } },
                 { provide: LoggerService, useValue: logger },
                 { provide: AuthService, useValue: auth }
             ]

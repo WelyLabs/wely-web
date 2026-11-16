@@ -3,6 +3,7 @@ import { LoggerService } from '../logging/logger.service';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { GenericError } from '@auth0/auth0-angular';
 import { AuthService } from '../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { USER_DELETED_CODE } from '../../models/account.model';
@@ -26,22 +27,20 @@ export class SessionInterceptor implements HttpInterceptor {
     /** Sends an expired session to the login, and a deleted account to the landing; never once the session has ended. */
     intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
         return next.handle(request).pipe(
-            catchError((error: HttpErrorResponse) => {
+            catchError((error: unknown) => {
                 if (this.authService.sessionEnded()) {
                     return throwError(() => error);
                 }
-                if (isOwnAccountGone(request, error)) {
+                if (error instanceof HttpErrorResponse && isOwnAccountGone(request, error)) {
                     this.authService.leaveAfterAccountDeletion();
                     return throwError(() => error);
                 }
-                const isUnauthorized = error.status === 401;
-                const isInvalidGrant = error.status === 400 &&
-                    (error.error?.error === 'invalid_grant' ||
-                        error.error?.error_description?.includes('Token is not active'));
+                const isUnauthorized = error instanceof HttpErrorResponse && error.status === 401;
+                // Raised by the Auth0 interceptor: the refresh token expired or was revoked.
+                const isInvalidGrant = error instanceof GenericError && error.error === 'invalid_grant';
 
-                // A 401, or a 400 invalid_grant: the token expired or was revoked.
                 if (isUnauthorized || isInvalidGrant) {
-                    this.logger.error('SessionInterceptor', `[SessionInterceptor] Session issue detected (${error.status}). Redirecting to login.`);
+                    this.logger.error('SessionInterceptor', `Session issue detected (${isUnauthorized ? 401 : 'invalid_grant'}). Redirecting to login.`);
                     this.authService.login();
                     return throwError(() => error);
                 }

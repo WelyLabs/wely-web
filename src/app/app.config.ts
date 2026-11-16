@@ -1,17 +1,15 @@
-import { ApplicationConfig, APP_INITIALIZER, LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { KeycloakService, KeycloakBearerInterceptor } from 'keycloak-angular';
+import { AuthHttpInterceptor, provideAuth0 } from '@auth0/auth0-angular';
 import { SessionInterceptor } from './core/interceptors/session.interceptor';
 import { UserService } from './services/user.service';
 
 import { routes } from './app.routes';
-import { initializeKeycloak } from './core/auth/keycloak-init.factory';
-import { AuthService } from './core/auth/auth.service';
-import { LoggerService } from './core/logging/logger.service';
+import { auth0Config, initializeAuth } from './core/auth/auth-init.factory';
 import { handleStaleChunk } from './core/routing/stale-chunk';
 
 // French dates everywhere: without a locale, every date pipe printed English day and month names.
@@ -31,22 +29,18 @@ export const appConfig: ApplicationConfig = {
     // instead of delaying the first paint.
     provideAnimationsAsync(),
     provideHttpClient(withInterceptorsFromDi()),
-    KeycloakService,
+    provideAuth0(auth0Config()),
     UserService,
-    {
-      provide: APP_INITIALIZER,
-      useFactory: initializeKeycloak,
-      multi: true,
-      deps: [KeycloakService, UserService, AuthService, LoggerService]
-    },
+    provideAppInitializer(initializeAuth),
+    // First, so it also sees the token errors raised by the Auth0 interceptor behind it.
     {
       provide: HTTP_INTERCEPTORS,
-      useClass: KeycloakBearerInterceptor,
+      useClass: SessionInterceptor,
       multi: true
     },
     {
       provide: HTTP_INTERCEPTORS,
-      useClass: SessionInterceptor,
+      useClass: AuthHttpInterceptor,
       multi: true
     }
   ]

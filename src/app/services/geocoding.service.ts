@@ -5,7 +5,7 @@ import { Coordinates, Place } from '../models/place.model';
 
 /**
  * Photon, komoot's geocoder over OpenStreetMap data: free, no key, and made for search-as-you-type.
- * Requests carry no token: the Keycloak interceptor only signs calls to our own API.
+ * Requests carry no token: the Auth0 interceptor only signs calls to our own API.
  */
 export const PHOTON_URL = 'https://photon.komoot.io';
 
