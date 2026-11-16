@@ -6,7 +6,7 @@ export const environment: Environment = {
   apiUrl: '/api/v1',
   rsocketUrl: '/rsocket',
   // Substituted into index.html at container start by entrypoint.sh, which wins over these.
-  authDomain: 'dev-8k6vch1dvh1qxrdz.eu.auth0.com',
+  authDomain: 'auth.welylabs.app',
   authClientId: 'a3HWp7xp83GIpuOyxjAoGfKHvFW44PK7',
   authAudience: 'wely-api-dev',
 };
