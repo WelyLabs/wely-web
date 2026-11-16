@@ -4,7 +4,7 @@ import { AuthService as Auth0Service } from '@auth0/auth0-angular';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AccountDeletionService, DELETION_REQUESTED_AT_KEY, DELETION_USER_ID_KEY } from './account-deletion.service';
+import { AccountDeletionService, FRESH_AUTH_MS } from './account-deletion.service';
 import { AuthService, REPLACE_PAGE } from '../core/auth/auth.service';
 import { LoggerService } from '../core/logging/logger.service';
 import { PushService } from './push.service';
@@ -25,11 +25,6 @@ describe('AccountDeletionService', () => {
   /** The sign-in time the access token carries, in milliseconds. */
   const signedInAt = (authenticatedAtMs: number | null) =>
     vi.spyOn(TestBed.inject(AuthService), 'authenticatedAt').mockReturnValue(authenticatedAtMs);
-  const remember = (requestedAt: number, userId = camille.id) => {
-    sessionStorage.setItem(DELETION_REQUESTED_AT_KEY, String(requestedAt));
-    sessionStorage.setItem(DELETION_USER_ID_KEY, userId);
-  };
-
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
@@ -73,92 +68,51 @@ describe('AccountDeletionService', () => {
     });
   });
 
-  describe('start', () => {
-    it('start_shouldWriteTheMarker_thenReauthenticateBackToPreferencesWithTheDeleteIntent', async () => {
-      expect(await service.start(camille)).toBe(true);
+  describe('authenticationIsFresh', () => {
+    it('authenticationIsFresh_shouldBeTrue_whenTheTokenWasSignedInJustNow', () => {
+      signedInAt(NOW);
 
-      expect(sessionStorage.getItem(DELETION_REQUESTED_AT_KEY)).toBe(String(NOW));
-      expect(sessionStorage.getItem(DELETION_USER_ID_KEY)).toBe('b-camille');
+      expect(service.authenticationIsFresh()).toBe(true);
+    });
+
+    it('authenticationIsFresh_shouldBeFalse_pastTheWindow', () => {
+      signedInAt(NOW - FRESH_AUTH_MS);
+
+      expect(service.authenticationIsFresh()).toBe(false);
+    });
+
+    it('authenticationIsFresh_shouldBeFalse_whenTheTokenCarriesNoSignInTime', () => {
+      // No proof of a recent sign-in is not proof of one: fail closed and ask again.
+      signedInAt(null);
+
+      expect(service.authenticationIsFresh()).toBe(false);
+    });
+  });
+
+  describe('reauthenticate', () => {
+    it('reauthenticate_shouldComeBackToPreferencesWithTheDeleteIntent', async () => {
+      await service.reauthenticate();
+
       expect(auth0.loginWithRedirect).toHaveBeenCalledWith(expect.objectContaining({
         appState: { target: '/preferences?account=delete' },
         authorizationParams: expect.objectContaining({ prompt: 'login' })
       }));
     });
 
-    it('start_shouldPassTheUsernameAsLoginHint', async () => {
-      await service.start(camille);
+    it('reauthenticate_shouldPassTheUsernameAsLoginHint', async () => {
+      await service.reauthenticate(camille.userName);
 
       expect(auth0.loginWithRedirect).toHaveBeenCalledWith(expect.objectContaining({
         authorizationParams: expect.objectContaining({ login_hint: 'camille' })
       }));
     });
 
-    it('start_shouldNotReauthenticate_whenTheMarkerCannotBeWritten', async () => {
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new DOMException('quota', 'QuotaExceededError');
-      });
+    it('reauthenticate_shouldRememberNothing', async () => {
+      // The point of the redesign: no state to lose, so coming back in another tab costs a click.
+      await service.reauthenticate();
 
-      expect(await service.start(camille)).toBe(false);
-      expect(auth0.loginWithRedirect).not.toHaveBeenCalled();
-    });
-
-    it('start_shouldNotReauthenticate_whenSessionStorageIsBlocked', async () => {
-      vi.spyOn(globalThis, 'sessionStorage', 'get').mockImplementation(() => {
-        throw new DOMException('blocked', 'SecurityError');
-      });
-
-      expect(await service.start(camille)).toBe(false);
-      expect(auth0.loginWithRedirect).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('pendingStep', () => {
-    it('pendingStep_shouldBeConfirm_whenTheIntentAndAFreshMarkerOfThisUserArePresent', () => {
-      remember(NOW - 60_000);
-      signedInAt(NOW - 30_000);
-
-      expect(service.pendingStep(camille.id, 'delete')).toBe('confirm');
-      expect(sessionStorage.getItem(DELETION_USER_ID_KEY)).toBe('b-camille');
-    });
-
-    it('pendingStep_shouldBeNull_withoutTheDeleteIntent', () => {
-      remember(NOW - 60_000);
-
-      expect(service.pendingStep(camille.id, null)).toBeNull();
-      expect(service.pendingStep(camille.id, 'deleted')).toBeNull();
-    });
-
-    it('pendingStep_shouldBeNull_withoutAMarker', () => {
-      expect(service.pendingStep(camille.id, 'delete')).toBeNull();
-    });
-
-    it('pendingStep_shouldBeNull_andForgetTheMarker_whenItIsOlderThanTenMinutes', () => {
-      remember(NOW - 11 * 60_000);
-
-      expect(service.pendingStep(camille.id, 'delete')).toBeNull();
-      expect(sessionStorage.getItem(DELETION_REQUESTED_AT_KEY)).toBeNull();
-      expect(sessionStorage.getItem(DELETION_USER_ID_KEY)).toBeNull();
-    });
-
-    it('pendingStep_shouldBeNull_andForgetTheMarker_whenAnotherAccountSignedIn', () => {
-      remember(NOW - 60_000, 'b-someone-else');
-
-      expect(service.pendingStep(camille.id, 'delete')).toBeNull();
-      expect(sessionStorage.getItem(DELETION_REQUESTED_AT_KEY)).toBeNull();
-    });
-
-    it('pendingStep_shouldBeReverify_whenTheTokenWasAuthenticatedBeforeTheRequest', () => {
-      remember(NOW - 60_000);
-      signedInAt(NOW - 3_600_000);
-
-      expect(service.pendingStep(camille.id, 'delete')).toBe('reverify');
-    });
-
-    it('pendingStep_shouldBeConfirm_whenTheTokenHasNoAuthTime', () => {
-      remember(NOW - 60_000);
-      signedInAt(null);
-
-      expect(service.pendingStep(camille.id, 'delete')).toBe('confirm');
+      expect(sessionStorage.length).toBe(0);
+      expect(localStorage.length).toBe(0);
     });
   });
 
@@ -221,13 +175,11 @@ describe('AccountDeletionService', () => {
       expect(users.getDeletionEligibility).not.toHaveBeenCalled();
     });
 
-    it('confirm_shouldReportUnavailable_andForgetTheRequest_whenDeletionIsSwitchedOff', async () => {
-      remember(NOW);
+    it('confirm_shouldReportUnavailable_whenDeletionIsSwitchedOff', async () => {
       users.deleteAccount.mockReturnValue(refusal(403, 'USR-BUS-014'));
 
       expect(await service.confirm()).toBe('unavailable');
       expect(users.getDeletionEligibility).not.toHaveBeenCalled();
-      expect(sessionStorage.getItem(DELETION_REQUESTED_AT_KEY)).toBeNull();
     });
 
     it('confirm_shouldAnswerFailed_andNotLeave_onAnyOtherError', async () => {
@@ -276,14 +228,5 @@ describe('AccountDeletionService', () => {
       expect(await service.confirm()).toBe('failed');
       expect(replacePage).not.toHaveBeenCalled();
     });
-  });
-
-  it('cancel_shouldForgetTheMarker', () => {
-    remember(NOW);
-
-    service.cancel();
-
-    expect(sessionStorage.getItem(DELETION_REQUESTED_AT_KEY)).toBeNull();
-    expect(sessionStorage.getItem(DELETION_USER_ID_KEY)).toBeNull();
   });
 });
