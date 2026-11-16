@@ -3,11 +3,12 @@ import {
   viewChild
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggle, MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { ACCOUNT_QUERY_PARAM } from '../../models/account.model';
+import { ACCOUNT_DELETE_INTENT, ACCOUNT_QUERY_PARAM } from '../../models/account.model';
 import { NotificationPreferences } from '../../models/notification.model';
 import { AccountDeletionService } from '../../services/account-deletion.service';
 import { NotificationCenterService } from '../../services/notification-center.service';
@@ -44,11 +45,11 @@ export const DELETION_CONSEQUENCES: readonly string[] = [
   'Dans tes communautés, un autre membre devient administrateur ; une communauté dont tu es le seul membre est supprimée.'
 ];
 
-/** The account section's step: nothing asked yet, the final confirmation, or the deletion running. */
-export type DeletionStep = 'start' | 'confirm' | 'deleting';
+/** The account section's step: nothing asked yet, or the deletion running. */
+export type DeletionStep = 'start' | 'deleting';
 
 const DELETION_FAILED = 'La suppression n’a pas abouti. Réessaie dans un instant.';
-const STORAGE_BLOCKED = 'Ton navigateur bloque le stockage de session : autorise-le pour Wely, puis réessaie.';
+const REAUTH_EXPIRED = 'Ta confirmation d’identité a expiré. Relance la suppression pour te reconnecter.';
 
 interface ThemeOption {
   value: ThemePreference;
@@ -93,8 +94,6 @@ export class PreferencesComponent implements OnInit {
   readonly deletionUnavailable = signal(false);
   readonly deletionStep = signal<DeletionStep>('start');
   readonly deletionError = signal<string | null>(null);
-  /** The re-authentication is too old, or was not done: the user signs in again before deleting. */
-  readonly reverifyNeeded = signal(false);
   readonly canRequestDeletion = computed(() => this.deletionAllowed() === true && this.handle() !== null);
 
   readonly options: readonly ThemeOption[] = [
@@ -148,42 +147,53 @@ export class PreferencesComponent implements OnInit {
       });
   }
 
-  /** Opens the typed confirmation, then the re-authentication that leads back to the final step. */
-  requestDeletion(): void {
+  /**
+   * Deleting the account: prove who is at the keyboard, then confirm, then delete.
+   *
+   * The sign-in comes FIRST. Everything after it happens in one page, so no intent has to survive
+   * a redirect: a user who comes back in another tab simply clicks here again, and this time the
+   * authentication is fresh and the confirmation opens straight away.
+   */
+  async requestDeletion(): Promise<void> {
     const me = this.me();
     const handle = this.handle();
     if (!this.canRequestDeletion() || !me || !handle) {
       return;
     }
+    this.deletionError.set(null);
+    if (!this.accountDeletion.authenticationIsFresh()) {
+      await this.accountDeletion.reauthenticate(me.userName);
+      return;
+    }
+    if (await this.confirmedByHand(handle)) {
+      await this.deleteNow();
+    }
+  }
+
+  /** The typed confirmation; resolves false when the dialog is dismissed. */
+  private async confirmedByHand(handle: string): Promise<boolean> {
     const data: ConfirmDialogData = {
       title: 'Supprimer ton compte ?',
-      message: 'La suppression est définitive. Pour finir, tu devras te reconnecter.',
+      message: 'La suppression est immédiate et définitive.',
       details: DELETION_CONSEQUENCES,
       confirmationPhrase: handle,
       confirmationLabel: `Pour confirmer, tape ${handle}`,
-      confirmText: 'Continuer',
+      confirmText: 'Supprimer définitivement',
       cancelText: 'Annuler',
       isDestructive: true
     };
-    this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
-      width: '520px',
-      maxWidth: '95vw',
-      data,
-      panelClass: 'confirm-dialog-panel'
-    }).afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(confirmed => {
-        if (confirmed) {
-          void this.startReauthentication();
-        }
-      });
+    const closed = await firstValueFrom(this.dialog
+      .open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+        width: '520px',
+        maxWidth: '95vw',
+        data,
+        panelClass: 'confirm-dialog-panel'
+      })
+      .afterClosed());
+    return closed === true;
   }
 
-  /** Sends the deletion, once the user confirmed it after re-authenticating. */
-  async confirmDeletion(): Promise<void> {
-    if (this.deletionStep() !== 'confirm') {
-      return;
-    }
+  private async deleteNow(): Promise<void> {
     this.deletionStep.set('deleting');
     this.deletionError.set(null);
     switch (await this.accountDeletion.confirm()) {
@@ -191,8 +201,10 @@ export class PreferencesComponent implements OnInit {
         // The page is being replaced by the landing.
         return;
       case 'reauthentication-required':
+        // Said rather than redirected: a redirect here could bounce for ever if the claim never
+        // comes back fresh. The next click re-authenticates, since the window has closed.
         this.deletionStep.set('start');
-        this.reverifyNeeded.set(true);
+        this.deletionError.set(REAUTH_EXPIRED);
         return;
       case 'protected':
         this.deletionStep.set('start');
@@ -203,54 +215,26 @@ export class PreferencesComponent implements OnInit {
         this.deletionUnavailable.set(true);
         return;
       default:
-        this.deletionStep.set('confirm');
+        this.deletionStep.set('start');
         this.deletionError.set(DELETION_FAILED);
     }
   }
 
-  /** Signs in again when the re-authentication expired; always from a click, so it cannot loop. */
-  reverify(): void {
-    void this.startReauthentication();
-  }
-
-  /** Gives up the deletion, and the intent in the address. */
-  cancelDeletion(): void {
-    this.accountDeletion.cancel();
-    this.deletionStep.set('start');
-    this.reverifyNeeded.set(false);
-    this.deletionError.set(null);
+  private onEligibility(allowed: boolean): void {
+    this.deletionAllowed.set(allowed);
+    if (!allowed || this.route.snapshot.queryParamMap.get(ACCOUNT_QUERY_PARAM) !== ACCOUNT_DELETE_INTENT) {
+      return;
+    }
+    // Back from the sign-in asked for above: drop the marker from the address, then confirm.
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { [ACCOUNT_QUERY_PARAM]: null },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
-  }
-
-  private onEligibility(allowed: boolean): void {
-    this.deletionAllowed.set(allowed);
-    const me = this.me();
-    if (!allowed || !me) {
-      return;
-    }
-    const step = this.accountDeletion.pendingStep(me.id, this.route.snapshot.queryParamMap.get(ACCOUNT_QUERY_PARAM));
-    if (step === 'confirm') {
-      this.deletionStep.set('confirm');
-      afterNextRender(() => this.accountCard()?.nativeElement.scrollIntoView?.({ block: 'center' }), { injector: this.injector });
-    } else if (step === 'reverify') {
-      this.reverifyNeeded.set(true);
-    }
-  }
-
-  private async startReauthentication(): Promise<void> {
-    const me = this.me();
-    if (!me) {
-      return;
-    }
-    this.deletionError.set(null);
-    if (!(await this.accountDeletion.start(me))) {
-      this.deletionError.set(STORAGE_BLOCKED);
-    }
+    afterNextRender(() => this.accountCard()?.nativeElement.scrollIntoView?.({ block: 'center' }),
+      { injector: this.injector });
+    void this.requestDeletion();
   }
 
   /** Enables or disables push here; the toggle follows the outcome, not the click. */

@@ -3,31 +3,23 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { LoggerService } from '../core/logging/logger.service';
-import { storageOrNull } from '../core/storage/web-storage';
 import {
   ACCOUNT_DELETE_INTENT, ACCOUNT_DELETION_DISABLED_CODE, ACCOUNT_PROTECTED_CODE, ACCOUNT_QUERY_PARAM,
   REAUTHENTICATION_REQUIRED_CODE, USER_DELETED_CODE
 } from '../models/account.model';
-import { User } from '../models/user.model';
 import { PushService } from './push.service';
 import { UserService } from './user.service';
 
 const SCOPE = 'AccountDeletionService';
 
-/** When the deletion was asked for, in epoch ms on this device's clock. */
-export const DELETION_REQUESTED_AT_KEY = 'wely.accountDeletion.requestedAt';
-/** The businessId of the account the deletion was asked for. */
-export const DELETION_USER_ID_KEY = 'wely.accountDeletion.userId';
-/** A request older than this is forgotten. */
-export const MARKER_TTL_MS = 10 * 60_000;
-/** How much older than the request the sign-in may look before it is not trusted to be the re-authentication. */
-export const AUTH_SKEW_MS = 60_000;
+/**
+ * A sign-in older than this no longer confirms a deletion. wely-users refuses past five minutes;
+ * the minute of margin keeps this device from sending a request the server is about to reject.
+ */
+export const FRESH_AUTH_MS = 4 * 60_000;
 
 const GONE = 410;
 const FORBIDDEN = 403;
-
-/** Where a deletion asked for before the Auth0 round trip stands on return. */
-export type PendingDeletionStep = 'confirm' | 'reverify';
 
 /** How the final deletion request ended. */
 export type DeletionOutcome = 'deleted' | 'reauthentication-required' | 'protected' | 'unavailable' | 'failed';
@@ -65,45 +57,26 @@ export class AccountDeletionService {
     return this.userService.getDeletionEligibility().pipe(map(eligibility => eligibility.allowed === true));
   }
 
-  /** Remembers the request for this account, then forces a sign-in that comes back to the final step; false when storage is blocked. */
-  async start(user: Pick<User, 'id' | 'userName'>): Promise<boolean> {
-    const storage = storageOrNull('session');
-    try {
-      if (!storage) {
-        return false;
-      }
-      storage.setItem(DELETION_REQUESTED_AT_KEY, String(Date.now()));
-      storage.setItem(DELETION_USER_ID_KEY, user.id);
-    } catch (error) {
-      this.logger.warn(SCOPE, 'Could not remember the deletion request', error);
-      return false;
-    }
-    const redirect = `/preferences?${ACCOUNT_QUERY_PARAM}=${ACCOUNT_DELETE_INTENT}`;
-    await this.authService.reauthenticate(redirect, user.userName);
-    return true;
+  /**
+   * Whether the sign-in behind the current token is recent enough to confirm a deletion.
+   * Absent claim counts as stale: without proof of a recent sign-in, ask for one.
+   */
+  authenticationIsFresh(): boolean {
+    const authenticatedAt = this.authService.authenticatedAt();
+    return authenticatedAt !== null && Date.now() - authenticatedAt < FRESH_AUTH_MS;
   }
 
-  /** The final step to show on /preferences, or null when no fresh request of this account is waiting. */
-  pendingStep(userId: string, intent: string | null): PendingDeletionStep | null {
-    if (intent !== ACCOUNT_DELETE_INTENT) {
-      return null;
-    }
-    const storage = storageOrNull('session');
-    let requestedAt: number;
-    let owner: string | null;
-    try {
-      requestedAt = Number(storage?.getItem(DELETION_REQUESTED_AT_KEY) ?? NaN);
-      owner = storage?.getItem(DELETION_USER_ID_KEY) ?? null;
-    } catch {
-      return null;
-    }
-    const fresh = Number.isFinite(requestedAt) && Date.now() - requestedAt <= MARKER_TTL_MS;
-    if (!fresh || owner !== userId) {
-      this.cancel();
-      return null;
-    }
-    const authenticatedAt = this.authService.authenticatedAt();
-    return authenticatedAt !== null && authenticatedAt < requestedAt - AUTH_SKEW_MS ? 'reverify' : 'confirm';
+  /**
+   * Forces a sign-in and comes back to the account section.
+   *
+   * THIS HAPPENS BEFORE ANYTHING IS CONFIRMED, on purpose. With the round trip behind us, the
+   * confirmation and the DELETE both happen in one page, so nothing has to survive a redirect the
+   * app does not control — the previous order kept the intent in sessionStorage, and a user who
+   * came back through a password-reset link landed in another tab with it gone.
+   */
+  async reauthenticate(loginHint?: string): Promise<void> {
+    await this.authService.reauthenticate(
+      `/preferences?${ACCOUNT_QUERY_PARAM}=${ACCOUNT_DELETE_INTENT}`, loginHint);
   }
 
   /** Unsubscribes push and clears the tray while the identity is valid, then deletes the account. */
@@ -117,17 +90,6 @@ export class AccountDeletionService {
       return this.leave();
     } catch (error) {
       return this.afterRefusal(error);
-    }
-  }
-
-  /** Forgets the request. */
-  cancel(): void {
-    try {
-      const storage = storageOrNull('session');
-      storage?.removeItem(DELETION_REQUESTED_AT_KEY);
-      storage?.removeItem(DELETION_USER_ID_KEY);
-    } catch {
-      // Storage refused: the request expires on its own.
     }
   }
 
@@ -145,7 +107,6 @@ export class AccountDeletionService {
       return 'protected';
     }
     if (error instanceof HttpErrorResponse && error.status === FORBIDDEN && code === ACCOUNT_DELETION_DISABLED_CODE) {
-      this.cancel();
       return 'unavailable';
     }
     // The 202 may have been lost after the commit: asking first avoids a re-authentication that cannot succeed.

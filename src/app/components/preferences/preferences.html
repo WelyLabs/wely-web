@@ -98,28 +98,8 @@
     @if (deletionUnavailable()) {
       <p class="account-note">La suppression du compte est indisponible pour le moment.</p>
     }
-    @if (reverifyNeeded() && deletionStep() === 'start') {
-      <div class="final-step">
-        <p>Ta confirmation d'identité a expiré. Reconnecte-toi pour terminer la suppression.</p>
-        <div class="final-actions">
-          <button type="button" class="danger-button" (click)="reverify()">Me reconnecter</button>
-          <button type="button" class="text-button" (click)="cancelDeletion()">Annuler</button>
-        </div>
-      </div>
-    }
-    @if (deletionStep() !== 'start') {
-      <div class="final-step">
-        <h3>Dernière étape</h3>
-        <p>Ton identité est confirmée. La suppression est immédiate et définitive.</p>
-        <div class="final-actions">
-          <button type="button" class="danger-button solid" [disabled]="deletionStep() === 'deleting'"
-            (click)="confirmDeletion()">
-            {{ deletionStep() === 'deleting' ? 'Suppression…' : 'Supprimer définitivement' }}
-          </button>
-          <button type="button" class="text-button" [disabled]="deletionStep() === 'deleting'"
-            (click)="cancelDeletion()">Annuler</button>
-        </div>
-      </div>
+    @if (deletionStep() === 'deleting') {
+      <p class="account-note" role="status">Suppression en cours…</p>
     }
     @if (deletionError()) {
       <p class="error" role="alert">{{ deletionError() }}</p>

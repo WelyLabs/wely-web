@@ -6,7 +6,7 @@ import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { NotificationPreferences } from '../../models/notification.model';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DELETION_CONSEQUENCES, PreferencesComponent } from './preferences';
-import { AccountDeletionService, DeletionOutcome, PendingDeletionStep } from '../../services/account-deletion.service';
+import { AccountDeletionService, DeletionOutcome } from '../../services/account-deletion.service';
 import { UserService } from '../../services/user.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
 import { User } from '../../models/user.model';
@@ -36,10 +36,9 @@ function pushStub() {
 function accountDeletionStub() {
   return {
     eligibility: vi.fn(() => of(true)),
-    start: vi.fn().mockResolvedValue(true),
-    pendingStep: vi.fn((): PendingDeletionStep | null => null),
-    confirm: vi.fn((): Promise<DeletionOutcome> => Promise.resolve('deleted')),
-    cancel: vi.fn()
+    authenticationIsFresh: vi.fn(() => true),
+    reauthenticate: vi.fn().mockResolvedValue(undefined),
+    confirm: vi.fn((): Promise<DeletionOutcome> => Promise.resolve('deleted'))
   };
 }
 
@@ -307,8 +306,6 @@ describe('PreferencesComponent', () => {
     const card = () => el().querySelector<HTMLElement>('[data-setting="account-deletion"]')!;
     const deleteButton = () => Array.from(card().querySelectorAll<HTMLButtonElement>('button'))
       .find(button => button.textContent?.includes('Supprimer mon compte'));
-    const buttonNamed = (name: string) => Array.from(card().querySelectorAll<HTMLButtonElement>('button'))
-      .find(button => button.textContent?.trim() === name);
     const settle = async () => {
       await fixture.whenStable();
       fixture.detectChanges();
@@ -332,7 +329,7 @@ describe('PreferencesComponent', () => {
 
       expect(deleteButton()?.disabled).toBe(true);
       expect(card().textContent).toContain('Le compte de démonstration ne peut pas être supprimé.');
-      expect(accountDeletion.pendingStep).not.toHaveBeenCalled();
+      expect(dialog.open).not.toHaveBeenCalled();
     });
 
     it('ngOnInit_shouldSayUnavailable_whenEligibilityCannotBeRead', () => {
@@ -343,38 +340,28 @@ describe('PreferencesComponent', () => {
       expect(card().textContent).toContain('La suppression du compte est indisponible pour le moment.');
     });
 
-    it('ngOnInit_shouldShowTheFinalStep_whenComingBackFromReauthentication', async () => {
+    it('ngOnInit_shouldConfirmStraightAway_whenComingBackFromReauthentication', async () => {
       const scrollIntoView = vi.fn();
       Object.assign(Element.prototype, { scrollIntoView });
       accountParam = 'delete';
-      accountDeletion.pendingStep.mockReturnValue('confirm');
       create();
       await settle();
 
-      expect(accountDeletion.pendingStep).toHaveBeenCalledWith('b-camille', 'delete');
-      expect(component.deletionStep()).toBe('confirm');
-      expect(card().textContent).toContain('Dernière étape');
-      expect(buttonNamed('Supprimer définitivement')).toBeTruthy();
-      expect(deleteButton()).toBeUndefined();
+      // Back from the sign-in: the confirmation opens by itself, and the marker leaves the address.
+      expect(dialog.open).toHaveBeenCalledTimes(1);
+      expect(accountDeletion.reauthenticate).not.toHaveBeenCalled();
       expect(scrollIntoView).toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+        queryParams: { account: null }, replaceUrl: true
+      }));
     });
 
-    it('ngOnInit_shouldOfferToVerifyAgain_whenThePendingStepIsReverify', () => {
-      accountParam = 'delete';
-      accountDeletion.pendingStep.mockReturnValue('reverify');
+    it('ngOnInit_shouldDoNothing_withoutTheDeleteIntent', async () => {
       create();
+      await settle();
 
-      expect(component.reverifyNeeded()).toBe(true);
-      expect(card().textContent).toContain('Ta confirmation d\'identité a expiré');
-      expect(buttonNamed('Me reconnecter')).toBeTruthy();
-    });
-
-    it('ngOnInit_shouldNotShowTheFinalStep_withoutAPendingRequest', () => {
-      create();
-
-      expect(accountDeletion.pendingStep).toHaveBeenCalledWith('b-camille', null);
+      expect(dialog.open).not.toHaveBeenCalled();
       expect(component.deletionStep()).toBe('start');
-      expect(card().textContent).not.toContain('Dernière étape');
     });
 
     it('requestDeletion_shouldOpenADestructiveDialogAskingForTheHandle', () => {
@@ -384,7 +371,7 @@ describe('PreferencesComponent', () => {
       deleteButton()!.click();
 
       expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.objectContaining({
-        data: expect.objectContaining({ isDestructive: true, confirmationPhrase: 'camille#2680', confirmText: 'Continuer' })
+        data: expect.objectContaining({ isDestructive: true, confirmationPhrase: 'camille#2680', confirmText: 'Supprimer définitivement' })
       }));
     });
 
@@ -400,13 +387,25 @@ describe('PreferencesComponent', () => {
         'communauté', 'jamais réattribué'].forEach(word => expect(all).toContain(word));
     });
 
-    it('requestDeletion_shouldStartReauthentication_onceConfirmed', async () => {
+    it('requestDeletion_shouldSignInFirst_whenTheSignInIsStale', async () => {
+      accountDeletion.authenticationIsFresh.mockReturnValue(false);
       create();
 
-      component.requestDeletion();
-      await settle();
+      await component.requestDeletion();
 
-      expect(accountDeletion.start).toHaveBeenCalledWith(camille);
+      // Nothing is confirmed before we know who is at the keyboard.
+      expect(accountDeletion.reauthenticate).toHaveBeenCalledWith('camille');
+      expect(dialog.open).not.toHaveBeenCalled();
+      expect(accountDeletion.confirm).not.toHaveBeenCalled();
+    });
+
+    it('requestDeletion_shouldDeleteStraightAway_whenTheHandleIsTyped', async () => {
+      create();
+
+      await component.requestDeletion();
+
+      expect(accountDeletion.reauthenticate).not.toHaveBeenCalled();
+      expect(accountDeletion.confirm).toHaveBeenCalledTimes(1);
       expect(component.deletionError()).toBeNull();
     });
 
@@ -414,133 +413,87 @@ describe('PreferencesComponent', () => {
       dialog.open.mockReturnValue({ afterClosed: () => of(false) });
       create();
 
-      component.requestDeletion();
-      await settle();
+      await component.requestDeletion();
 
-      expect(accountDeletion.start).not.toHaveBeenCalled();
+      expect(accountDeletion.confirm).not.toHaveBeenCalled();
     });
 
-    it('requestDeletion_shouldNeverReauthenticate_forAProtectedAccount', async () => {
+    it('requestDeletion_shouldNeverActForAProtectedAccount', async () => {
       accountDeletion.eligibility.mockReturnValue(of(false));
       create();
 
-      component.requestDeletion();
-      await settle();
+      await component.requestDeletion();
 
       expect(dialog.open).not.toHaveBeenCalled();
-      expect(accountDeletion.start).not.toHaveBeenCalled();
+      expect(accountDeletion.reauthenticate).not.toHaveBeenCalled();
+      expect(accountDeletion.confirm).not.toHaveBeenCalled();
     });
 
-    it('requestDeletion_shouldExplain_whenTheBrowserBlocksStorage', async () => {
-      accountDeletion.start.mockResolvedValue(false);
-      create();
-
-      component.requestDeletion();
-      await settle();
-
-      expect(card().querySelector('[role="alert"]')?.textContent).toContain('bloque le stockage');
-    });
-
-    it('confirmDeletion_shouldDelete_andShowItIsDeleting', async () => {
+    it('requestDeletion_shouldShowItIsDeleting_whileTheServerAnswers', async () => {
       let finish: (outcome: DeletionOutcome) => void = () => undefined;
       accountDeletion.confirm.mockReturnValue(new Promise<DeletionOutcome>(resolve => finish = resolve));
-      accountParam = 'delete';
-      accountDeletion.pendingStep.mockReturnValue('confirm');
       create();
 
-      buttonNamed('Supprimer définitivement')!.click();
+      const running = component.requestDeletion();
+      await settle();
+      // The step flips inside the chain settle() drains, so the view needs one more pass.
       fixture.detectChanges();
 
-      expect(accountDeletion.confirm).toHaveBeenCalledTimes(1);
       expect(component.deletionStep()).toBe('deleting');
-      const button = buttonNamed('Suppression…');
-      expect(button?.disabled).toBe(true);
+      expect(card().textContent).toContain('Suppression en cours');
       finish('deleted');
-      await settle();
+      await running;
+      // The page is being replaced: the step stays as it was.
       expect(component.deletionStep()).toBe('deleting');
     });
 
-    it('confirmDeletion_shouldOfferToVerifyAgain_whenReauthenticationExpired', async () => {
+    it('requestDeletion_shouldSayTheConfirmationExpired_ratherThanBounce', async () => {
       accountDeletion.confirm.mockResolvedValue('reauthentication-required');
-      accountDeletion.pendingStep.mockReturnValue('confirm');
       create();
 
-      await component.confirmDeletion();
+      await component.requestDeletion();
       fixture.detectChanges();
 
       expect(component.deletionStep()).toBe('start');
-      expect(component.reverifyNeeded()).toBe(true);
-      expect(card().textContent).toContain('Ta confirmation d\'identité a expiré');
+      // Said, not redirected: a redirect here could bounce for ever.
+      expect(accountDeletion.reauthenticate).not.toHaveBeenCalled();
+      expect(card().querySelector('[role="alert"]')?.textContent).toContain('a expiré');
     });
 
-    it('confirmDeletion_shouldShowTheDemoMessage_whenProtected', async () => {
+    it('requestDeletion_shouldShowTheDemoMessage_whenProtected', async () => {
       accountDeletion.confirm.mockResolvedValue('protected');
-      accountDeletion.pendingStep.mockReturnValue('confirm');
       create();
 
-      await component.confirmDeletion();
+      await component.requestDeletion();
       fixture.detectChanges();
 
       expect(component.deletionAllowed()).toBe(false);
       expect(card().textContent).toContain('Le compte de démonstration ne peut pas être supprimé.');
     });
 
-    it('confirmDeletion_shouldShowUnavailable_whenTheServerAnswersUsrBus014', async () => {
+    it('requestDeletion_shouldShowUnavailable_whenTheServerAnswersUsrBus014', async () => {
       accountDeletion.confirm.mockResolvedValue('unavailable');
-      accountDeletion.pendingStep.mockReturnValue('confirm');
       create();
 
-      await component.confirmDeletion();
+      await component.requestDeletion();
       fixture.detectChanges();
 
       expect(component.deletionStep()).toBe('start');
       expect(component.deletionUnavailable()).toBe(true);
     });
 
-    it('confirmDeletion_shouldShowAnError_andKeepTheFinalStep_whenItFails', async () => {
+    it('requestDeletion_shouldShowAnError_whenItFails', async () => {
       accountDeletion.confirm.mockResolvedValue('failed');
-      accountDeletion.pendingStep.mockReturnValue('confirm');
       create();
 
-      await component.confirmDeletion();
+      await component.requestDeletion();
       fixture.detectChanges();
 
-      expect(component.deletionStep()).toBe('confirm');
-      expect(card().querySelector('[role="alert"]')?.textContent).toContain('La suppression n’a pas abouti');
-      expect(buttonNamed('Supprimer définitivement')?.disabled).toBe(false);
-    });
-
-    it('confirmDeletion_shouldDoNothing_withoutTheFinalStep', async () => {
-      create();
-
-      await component.confirmDeletion();
-
-      expect(accountDeletion.confirm).not.toHaveBeenCalled();
-    });
-
-    it('reverify_shouldStartReauthenticationAgain', async () => {
-      accountDeletion.pendingStep.mockReturnValue('reverify');
-      create();
-
-      buttonNamed('Me reconnecter')!.click();
-      await settle();
-
-      expect(accountDeletion.start).toHaveBeenCalledWith(camille);
-    });
-
-    it('cancelDeletion_shouldForgetTheRequest_andDropTheIntentFromTheUrl', () => {
-      accountParam = 'delete';
-      accountDeletion.pendingStep.mockReturnValue('confirm');
-      create();
-
-      buttonNamed('Annuler')!.click();
-      fixture.detectChanges();
-
-      expect(accountDeletion.cancel).toHaveBeenCalled();
       expect(component.deletionStep()).toBe('start');
-      expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
-        queryParams: { account: null }, queryParamsHandling: 'merge', replaceUrl: true
-      }));
+      expect(card().querySelector('[role="alert"]')?.textContent).toContain('La suppression n’a pas abouti');
+      expect(deleteButton()?.disabled).toBe(false);
     });
+
+
   });
 });
