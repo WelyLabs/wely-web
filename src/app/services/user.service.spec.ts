@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { UserService } from './user.service';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../core/auth/auth.service';
 import { environment } from '../../environments/environment';
 import { MOCK_USER } from '../models/user.mock';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -10,21 +10,21 @@ import { firstValueFrom } from 'rxjs';
 describe('UserService', () => {
     let service: UserService;
     let httpMock: HttpTestingController;
-    let keycloakMock: Partial<KeycloakService>;
+    let authMock: { getToken: ReturnType<typeof vi.fn>; accessToken: ReturnType<typeof vi.fn> };
     const apiUrl = `${environment.apiUrl}/user-service`;
 
     beforeEach(() => {
         TestBed.resetTestingModule();
-        keycloakMock = {
-            getKeycloakInstance: vi.fn().mockReturnValue({ token: 'mock-token' }),
-            updateToken: vi.fn().mockResolvedValue(true)
+        authMock = {
+            getToken: vi.fn().mockReturnValue('mock-token'),
+            accessToken: vi.fn().mockResolvedValue('fresh-token')
         };
 
         TestBed.configureTestingModule({
             imports: [HttpClientTestingModule],
             providers: [
                 UserService,
-                { provide: KeycloakService, useValue: keycloakMock }
+                { provide: AuthService, useValue: authMock }
             ]
         });
         service = TestBed.inject(UserService);
@@ -80,12 +80,12 @@ describe('UserService', () => {
 
         await expect(result).resolves.toEqual(saved);
         expect(service.getCurrentUserValue()?.userName).toBe('new_name');
-        // -1 forces a refresh: preferred_username is what wely-chat signs messages with.
-        expect(keycloakMock.updateToken).toHaveBeenCalledWith(-1);
+        // Past the cache: preferred_username is what wely-chat signs messages with.
+        expect(authMock.accessToken).toHaveBeenCalledWith(true);
     });
 
     it('updateProfile_shouldStillSucceed_whenTheTokenRefreshFails', async () => {
-        (keycloakMock.updateToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('offline'));
+        authMock.accessToken.mockRejectedValue(new Error('offline'));
         const saved = { ...MOCK_USER, userName: 'new_name' };
 
         const result = firstValueFrom(service.updateProfile({ userName: 'new_name', firstName: 'A', lastName: 'B' }));

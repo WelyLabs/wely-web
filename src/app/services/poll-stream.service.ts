@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { KeycloakService } from 'keycloak-angular';
 import { Observable, catchError, filter, map, takeWhile, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { LoggerService } from '../core/logging/logger.service';
+import { AuthService } from '../core/auth/auth.service';
 import { SseStreamError, sseStream } from '../core/sse/sse-stream';
 import { Poll, PollPayload, toPoll } from './event.service';
 
@@ -19,7 +19,7 @@ export class PollStreamError extends Error {
 /** Follows a date poll live over SSE. */
 @Injectable({ providedIn: 'root' })
 export class PollStreamService {
-  private readonly keycloak = inject(KeycloakService);
+  private readonly authService = inject(AuthService);
   private readonly logger = inject(LoggerService);
   private readonly apiUrl = `${environment.apiUrl}/events-service/events`;
 
@@ -27,7 +27,7 @@ export class PollStreamService {
   follow(eventId: string): Observable<Poll> {
     return sseStream({
       url: `${this.apiUrl}/${eventId}/poll/stream`,
-      token: () => this.keycloak.getToken(),
+      token: () => this.authService.accessToken(),
       finalStatuses: FINAL_STATUSES,
       onRetry: (delay, reason) =>
         this.logger.warn('PollStreamService', `Stream lost, retrying in ${delay} ms`, reason)

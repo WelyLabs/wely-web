@@ -7,7 +7,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MainLayoutComponent } from './main-layout';
 import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
 import { ChatService } from '../../services/chat.service';
@@ -30,7 +30,7 @@ describe('MainLayoutComponent', () => {
     let component: MainLayoutComponent;
     let fixture: ComponentFixture<MainLayoutComponent>;
     let breakpointObserverMock: Partial<BreakpointObserver>;
-    let keycloakMock: Partial<KeycloakService>;
+    let authMock: { logout: ReturnType<typeof vi.fn> };
     let userServiceMock: Partial<UserService>;
     let chatServiceMock: Partial<ChatService>;
     let notificationServiceMock: Partial<NotificationService>;
@@ -68,7 +68,7 @@ describe('MainLayoutComponent', () => {
         breakpointObserverMock = {
             observe: vi.fn().mockReturnValue(breakpointSubject.asObservable())
         };
-        keycloakMock = {
+        authMock = {
             // Resolves, rather than returning undefined. The previous mock returned nothing and
             // the test still passed, because `await undefined` is legal — so it never exercised
             // the promise the component actually depends on.
@@ -101,7 +101,7 @@ describe('MainLayoutComponent', () => {
             set: {
                 providers: [
                     { provide: BreakpointObserver, useValue: breakpointObserverMock },
-                    { provide: KeycloakService, useValue: keycloakMock },
+                    { provide: AuthService, useValue: authMock },
                     { provide: UserService, useValue: userServiceMock },
                     { provide: ChatService, useValue: chatServiceMock },
                     { provide: CallService, useValue: callServiceStub() },
@@ -287,13 +287,13 @@ describe('MainLayoutComponent', () => {
     it('should logout', () => {
         fixture.detectChanges();
         component.logout();
-        expect(keycloakMock.logout).toHaveBeenCalled();
+        expect(authMock.logout).toHaveBeenCalled();
     });
 
     it('logs a failed logout instead of leaving it unhandled', async () => {
         fixture.detectChanges();
-        (keycloakMock.logout as unknown as ReturnType<typeof vi.fn>)
-            .mockReturnValue(Promise.reject(new Error('keycloak down')));
+        authMock.logout
+            .mockReturnValue(Promise.reject(new Error('auth0 down')));
 
         component.logout();
         await Promise.resolve();

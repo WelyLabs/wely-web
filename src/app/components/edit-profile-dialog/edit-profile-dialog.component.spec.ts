@@ -47,7 +47,7 @@ describe('EditProfileDialogComponent', () => {
 
     it('should create and initialize form', () => {
         expect(component).toBeTruthy();
-        // No email: it stays with Keycloak.
+        // No email: it stays with Auth0.
         expect(component.profileForm.value).toEqual({ ...formValues, birthDate: '' });
     });
 

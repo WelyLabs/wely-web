@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { KeycloakService } from 'keycloak-angular';
+import { AuthService } from '../../core/auth/auth.service';
 import { ACCOUNT_DELETED, ACCOUNT_QUERY_PARAM } from '../../models/account.model';
 
 /** One day column of the calendar preview in the hero. */
@@ -68,7 +68,7 @@ export function weekLabel(today: Date): string {
 export class LandingPageComponent {
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
-    private readonly keycloak = inject(KeycloakService);
+    private readonly authService = inject(AuthService);
 
     /** Arrived here right after deleting the account: the page says it is done. */
     readonly accountDeleted = signal(this.route.snapshot.queryParamMap.get(ACCOUNT_QUERY_PARAM) === ACCOUNT_DELETED);
@@ -96,7 +96,7 @@ export class LandingPageComponent {
 
     readonly stack = [
         'Spring WebFlux', 'Project Reactor', 'RSocket', 'Kafka', 'PostgreSQL · R2DBC', 'Neo4j',
-        'MongoDB', 'Keycloak', 'Angular 21 · signals', 'k3s · Argo CD'
+        'MongoDB', 'Auth0', 'Angular 21 · signals', 'k3s · Argo CD'
     ];
 
     /**
@@ -117,14 +117,12 @@ export class LandingPageComponent {
     ];
 
     async launchApp(): Promise<void> {
-        const isLoggedIn = await this.keycloak.isLoggedIn();
+        const isLoggedIn = await this.authService.isLoggedIn();
 
         if (isLoggedIn) {
             this.router.navigate(['/calendar']);
         } else {
-            await this.keycloak.login({
-                redirectUri: window.location.origin + '/calendar'
-            });
+            await this.authService.login('/calendar');
         }
     }
 
@@ -135,8 +133,6 @@ export class LandingPageComponent {
     }
 
     async signup(): Promise<void> {
-        await this.keycloak.register({
-            redirectUri: window.location.origin + '/calendar'
-        });
+        await this.authService.signup('/calendar');
     }
 }

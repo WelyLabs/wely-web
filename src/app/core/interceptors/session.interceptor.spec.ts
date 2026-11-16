@@ -5,6 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
+import { GenericError } from '@auth0/auth0-angular';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('SessionInterceptor', () => {
@@ -59,36 +60,15 @@ describe('SessionInterceptor', () => {
         });
     });
 
-    it('should handle 400 invalid_grant and redirect to login', () => {
+    it('intercept_shouldRedirectToLogin_whenAuth0CannotRenewTheSession', () => {
         const req = new HttpRequest('GET', '/test');
-        const errorResponse = new HttpErrorResponse({
-            status: 400,
-            error: { error: 'invalid_grant' }
-        });
+        nextMock.handle.mockReturnValue(throwError(() => new GenericError('invalid_grant', 'Unknown or invalid refresh token.')));
+        let failure: unknown;
 
-        nextMock.handle.mockReturnValue(throwError(() => errorResponse));
+        interceptor.intercept(req, nextMock).subscribe({ error: (err) => (failure = err) });
 
-        interceptor.intercept(req, nextMock).subscribe({
-            error: () => {
-                expect(authServiceMock.login).toHaveBeenCalled();
-            }
-        });
-    });
-
-    it('should handle 400 with Token is not active description', () => {
-        const req = new HttpRequest('GET', '/test');
-        const errorResponse = new HttpErrorResponse({
-            status: 400,
-            error: { error_description: 'Token is not active' }
-        });
-
-        nextMock.handle.mockReturnValue(throwError(() => errorResponse));
-
-        interceptor.intercept(req, nextMock).subscribe({
-            error: () => {
-                expect(authServiceMock.login).toHaveBeenCalled();
-            }
-        });
+        expect(failure).toBeInstanceOf(GenericError);
+        expect(authServiceMock.login).toHaveBeenCalled();
     });
 
     it('should rethrow non-auth errors', () => {

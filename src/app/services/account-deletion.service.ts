@@ -26,7 +26,7 @@ export const AUTH_SKEW_MS = 60_000;
 const GONE = 410;
 const FORBIDDEN = 403;
 
-/** Where a deletion asked for before the Keycloak round trip stands on return. */
+/** Where a deletion asked for before the Auth0 round trip stands on return. */
 export type PendingDeletionStep = 'confirm' | 'reverify';
 
 /** How the final deletion request ended. */
@@ -78,7 +78,7 @@ export class AccountDeletionService {
       this.logger.warn(SCOPE, 'Could not remember the deletion request', error);
       return false;
     }
-    const redirect = `${window.location.origin}/preferences?${ACCOUNT_QUERY_PARAM}=${ACCOUNT_DELETE_INTENT}`;
+    const redirect = `/preferences?${ACCOUNT_QUERY_PARAM}=${ACCOUNT_DELETE_INTENT}`;
     await this.authService.reauthenticate(redirect, user.userName);
     return true;
   }

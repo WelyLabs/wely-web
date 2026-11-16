@@ -14,7 +14,7 @@
 
   <!-- Link previews (LinkedIn, Slack, messaging apps). Crawlers do not run JavaScript, so these
        must be in the static page. ${PUBLIC_URL} is the site's own origin, written in by
-       entrypoint.sh at container start like KEYCLOAK_URL: the image URL has to be absolute,
+       entrypoint.sh at container start like AUTH_DOMAIN: the image URL has to be absolute,
        and the origin differs between environments. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Wely">
@@ -41,11 +41,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script>
-    window.KEYCLOAK_URL = '${KEYCLOAK_URL}';
-    // One Keycloak serves every environment, one realm each, so the realm and the client are
-    // injected like the URL rather than built into the bundle.
-    window.KEYCLOAK_REALM = '${KEYCLOAK_REALM}';
-    window.KEYCLOAK_CLIENT_ID = '${KEYCLOAK_CLIENT_ID}';
+    // One Auth0 tenant serves every environment, one application and API each, so they are
+    // injected at container start rather than built into the bundle.
+    window.AUTH_DOMAIN = '${AUTH_DOMAIN}';
+    window.AUTH_CLIENT_ID = '${AUTH_CLIENT_ID}';
+    window.AUTH_AUDIENCE = '${AUTH_AUDIENCE}';
   </script>
   <!-- The theme last chosen on this browser, set before the first paint: applied by Angular
        only, a dark theme flashed white on every load. ThemeService takes over once started;

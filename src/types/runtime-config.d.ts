@@ -3,10 +3,10 @@
  * can be deployed to several environments without a rebuild.
  *
  * <p>Declared here rather than reached through `(window as any)`, which hid the fact
- * that the value can be an unsubstituted `$KEYCLOAK_URL` placeholder.
+ * that the value can be an unsubstituted `$AUTH_DOMAIN` placeholder.
  */
 interface Window {
-  KEYCLOAK_URL?: string;
-  KEYCLOAK_REALM?: string;
-  KEYCLOAK_CLIENT_ID?: string;
+  AUTH_DOMAIN?: string;
+  AUTH_CLIENT_ID?: string;
+  AUTH_AUDIENCE?: string;
 }
