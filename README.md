@@ -213,7 +213,7 @@ nginx sert `sw.js` sans cache, pour qu'un correctif arrive au prochain chargemen
 | `apiUrl` | `http://localhost:8081/api/v1` | `/api/v1` |
 | `rsocketUrl` | `ws://localhost:8081/rsocket` | `/rsocket` |
 | `authDomain` | `dev-8k6vch1dvh1qxrdz.eu.auth0.com` | same |
-| `authClientId` | `SET_ME_wely-web-dev` (placeholder) | injected |
+| `authClientId` | `a3HWp7xp83GIpuOyxjAoGfKHvFW44PK7` (`wely-web-dev`) | injected |
 | `authAudience` | `wely-api-dev` | injected |
 
 In the cluster, `AUTH_DOMAIN`, `AUTH_CLIENT_ID` and `AUTH_AUDIENCE` are **injected at container start**: `entrypoint.sh` substitutes them into `index.html`, so one image serves every environment without a rebuild.
