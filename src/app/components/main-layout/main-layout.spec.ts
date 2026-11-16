@@ -51,6 +51,7 @@ describe('MainLayoutComponent', () => {
             email: 'me@example.com',
             firstName: 'Me',
             lastName: 'Test',
+            birthDate: '1990-01-01',
             jobTitle: '',
             department: '',
             location: '',
@@ -123,20 +124,21 @@ describe('MainLayoutComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('signupPending_shouldBlockTheApp_untilTheRegistrationIsCompleted', () => {
-        userSubject.next({ ...userSubject.value!, registrationCompleted: false });
+    it('signupPending_shouldBlockTheApp_whileTheProfileMissesAField', () => {
+        userSubject.next({ ...userSubject.value!, birthDate: null, registrationCompleted: true });
         fixture.detectChanges();
 
         expect(component.signupPending()).toBe(true);
         expect(fixture.nativeElement.querySelector('app-signup-completion')).not.toBeNull();
 
-        userSubject.next({ ...userSubject.value!, registrationCompleted: true, birthDate: '1995-03-12' });
+        userSubject.next({ ...userSubject.value!, birthDate: '1995-03-12' });
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('app-signup-completion')).toBeNull();
     });
 
-    it('signupPending_shouldNotBlock_aProfileThatSaysNothing', () => {
+    it('signupPending_shouldNotBlock_aCompleteProfile_evenIfTheFlagSaysOtherwise', () => {
+        userSubject.next({ ...userSubject.value!, birthDate: '1995-03-12', registrationCompleted: false });
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('app-signup-completion')).toBeNull();

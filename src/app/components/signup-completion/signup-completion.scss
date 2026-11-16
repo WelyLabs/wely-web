@@ -98,6 +98,27 @@
   }
 }
 
+.signup-names {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+
+  legend {
+    padding: 0;
+    margin-bottom: 4px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+}
+
 .signup-hint {
   display: flex;
   align-items: center;
