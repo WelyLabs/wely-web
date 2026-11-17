@@ -91,7 +91,7 @@ export class AuthService {
 
     /** When the user last signed in with their credentials, in milliseconds; null when the token does not say. */
     authenticatedAt(): number | null {
-        // shortcut: on Auth0's clock, not the device's (keycloak-js corrected the skew); a device more than AUTH_SKEW_MS fast asks to re-verify again, measure the skew if that shows up.
+        // shortcut: on Auth0's clock, not the device's (the former client library corrected the skew); a device more than AUTH_SKEW_MS fast asks to re-verify again, measure the skew if that shows up.
         const seconds = jwtPayload(this.token)?.[AUTHENTICATED_AT_CLAIM];
         return typeof seconds === 'number' ? seconds * 1000 : null;
     }
