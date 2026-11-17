@@ -31,6 +31,14 @@ export class NotificationService {
         }).onAction().subscribe(onAction);
     }
 
+    /** A message that stays until the user closes it, across the top of the app. */
+    showBanner(message: string): void {
+        this.snackBar.open(message, 'Fermer', {
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+        });
+    }
+
     showInfo(message: string): void {
         this.snackBar.open(message, 'Fermer', {
             duration: 3000,

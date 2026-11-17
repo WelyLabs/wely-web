@@ -14,10 +14,14 @@ describe('AccountDeletionService', () => {
   const NOW = new Date('2026-10-15T14:00:00Z').getTime();
   const camille = { id: 'b-camille', userName: 'camille' };
   let service: AccountDeletionService;
-  let users: { getDeletionEligibility: ReturnType<typeof vi.fn>; deleteAccount: ReturnType<typeof vi.fn> };
+  let users: {
+    getDeletionEligibility: ReturnType<typeof vi.fn>;
+    deleteAccount: ReturnType<typeof vi.fn>;
+    cancelAccountDeletion: ReturnType<typeof vi.fn>;
+  };
   let push: { disable: ReturnType<typeof vi.fn>; clearShownNotifications: ReturnType<typeof vi.fn> };
   let auth0: { loginWithRedirect: ReturnType<typeof vi.fn>; logout: ReturnType<typeof vi.fn> };
-  let logger: { warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let logger: { warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn>; debug: ReturnType<typeof vi.fn> };
   let replacePage: ReturnType<typeof vi.fn>;
 
   const refusal = (status: number, code?: string) =>
@@ -28,10 +32,14 @@ describe('AccountDeletionService', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
-    users = { getDeletionEligibility: vi.fn(() => of({ allowed: true })), deleteAccount: vi.fn(() => of(null)) };
+    users = {
+      getDeletionEligibility: vi.fn(() => of({ allowed: true, dueAt: null })),
+      deleteAccount: vi.fn(() => of(null)),
+      cancelAccountDeletion: vi.fn(() => of(null))
+    };
     push = { disable: vi.fn().mockResolvedValue(true), clearShownNotifications: vi.fn().mockResolvedValue(undefined) };
     auth0 = { loginWithRedirect: vi.fn(() => of(undefined)), logout: vi.fn(() => of(undefined)) };
-    logger = { warn: vi.fn(), error: vi.fn() };
+    logger = { warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
     replacePage = vi.fn();
     TestBed.configureTestingModule({
       providers: [
@@ -57,7 +65,7 @@ describe('AccountDeletionService', () => {
     it('eligibility_shouldAnswerWhetherDeletionIsAllowed', async () => {
       expect(await firstValueFrom(service.eligibility())).toBe(true);
 
-      users.getDeletionEligibility.mockReturnValue(of({ allowed: false }));
+      users.getDeletionEligibility.mockReturnValue(of({ allowed: false, dueAt: null }));
       expect(await firstValueFrom(service.eligibility())).toBe(false);
     });
 
@@ -65,6 +73,37 @@ describe('AccountDeletionService', () => {
       users.getDeletionEligibility.mockReturnValue(refusal(503));
 
       await expect(firstValueFrom(service.eligibility())).rejects.toMatchObject({ status: 503 });
+    });
+  });
+
+  describe('cancelScheduledDeletion', () => {
+    const DUE_AT = '2026-11-14T14:00:00.000Z';
+
+    it('cancelScheduledDeletion_shouldCancelAndReturnTheDueDate_whenADeletionIsPending', async () => {
+      users.getDeletionEligibility.mockReturnValue(of({ allowed: true, dueAt: DUE_AT }));
+
+      expect(await service.cancelScheduledDeletion()).toEqual(new Date(DUE_AT));
+      expect(users.cancelAccountDeletion).toHaveBeenCalled();
+    });
+
+    it('cancelScheduledDeletion_shouldNotCallTheServer_whenNoDeletionIsPending', async () => {
+      expect(await service.cancelScheduledDeletion()).toBeNull();
+      expect(users.cancelAccountDeletion).not.toHaveBeenCalled();
+    });
+
+    it('cancelScheduledDeletion_shouldStaySilent_whenDeletionIsSwitchedOffOrTheServerFails', async () => {
+      users.getDeletionEligibility.mockReturnValue(refusal(403, 'USR-BUS-014'));
+
+      expect(await service.cancelScheduledDeletion()).toBeNull();
+      expect(users.cancelAccountDeletion).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('cancelScheduledDeletion_shouldReturnNull_whenTheCancellationItselfFails', async () => {
+      users.getDeletionEligibility.mockReturnValue(of({ allowed: true, dueAt: DUE_AT }));
+      users.cancelAccountDeletion.mockReturnValue(refusal(503));
+
+      expect(await service.cancelScheduledDeletion()).toBeNull();
     });
   });
 

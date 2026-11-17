@@ -81,8 +81,9 @@
   <section class="card account-card" aria-labelledby="account-title" data-setting="account-deletion" #accountCard>
     <h2 id="account-title">Compte</h2>
     <p class="card-hint" id="account-hint">
-      Supprimer ton compte efface ton profil et tes données personnelles. Tes messages restent visibles par
-      ceux à qui tu les as envoyés, sous « Utilisateur supprimé ».
+      Supprimer ton compte efface ton profil et tes données personnelles 30 jours plus tard ; te reconnecter
+      avant la fin du délai annule la suppression. Tes messages restent visibles par ceux à qui tu les as
+      envoyés, sous « Utilisateur supprimé ».
     </p>
 
     @if (deletionStep() === 'start') {

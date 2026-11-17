@@ -163,9 +163,9 @@ describe('UserService', () => {
 
         const call = httpMock.expectOne(`${apiUrl}/profile/deletion`);
         expect(call.request.method).toBe('GET');
-        call.flush({ allowed: false });
+        call.flush({ allowed: false, dueAt: null });
 
-        expect(await result).toEqual({ allowed: false });
+        expect(await result).toEqual({ allowed: false, dueAt: null });
     });
 
     it('getDeletionEligibility_shouldReportTheFailure', async () => {
@@ -192,6 +192,24 @@ describe('UserService', () => {
         httpMock.expectOne(`${apiUrl}/profile`).flush({ code: 'USR-BUS-010' }, { status: 403, statusText: 'Forbidden' });
 
         await expect(result).rejects.toMatchObject({ status: 403, error: { code: 'USR-BUS-010' } });
+    });
+
+    it('cancelAccountDeletion_shouldSendDeleteToTheDeletion', async () => {
+        const result = firstValueFrom(service.cancelAccountDeletion(), { defaultValue: undefined });
+
+        const call = httpMock.expectOne(`${apiUrl}/profile/deletion`);
+        expect(call.request.method).toBe('DELETE');
+        call.flush(null, { status: 204, statusText: 'No Content' });
+
+        await expect(result).resolves.toBeNull();
+    });
+
+    it('cancelAccountDeletion_shouldReportTheFailure', async () => {
+        const result = firstValueFrom(service.cancelAccountDeletion());
+
+        httpMock.expectOne(`${apiUrl}/profile/deletion`).flush(null, { status: 503, statusText: 'Unavailable' });
+
+        await expect(result).rejects.toMatchObject({ status: 503 });
     });
 
     it('completeRegistration_shouldPutTheBirthDate_andMarkTheCurrentUserComplete', async () => {

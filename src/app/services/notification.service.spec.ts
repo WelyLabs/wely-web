@@ -30,6 +30,14 @@ describe('NotificationService', () => {
         expect(service).toBeTruthy();
     });
 
+    it('showBanner_shouldStayUntilTheUserClosesIt', () => {
+        service.showBanner('Ta suppression est annulée.');
+
+        expect(snackBarMock.open).toHaveBeenCalledWith('Ta suppression est annulée.', 'Fermer',
+            expect.objectContaining({ verticalPosition: 'top' }));
+        expect(snackBarMock.open.mock.calls[0][2].duration).toBeUndefined();
+    });
+
     it('showNotification_shouldOpenTheNotificationToast_atTheTop', () => {
         const notification = aNotification();
 

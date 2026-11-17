@@ -1,6 +1,8 @@
 /** Whether the signed-in account may be deleted; false for a protected demo account. */
 export interface AccountDeletionEligibility {
     allowed: boolean;
+    /** ISO instant of the scheduled erasure; null when no deletion is pending. */
+    dueAt: string | null;
 }
 
 /** Ids asked about in one POST /users/deleted; wely-users takes at most 100. */
