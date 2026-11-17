@@ -7,6 +7,8 @@ import { UserService } from './services/user.service';
 import { AuthService } from './core/auth/auth.service';
 import { SignInRefusedComponent } from './components/shared/sign-in-refused/sign-in-refused';
 import { StartupErrorComponent } from './components/shared/startup-error/startup-error';
+import { AccountDeletionService } from './services/account-deletion.service';
+import { NotificationService } from './services/notification.service';
 import { ThemeService } from './services/theme.service';
 
 @Component({
@@ -23,6 +25,8 @@ export class App implements OnInit {
   private readonly authService = inject(AuthService);
   // Injected here so the theme is applied, and follows the device, from the first screen on.
   private readonly theme = inject(ThemeService);
+  private readonly accountDeletion = inject(AccountDeletionService);
+  private readonly notifications = inject(NotificationService);
 
   /** Auth0 could not be initialised: there is no session to follow or profile to load. */
   protected readonly startupFailed = this.authService.startupFailed;
@@ -42,6 +46,8 @@ export class App implements OnInit {
         filter(Boolean),
         // The theme kept with the account wins over the one last used on this browser.
         tap(() => this.theme.sync()),
+        // Signing in is what cancels a scheduled deletion; the user is told once it is undone.
+        tap(() => void this.cancelScheduledDeletion()),
         switchMap(() => this.userService.loadAndSetCurrentUser()),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -49,5 +55,14 @@ export class App implements OnInit {
         next: (user) => this.logger.debug('App', 'User profile loaded:', user),
         error: (err) => this.logger.error('App', 'Error fetching user profile:', err)
       });
+  }
+
+  private async cancelScheduledDeletion(): Promise<void> {
+    const dueAt = await this.accountDeletion.cancelScheduledDeletion();
+    if (dueAt) {
+      this.notifications.showBanner(`La suppression de ton compte, prévue le `
+        + `${dueAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, est annulée : `
+        + `te reconnecter suffit à la rendre caduque.`);
+    }
   }
 }

@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggle, MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ACCOUNT_DELETE_INTENT, ACCOUNT_QUERY_PARAM } from '../../models/account.model';
 import { NotificationPreferences } from '../../models/notification.model';
-import { AccountDeletionService } from '../../services/account-deletion.service';
+import { AccountDeletionService, GRACE_PERIOD_DAYS } from '../../services/account-deletion.service';
 import { NotificationCenterService } from '../../services/notification-center.service';
 import { PushService, PushState } from '../../services/push.service';
 import { ThemePreference, ThemeService } from '../../services/theme.service';
@@ -174,11 +174,12 @@ export class PreferencesComponent implements OnInit {
   private async confirmedByHand(handle: string): Promise<boolean> {
     const data: ConfirmDialogData = {
       title: 'Supprimer ton compte ?',
-      message: 'La suppression est immédiate et définitive.',
+      message: `Ton compte sera supprimé dans ${GRACE_PERIOD_DAYS} jours. D’ici là rien ne change pour les autres, `
+        + 'et te reconnecter suffit à tout annuler. Passé ce délai :',
       details: DELETION_CONSEQUENCES,
       confirmationPhrase: handle,
       confirmationLabel: `Pour confirmer, tape ${handle}`,
-      confirmText: 'Supprimer définitivement',
+      confirmText: 'Supprimer mon compte',
       cancelText: 'Annuler',
       isDestructive: true
     };

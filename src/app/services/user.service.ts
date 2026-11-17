@@ -112,14 +112,19 @@ export class UserService {
         return this.http.get<FriendProfile>(`${this.apiUrl}/users/${userId}/profile`);
     }
 
-    /** Whether the signed-in account may be deleted; a demo account may not. */
+    /** Whether the signed-in account may be deleted, and when a scheduled erasure is due. */
     getDeletionEligibility(): Observable<AccountDeletionEligibility> {
         return this.http.get<AccountDeletionEligibility>(`${this.apiUrl}/profile/deletion`);
     }
 
-    /** Deletes the signed-in account; wely-users answers 202 once the deletion is committed. */
+    /** Schedules the deletion of the signed-in account; wely-users answers 202 once it is scheduled. */
     deleteAccount(): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/profile`);
+    }
+
+    /** Cancels a scheduled deletion; 204 whether or not one was pending. */
+    cancelAccountDeletion(): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/profile/deletion`);
     }
 
     /** The signed-in user's bio and interests. */

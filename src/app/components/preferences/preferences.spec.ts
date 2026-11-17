@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DELETION_CONSEQUENCES, PreferencesComponent } from './preferences';
 import { AccountDeletionService, DeletionOutcome } from '../../services/account-deletion.service';
 import { UserService } from '../../services/user.service';
-import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 import { User } from '../../models/user.model';
 import { AppliedTheme, ThemePreference, ThemeService } from '../../services/theme.service';
 import { PushService, PushState } from '../../services/push.service';
@@ -371,8 +371,19 @@ describe('PreferencesComponent', () => {
       deleteButton()!.click();
 
       expect(dialog.open).toHaveBeenCalledWith(ConfirmDialogComponent, expect.objectContaining({
-        data: expect.objectContaining({ isDestructive: true, confirmationPhrase: 'camille#2680', confirmText: 'Supprimer définitivement' })
+        data: expect.objectContaining({ isDestructive: true, confirmationPhrase: 'camille#2680', confirmText: 'Supprimer mon compte' })
       }));
+    });
+
+    it('requestDeletion_shouldAnnounceTheGracePeriodAndTheCancellation', () => {
+      dialog.open.mockReturnValue({ afterClosed: () => of(false) });
+      create();
+
+      deleteButton()!.click();
+
+      const { message } = dialog.open.mock.calls[0][1].data as ConfirmDialogData;
+      expect(message).toContain('30 jours');
+      expect(message).toContain('te reconnecter suffit à tout annuler');
     });
 
     it('requestDeletion_shouldListEveryConsequence', () => {

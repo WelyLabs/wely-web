@@ -41,9 +41,13 @@ function mayHaveCompleted(error: unknown): boolean {
   return error.status === 0 || error.status >= 500 || codeOf(error) === REAUTHENTICATION_REQUIRED_CODE;
 }
 
+/** The deletion is scheduled this far ahead; wely-users owns the real delay, this only words it. */
+export const GRACE_PERIOD_DAYS = 30;
+
 /**
- * The account deletion flow: the request, the forced re-authentication, and the final DELETE,
- * after which this device leaves the app for the landing page.
+ * The account deletion flow: the request, the forced re-authentication, and the DELETE that
+ * schedules the erasure, after which this device leaves the app for the landing page. The deletion
+ * runs thirty days later, and any sign-in before then cancels it.
  */
 @Injectable({ providedIn: 'root' })
 export class AccountDeletionService {
@@ -55,6 +59,27 @@ export class AccountDeletionService {
   /** Whether wely-users lets this account be deleted. */
   eligibility(): Observable<boolean> {
     return this.userService.getDeletionEligibility().pipe(map(eligibility => eligibility.allowed === true));
+  }
+
+  /**
+   * Cancels a deletion scheduled for this account, as signing in is meant to. No screen asks:
+   * being here is the answer, and the caller tells the user afterwards.
+   *
+   * @returns the due date of the deletion just cancelled, or null when there was none.
+   */
+  async cancelScheduledDeletion(): Promise<Date | null> {
+    try {
+      const { dueAt } = await firstValueFrom(this.userService.getDeletionEligibility());
+      if (!dueAt) {
+        return null;
+      }
+      await firstValueFrom(this.userService.cancelAccountDeletion());
+      return new Date(dueAt);
+    } catch (error) {
+      // Deletion switched off, account already erased, server down: nothing this device can undo.
+      this.logger.debug(SCOPE, 'No scheduled deletion to cancel', error);
+      return null;
+    }
   }
 
   /**

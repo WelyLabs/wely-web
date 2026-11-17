@@ -103,7 +103,8 @@ describe('LandingPageComponent', () => {
         const notice: HTMLElement | null = fixture.nativeElement.querySelector('.deletion-notice');
         expect(component.accountDeleted()).toBe(true);
         expect(notice?.getAttribute('role')).toBe('status');
-        expect(notice?.textContent).toContain('Ton compte a été supprimé.');
+        expect(notice?.textContent).toContain('Ton compte sera supprimé dans 30 jours.');
+        expect(notice?.textContent).toContain('te reconnecter annule la suppression');
         expect(notice?.textContent).toContain('« Utilisateur supprimé »');
     });
 
