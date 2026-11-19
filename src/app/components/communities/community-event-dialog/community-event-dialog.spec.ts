@@ -54,6 +54,8 @@ describe('CommunityEventDialogComponent', () => {
     expect(events.createEvent).toHaveBeenCalledWith({
       title: 'Balade', location: 'Annecy', description: 'Pique-nique', communityId: 'c1',
       startDate: new Date('2099-05-01T09:00'), endDate: new Date('2099-05-01T18:00'),
+      // The API requires it: left out, the creation answers 400 EVT-REQ-000.
+      allDay: false,
     });
     expect(dialogRef.close).toHaveBeenCalledWith({ id: 'e1' });
   });
