@@ -138,6 +138,69 @@ describe('CalendarComponent', () => {
         expect(component.currentDate().getMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
     });
 
+    describe('slide between periods', () => {
+        let animate: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            // jsdom has no Web Animations API.
+            animate = vi.fn();
+            (HTMLElement.prototype as unknown as { animate: unknown }).animate = animate;
+        });
+
+        afterEach(() => {
+            delete (HTMLElement.prototype as unknown as { animate?: unknown }).animate;
+            vi.unstubAllGlobals();
+        });
+
+        const startX = () => animate.mock.calls[0][0][0].transform;
+
+        it('navigate_shouldSlideTheMonthInFromTheRight_whenMovingForward', () => {
+            component.toggleView('month');
+            fixture.detectChanges();
+
+            component.navigate(1);
+
+            expect(animate).toHaveBeenCalledTimes(1);
+            expect(animate.mock.instances[0].classList).toContain('month-grid');
+            expect(startX()).toBe('translateX(40px)');
+        });
+
+        it('navigate_shouldSlideInFromTheLeft_whenMovingBack', () => {
+            component.toggleView('month');
+            fixture.detectChanges();
+
+            component.navigate(-1);
+
+            expect(startX()).toBe('translateX(-40px)');
+        });
+
+        it('navigate_shouldSlideTheWeekAndDayViewsToo', () => {
+            component.toggleView('week');
+            fixture.detectChanges();
+            component.navigate(1);
+            component.toggleView('day');
+            fixture.detectChanges();
+            component.navigate(-1);
+
+            expect(animate).toHaveBeenCalledTimes(2);
+            expect(animate.mock.instances[0].classList).toContain('week-schedule-container');
+            expect(startX()).toBe('translateX(40px)');
+            expect(animate.mock.calls[1][0][0].transform).toBe('translateX(-40px)');
+        });
+
+        it('navigate_shouldNotSlide_whenTheDeviceAsksForLessMotion', () => {
+            vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(prefers-reduced-motion: reduce)' }));
+            component.toggleView('month');
+            fixture.detectChanges();
+            const month = component.currentDate().getMonth();
+
+            component.navigate(1);
+
+            expect(animate).not.toHaveBeenCalled();
+            expect(component.currentDate().getMonth()).toBe((month + 1) % 12);
+        });
+    });
+
     it('goToToday_shouldReturnToTheCurrentMonth', () => {
         component.toggleView('month');
         component.navigate(-3);
