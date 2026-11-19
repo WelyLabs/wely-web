@@ -70,6 +70,7 @@ export class CommunityEventDialogComponent {
         location: this.location().trim(),
         description: this.description().trim() || undefined,
         communityId: this.community.communityId,
+        allDay: false,
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
