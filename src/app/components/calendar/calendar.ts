@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -89,6 +89,8 @@ const DAYS_ON_PHONE = 3;
 /** A horizontal swipe at least this long, and mostly horizontal, moves to the next period. */
 const SWIPE_MIN_PX = 60;
 const SWIPE_MAX_MS = 600;
+/** How long the grid takes to slide in after a move to another period. */
+const SLIDE_MS = 250;
 
 interface CalendarDay {
   date: Date;
@@ -290,6 +292,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly insights = inject(FriendshipInsightsService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Business id of the signed-in user: tells a month event apart as hosted vs joined. */
   private myId: string | null = null;
@@ -1186,6 +1189,22 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     this.generateCalendar();
     if (this.viewMode() !== 'day') this.selectedDate.set(null);
+    this.slideIn(delta);
+  }
+
+  /**
+   * Slides the grid in from the side the new period comes from, so the user sees which way they
+   * went. A new move simply replaces a running slide; none when the device asks for less motion.
+   */
+  private slideIn(delta: number): void {
+    const grid = this.host.nativeElement.querySelector<HTMLElement>('.month-grid, .week-schedule-container');
+    if (!grid?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+    grid.animate(
+      [{ transform: `translateX(${delta > 0 ? 40 : -40}px)`, opacity: 0.4 }, { transform: 'none', opacity: 1 }],
+      { duration: SLIDE_MS, easing: 'ease-out' }
+    );
   }
 
   /** Back to today in the active view: the month that holds it, its week, or the day itself. */
