@@ -118,7 +118,6 @@ export class MainLayoutComponent implements OnInit {
   /** The bell's badge: unread notifications, capped at 99+. */
   readonly unreadBadge = computed(() => badgeText(this.notificationCenter.unreadCount()));
 
-  readonly showUserMenu = signal(false);
   readonly showMobileMenu = signal(false);
   readonly showCopySuccess = signal(false);
 

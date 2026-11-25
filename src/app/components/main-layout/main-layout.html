@@ -25,7 +25,7 @@
       </a>
     </div>
 
-    <div class="user-profile" (mouseenter)="showUserMenu.set(true)" (mouseleave)="showUserMenu.set(false)">
+    <div class="user-profile">
       <div class="avatar" [class.has-image]="myPicture()">
         @if (myPicture()) {
           <img [src]="myPicture()"
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Dropdown Menu -->
-      <div class="user-menu" [class.show]="showUserMenu()">
+      <div class="user-menu">
         <button class="menu-item" routerLink="/profile">
           <mat-icon>person</mat-icon>
           <span>Mon Profil</span>
