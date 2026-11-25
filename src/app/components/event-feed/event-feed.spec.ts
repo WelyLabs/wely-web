@@ -9,6 +9,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { eventTint } from '../../core/ui/event-tint';
 import { signal } from '@angular/core';
 import { AvatarService } from '../../services/avatar.service';
+import { UserService } from '../../services/user.service';
 
 describe('EventFeedComponent', () => {
     let component: EventFeedComponent;
@@ -27,7 +28,8 @@ describe('EventFeedComponent', () => {
         eventServiceMock = {
             refreshEvents: vi.fn(),
             feedEvents$: of(currentMockEvents),
-            toggleSubscription: vi.fn().mockReturnValue(of({}))
+            toggleSubscription: vi.fn().mockReturnValue(of({})),
+            withdrawInvitation: vi.fn().mockReturnValue(of(undefined))
         };
         socialServiceMock = {
             searchUsers: vi.fn().mockReturnValue(of([
@@ -48,7 +50,8 @@ describe('EventFeedComponent', () => {
                 { provide: EventService, useValue: eventServiceMock },
                 { provide: SocialService, useValue: socialServiceMock },
                 { provide: Router, useValue: routerMock },
-                { provide: AvatarService, useValue: { url: () => signal(null) } }
+                { provide: AvatarService, useValue: { url: () => signal(null) } },
+                { provide: UserService, useValue: { currentUser$: of({ id: 'me' }) } }
             ]
         }).compileComponents();
 
@@ -77,13 +80,14 @@ describe('EventFeedComponent', () => {
         vi.useRealTimers();
     });
 
-    it('should drop the card without subscribing when swiped left', () => {
+    it('should decline the event on the server and drop the card when swiped left', () => {
         vi.useFakeTimers();
         const before = component.currentEvents().length;
 
         component.swipeLeft();
         vi.advanceTimersByTime(300);
 
+        expect(eventServiceMock.withdrawInvitation).toHaveBeenCalledWith('1', 'me');
         expect(eventServiceMock.toggleSubscription).not.toHaveBeenCalled();
         expect(component.currentEvents().length).toBe(before - 1);
         vi.useRealTimers();
