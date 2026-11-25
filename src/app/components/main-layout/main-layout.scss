@@ -128,6 +128,16 @@
             background: color-mix(in srgb, var(--brand-blue) 5%, transparent);
         }
 
+        // Invisible bridge over the 8px gap so the pointer reaches the menu without leaving the hover.
+        &:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 8px;
+            right: 8px;
+            height: 8px;
+        }
+
         .avatar {
             width: 40px;
             height: 40px;
@@ -235,17 +245,24 @@
             opacity: 0;
             visibility: hidden;
             transform: translateY(8px);
-            transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
-            transition-duration: 0.3s;
+            transition-property: background, color, border-color, box-shadow, transform, opacity, filter, visibility;
+            transition-duration: 0.2s;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            // A short grace period forgives a diagonal move off the menu.
+            transition-delay: 100ms;
             overflow: hidden;
             z-index: 1000;
+        }
 
-            &.show {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-            }
+        &:hover .user-menu,
+        &:focus-within .user-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            transition-delay: 0s;
+        }
+
+        .user-menu {
 
             .menu-item {
                 width: 100%;
