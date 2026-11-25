@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { EventService, FeedEvent } from '../../services/event.service';
 import { SocialService } from '../../services/social.service';
+import { UserService } from '../../services/user.service';
 import { ExploreMapComponent } from '../explore-map/explore-map';
 import { eventTint } from '../../core/ui/event-tint';
 import { FriendsGoingComponent } from '../friends-going/friends-going';
@@ -52,13 +53,14 @@ export class EventFeedComponent implements OnInit {
   private readonly socialService = inject(SocialService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly me = toSignal(inject(UserService).currentUser$, { initialValue: null });
 
-  /** The deck: what is left to swipe. Skipping a card takes it out of here only. */
+  /** The deck: what is left to swipe. Skipping a card declines the event, which then leaves the feed for good. */
   private readonly events = signal<FeedEvent[]>([]);
 
   /**
-   * Everything the feed holds, for the grid. Kept apart from the deck: a card skipped while
-   * swiping is not refused for good, and an overview that hid it would not be one.
+   * Everything the feed holds, for the grid. Kept apart from the deck: a skipped card leaves the
+   * grid when the feed is read again, without the deck being dealt anew meanwhile.
    */
   private readonly feed = signal<FeedEvent[]>([]);
 
@@ -322,14 +324,24 @@ export class EventFeedComponent implements OnInit {
   }
 
   private animateSwipeLeft(): void {
-    if (!this.currentEvents()[0] || this.throwing) {
+    const currentEvent = this.currentEvents()[0];
+    if (!currentEvent || this.throwing) {
       return;
     }
     this.throwing = true;
     this.cardTransform.set(`translateX(-${THROW_DISTANCE_PX}px) rotate(-${THROW_ROTATION_DEG}deg)`);
     this.leftOverlayOpacity.set(1);
 
-    setTimeout(() => this.removeCurrentCard(), THROW_DURATION_MS);
+    // Declined on the server, so the event does not come back at the next sign-in or on another device.
+    setTimeout(() => {
+      const me = this.me();
+      if (me) {
+        this.eventService.withdrawInvitation(currentEvent.id, me.id)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe();
+      }
+      this.removeCurrentCard();
+    }, THROW_DURATION_MS);
   }
 
   private removeCurrentCard(): void {
