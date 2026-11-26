@@ -36,6 +36,7 @@ export interface RemoteParticipant {
   userId: string;
   stream: MediaStream;
   hasVideo: boolean;
+  cameraOff: boolean;
 }
 
 const AUDIO_CONSTRAINTS: MediaTrackConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
@@ -81,7 +82,8 @@ export class CallService {
       .filter(participant => participant.userId !== me)
       .map(participant => {
         const stream = streams.get(participant.userId) ?? new MediaStream();
-        return { userId: participant.userId, stream, hasVideo: stream.getVideoTracks().length > 0 };
+        const cameraOff = participant.cameraOff ?? false;
+        return { userId: participant.userId, stream, cameraOff, hasVideo: !cameraOff && stream.getVideoTracks().length > 0 };
       })
       .sort((a, b) => Number(b.userId === speaker) - Number(a.userId === speaker));
   });
@@ -208,6 +210,7 @@ export class CallService {
       });
       await this.session.replaceTrack(CAMERA_TRACK, null);
       this.cameraOn.set(false);
+      this.announceCamera(false);
       this.localStream.set(new MediaStream(local.getTracks()));
       return;
     }
@@ -220,6 +223,7 @@ export class CallService {
         await this.session.publish([{ name: CAMERA_TRACK, track: camera, simulcast: true }]);
       }
       this.cameraOn.set(true);
+      this.announceCamera(true);
       this.localStream.set(new MediaStream(local.getTracks()));
     } catch (error) {
       this.explain(error);
@@ -417,6 +421,13 @@ export class CallService {
         error: error => this.logger.warn(SCOPE, 'layer switch failed', error),
       });
     }
+  }
+
+  /** The others see the frozen last frame otherwise: a stopped camera sends nothing more. */
+  private announceCamera(on: boolean): void {
+    this.http.put<void>(`${this.apiUrl}/${this.call()?.id}/camera`, { on }).subscribe({
+      error: error => this.logger.warn(SCOPE, 'camera state not shared', error),
+    });
   }
 
   private beat(callId: string): void {

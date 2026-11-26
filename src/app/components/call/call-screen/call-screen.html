@@ -25,7 +25,12 @@
           </div>
         }
         <audio [appMediaStream]="participant.stream" autoplay></audio>
-        <figcaption>{{ nameOf(participant.userId) }}</figcaption>
+        <figcaption>
+          @if (participant.cameraOff) {
+            <mat-icon role="img" aria-label="Caméra coupée">videocam_off</mat-icon>
+          }
+          {{ nameOf(participant.userId) }}
+        </figcaption>
       </figure>
     } @empty {
       <div class="waiting">

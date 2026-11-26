@@ -72,7 +72,7 @@ describe('CallScreenComponent', () => {
   it('template_shouldNameADirectCallAfterTheOtherPerson_andShowItsDuration', () => {
     calls.call.set(call());
     calls.connection.set('connected');
-    calls.participants.set([{ userId: 'alice', stream: new FakeMediaStream() as unknown as MediaStream, hasVideo: false }]);
+    calls.participants.set([{ userId: 'alice', stream: new FakeMediaStream() as unknown as MediaStream, hasVideo: false, cameraOff: false }]);
 
     const fixture = create();
 
@@ -104,13 +104,24 @@ describe('CallScreenComponent', () => {
     calls.call.set(call());
     calls.cameraOn.set(true);
     calls.localStream.set(new FakeMediaStream([new FakeTrack('video')]) as unknown as MediaStream);
-    calls.participants.set([{ userId: 'alice', stream: new FakeMediaStream() as unknown as MediaStream, hasVideo: true }]);
+    calls.participants.set([{ userId: 'alice', stream: new FakeMediaStream() as unknown as MediaStream, hasVideo: true, cameraOff: false }]);
 
     const fixture = create();
 
     expect(fixture.nativeElement.querySelectorAll('.tile video').length).toBe(1);
     expect(fixture.nativeElement.querySelector('video.self')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('[aria-label="Changer de caméra"]')).not.toBeNull();
+  });
+
+  it('template_shouldShowTheirPicture_andACameraOffIcon_whenTheirCameraIsOff', () => {
+    calls.call.set(call());
+    calls.participants.set([{ userId: 'alice', stream: new FakeMediaStream() as unknown as MediaStream, hasVideo: false, cameraOff: true }]);
+
+    const fixture = create();
+
+    expect(fixture.nativeElement.querySelector('.tile video')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tile .portrait')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Caméra coupée"]')).not.toBeNull();
   });
 
   it('controls_shouldDriveTheCall', () => {

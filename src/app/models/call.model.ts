@@ -14,6 +14,8 @@ export interface CallParticipant {
   userId: string;
   joinedAt: string;
   trackNames: string[];
+  /** Camera published but turned off: show their picture, not a frozen frame. Absent from older servers. */
+  cameraOff?: boolean;
 }
 
 export interface Call {
