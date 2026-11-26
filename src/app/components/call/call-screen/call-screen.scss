@@ -102,6 +102,15 @@
     border-radius: 999px;
     background: rgb(0 0 0 / 45%);
     font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    mat-icon {
+      width: 1rem;
+      height: 1rem;
+      font-size: 1rem;
+    }
   }
 }
 

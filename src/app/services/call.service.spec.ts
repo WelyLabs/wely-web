@@ -163,6 +163,11 @@ describe('CallService', () => {
     FakePeerConnection.last!.deliver('4', new FakeTrack('video'));
     expect(service.participants()[0].hasVideo).toBe(true);
 
+    events.next({ type: 'TRACKS_PUBLISHED', actorId: 'alice', call: call({ status: 'ACTIVE', participants: [
+      withAlice.participants[0], { ...withAlice.participants[1], cameraOff: true }] }) });
+    await settle();
+    expect(service.participants()[0]).toEqual(expect.objectContaining({ hasVideo: false, cameraOff: true }));
+
     events.next({ type: 'PARTICIPANT_LEFT', actorId: 'alice', call: call({ status: 'ACTIVE',
       participants: [{ userId: 'me', joinedAt: '', trackNames: ['audio'] }] }) });
 
@@ -225,8 +230,12 @@ describe('CallService', () => {
     await turnedOn;
 
     expect(service.cameraOn()).toBe(true);
+    expect(http.expectOne(`${API}/call-1/camera`).request.body).toEqual({ on: true });
     await service.toggleCamera();
     expect(service.cameraOn()).toBe(false);
+    const off = http.expectOne(`${API}/call-1/camera`);
+    expect(off.request.method).toBe('PUT');
+    expect(off.request.body).toEqual({ on: false });
   });
 
   it('heartbeat_shouldEndTheCallHere_onceTheServerNoLongerKnowsIt', async () => {
