@@ -27,13 +27,6 @@ import { AvatarService } from '../../services/avatar.service';
 
 /** How long the "copied" tick stays visible after the user tag is put on the clipboard. */
 const COPY_FEEDBACK_MS = 2000;
-/** How far a list must scroll one way before the bottom bar hides or comes back. */
-const NAV_SCROLL_THRESHOLD_PX = 24;
-/**
- * How long scrolls are ignored after the bar moves. Hiding it makes the page taller, which pulls
- * a list scrolled to its end back up: read as a scroll up, that brought the bar straight back.
- */
-const NAV_SETTLE_MS = 350;
 
 @Component({
   selector: 'app-main-layout',
@@ -106,14 +99,9 @@ export class MainLayoutComponent implements OnInit {
     { initialValue: false }
   );
 
-  /** The bottom bar, out of the way while the user scrolls down a list; back on any scroll up. */
-  readonly navHidden = signal(false);
-  /** Its height, safe area included, measured: what hiding it gives back. */
+  /** The bottom bar's height, safe area included, measured for what floats above it. */
   readonly navHeight = signal(0);
   private readonly bottomNav = viewChild<ElementRef<HTMLElement>>('bottomNav');
-  /** Where each scrolled element was when the bar last decided, so small moves add up. */
-  private readonly scrollAnchors = new WeakMap<Element, number>();
-  private navSettlesAt = 0;
 
   /** The bell's badge: unread notifications, capped at 99+. */
   readonly unreadBadge = computed(() => badgeText(this.notificationCenter.unreadCount()));
@@ -139,49 +127,12 @@ export class MainLayoutComponent implements OnInit {
       onCleanup(() => observer.disconnect());
     });
     // What the bar takes from the bottom of the screen, for what floats above it (the new-event
-    // button). Zero when it is hidden or not shown at all.
+    // button). Zero when it is not shown.
     effect(() => {
-      const space = this.bottomNav() && !this.navHidden() ? this.navHeight() : 0;
+      const space = this.bottomNav() ? this.navHeight() : 0;
       document.documentElement.style.setProperty('--bottom-nav-space', `${space}px`);
     });
-
-    // Scroll events do not bubble; caught on the way down, they come from every list of the app.
-    const onScroll = (event: Event) => this.onAnyScroll(event);
-    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    inject(DestroyRef).onDestroy(() => {
-      document.removeEventListener('scroll', onScroll, { capture: true });
-      document.documentElement.style.removeProperty('--bottom-nav-space');
-    });
-  }
-
-  /** Hides the bottom bar on a scroll down, shows it on a scroll up or back at the top. */
-  onAnyScroll(event: Event): void {
-    if (!this.isMobile() || this.showMobileMenu()) {
-      return;
-    }
-    const target = event.target instanceof Element ? event.target : document.scrollingElement;
-    if (!target) {
-      return;
-    }
-    const top = target.scrollTop;
-    const anchor = this.scrollAnchors.get(target);
-    if (anchor === undefined || Date.now() < this.navSettlesAt) {
-      this.scrollAnchors.set(target, top);
-      return;
-    }
-    const hidden = top <= 0 ? false : Math.abs(top - anchor) < NAV_SCROLL_THRESHOLD_PX ? null : top > anchor;
-    if (hidden === null) {
-      return;
-    }
-    this.scrollAnchors.set(target, top);
-    this.setNavHidden(hidden);
-  }
-
-  private setNavHidden(hidden: boolean): void {
-    if (hidden !== this.navHidden()) {
-      this.navHidden.set(hidden);
-      this.navSettlesAt = Date.now() + NAV_SETTLE_MS;
-    }
+    inject(DestroyRef).onDestroy(() => document.documentElement.style.removeProperty('--bottom-nav-space'));
   }
 
   ngOnInit(): void {
@@ -200,11 +151,6 @@ export class MainLayoutComponent implements OnInit {
           sidenav.open();
         }
       });
-
-    // A new page starts with the bar in view.
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.setNavHidden(false));
 
     this.userService.currentUser$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -245,7 +191,6 @@ export class MainLayoutComponent implements OnInit {
 
   toggleMobileMenu(): void {
     this.showMobileMenu.update(open => !open);
-    this.setNavHidden(false);
   }
 
   /** Escape closes the mobile menu; its backdrop cannot take focus. */

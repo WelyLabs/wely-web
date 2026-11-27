@@ -111,3 +111,18 @@
     font-size: 13px;
     color: var(--text-secondary);
 }
+
+// The calendar's overlay field on a phone: a filled search pill, like the iOS search fields.
+@media (max-width: 768px) {
+    :host-context(.overlay-bar) .mention-field {
+        min-height: 36px;
+        padding: 2px 12px;
+        border: none;
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+
+        input {
+            font-family: inherit;
+        }
+    }
+}

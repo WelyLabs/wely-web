@@ -343,27 +343,19 @@
     }
 }
 
-// Mobile Bottom Navigation
+// Mobile Bottom Navigation: always there, like an iOS tab bar.
 .bottom-nav {
     flex-shrink: 0;
     width: 100%;
-    margin-top: 0; // Seamless integration with content
-    background: color-mix(in srgb, var(--bg-card) 98%, transparent);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border-default);
+    view-transition-name: bottom-nav;
+    background: var(--bg-card);
+    border-top: 0.5px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
     display: flex;
     justify-content: space-around;
     align-items: center;
     z-index: 1000;
     // Padding provides the height and handles safe area insets for modern phones
-    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-    // Slid away by a negative margin, set from its measured height: the content grows into
-    // the room, where a transform would have left an empty band behind.
-    transition: margin-bottom 0.25s ease;
-
-    @media (prefers-reduced-motion: reduce) {
-        transition: none;
-    }
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
 
     .nav-item {
         display: flex;
@@ -371,19 +363,21 @@
         align-items: center;
         justify-content: center;
         text-decoration: none;
-        color: var(--text-secondary);
+        color: var(--text-tertiary);
         font-size: 10px;
-        gap: 2px; // Tighter gap
+        font-weight: 500;
+        letter-spacing: 0.1px;
+        gap: 2px;
         flex: 1;
-        transition-property: background, color, border-color, box-shadow, transform, opacity, filter;
-        transition-duration: 0.2s;
-        transition-timing-function: ease;
+        min-height: 44px;
+        transition: color 0.2s ease;
 
         mat-icon {
-            font-size: 24px;
-            width: 24px;
-            height: 24px;
+            font-size: 25px;
+            width: 25px;
+            height: 25px;
             margin: 0;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         &.active {
@@ -391,11 +385,8 @@
 
             mat-icon {
                 color: var(--primary-blue);
+                transform: scale(1.06);
             }
-        }
-
-        &:active {
-            transform: scale(0.95);
         }
     }
 

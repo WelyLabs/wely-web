@@ -576,3 +576,52 @@
 .going {
     margin: 2px 0 8px;
 }
+
+// Phone: the same compact large title as the other tabs, the hint in small print and a slim,
+// full-width view picker.
+@media (max-width: 768px) {
+    .feed-container {
+        padding: 12px 16px 16px;
+
+        .feed-header,
+        &.grid-view .feed-header,
+        &.map-view .feed-header {
+            width: 100%;
+            margin-bottom: 12px;
+            text-align: left;
+
+            h1 {
+                margin: 0 0 2px;
+                font-size: 30px;
+                letter-spacing: -0.5px;
+            }
+
+            p {
+                margin: 0;
+                font-size: 13px;
+                font-weight: 400;
+            }
+        }
+
+        .view-switch {
+            display: flex;
+            margin-top: 10px;
+            padding: 2px;
+            border-radius: 10px;
+
+            button {
+                flex: 1;
+                justify-content: center;
+                padding: 5px 8px;
+                border-radius: 8px;
+                font-size: 13px;
+
+                mat-icon {
+                    font-size: 16px;
+                    width: 16px;
+                    height: 16px;
+                }
+            }
+        }
+    }
+}

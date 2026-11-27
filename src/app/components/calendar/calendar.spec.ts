@@ -1420,6 +1420,30 @@ describe('CalendarComponent', () => {
             expect(component.currentDate().getTime()).toBe(before);
         });
 
+        it('panelDay_shouldListTodayUnderTheMonth_untilADayIsTapped', () => {
+            phone(true);
+            component.toggleView('month');
+
+            expect(component.inlineDay()).toBe(true);
+            expect(component.isSameDate(component.panelDay()!, new Date())).toBe(true);
+            fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.details-section.visible')).not.toBeNull();
+            expect(fixture.nativeElement.querySelector('.details-backdrop.visible')).toBeNull();
+
+            const other = new Date(2030, 0, 10);
+            component.selectDate({ date: other, isToday: false, isCurrentMonth: true, hasEvents: false });
+
+            expect(component.panelDay()).toEqual(other);
+        });
+
+        it('panelDay_shouldStayEmpty_onALargerScreen', () => {
+            phone(false);
+            component.toggleView('month');
+
+            expect(component.inlineDay()).toBe(false);
+            expect(component.panelDay()).toBeNull();
+        });
+
         it('onViewPicked_shouldSwitchTheView', () => {
             const select = document.createElement('select');
             select.innerHTML = '<option value="day">Jour</option>';

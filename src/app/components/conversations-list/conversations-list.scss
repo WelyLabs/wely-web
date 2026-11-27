@@ -351,19 +351,112 @@
     }
 }
 
-/* Responsive */
+/* Phone: one grouped list, as in iOS Messages */
 @media (max-width: 768px) {
     .conv-page-container {
-        padding: 32px 20px;
+        padding: 12px 16px 24px;
     }
 
     .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 20px;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 0;
 
-        .new-conv-btn {
-            width: 100%;
+        .title-group {
+            h1 {
+                font-size: 30px;
+                letter-spacing: -0.5px;
+                margin: 0;
+            }
+
+            .subtitle {
+                display: none;
+            }
         }
+
+        // « Nouveau »: a round + beside the title.
+        .new-conv-btn {
+            width: 36px;
+            min-width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+            box-shadow: none;
+
+            mat-icon {
+                margin: 0;
+            }
+
+            span:not(.mat-mdc-button-persistent-ripple, .mdc-button__ripple, .mat-focus-indicator, .mat-mdc-button-touch-target) {
+                display: none;
+            }
+        }
+    }
+
+    .conversations-grid {
+        gap: 0;
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .conv-item {
+        gap: 12px;
+        padding: 10px 12px 10px 14px;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
+
+        &::after {
+            display: none;
+        }
+
+        // Hairline between rows, from the text on: iOS's inset separator.
+        & + .conv-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 74px;
+            right: 0;
+            border-top: 0.5px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
+        }
+
+        &:active {
+            background: var(--bg-subtle);
+        }
+    }
+
+    .avatar-wrapper .avatar-gradient {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        font-size: 18px;
+        box-shadow: none;
+    }
+
+    .avatar-wrapper .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-width: 2px;
+        bottom: 0;
+        right: 0;
+    }
+
+    .conv-details {
+        .details-top .name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .details-bottom .preview {
+            font-size: 14px;
+            padding-right: 0;
+        }
+    }
+
+    .chevron {
+        display: none;
     }
 }

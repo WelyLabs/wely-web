@@ -1,7 +1,7 @@
 import { ApplicationConfig, LOCALE_ID, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
-import { provideRouter, withNavigationErrorHandler } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler, withViewTransitions } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthHttpInterceptor, provideAuth0 } from '@auth0/auth0-angular';
@@ -24,7 +24,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'fr-FR' },
     // A tab opened before a deploy asks for chunks the new image no longer has: reload it once,
     // on the screen it was going to. See stale-chunk.ts.
-    provideRouter(routes, withNavigationErrorHandler(handleStaleChunk)),
+    provideRouter(routes, withNavigationErrorHandler(handleStaleChunk), withViewTransitions()),
     // Async: the animation engine (about 60 KB) loads with the first animated component
     // instead of delaying the first paint.
     provideAnimationsAsync(),
