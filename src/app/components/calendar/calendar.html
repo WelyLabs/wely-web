@@ -1,10 +1,10 @@
-<div class="calendar-container" [class.split-view]="isDetailsOpen() && viewMode() === 'month'"
+<div class="calendar-container" [class.split-view]="isDetailsOpen() && viewMode() === 'month' && !inlineDay()" [class.inline-day]="inlineDay()"
   [class.week-mode]="viewMode() === 'week'" [class.day-mode]="viewMode() === 'day'">
 
   <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus --
        Presentational dismiss target: it is not a control and cannot take focus. Keyboard
        dismissal is handled by the component's Escape listener. -->
-  <div class="details-backdrop" [class.visible]="isDetailsOpen() && viewMode() === 'month'" (click)="closeDetails()">
+  <div class="details-backdrop" [class.visible]="isDetailsOpen() && viewMode() === 'month' && !inlineDay()" (click)="closeDetails()">
   </div>
 
   <!-- Calendar Section -->
@@ -109,7 +109,7 @@
         (touchstart)="onSwipeStart($event)" (touchend)="onSwipeEnd($event)">
         @for (day of days(); track day.date.getTime(); let i = $index) {
           <div class="day-cell" role="button" tabindex="0" [class.other-month]="!day.isCurrentMonth"
-            [class.today]="day.isToday" [class.selected]="selectedDate() && isSameDate(day.date, selectedDate()!)"
+            [class.today]="day.isToday" [class.selected]="panelDay() && isSameDate(day.date, panelDay()!)"
             (click)="selectDate(day)" (keydown.enter)="selectDate(day)" (keydown.space)="selectDate(day)">
             <div class="day-content">
               <span class="day-number">{{ day.date | date:'d' }}</span>
@@ -234,11 +234,11 @@
   </div>
 
   <!-- Details Section (Month View Only) -->
-  <div class="details-section" [class.visible]="isDetailsOpen() && viewMode() === 'month'"
+  <div class="details-section" [class.visible]="inlineDay() || (isDetailsOpen() && viewMode() === 'month')"
     (touchstart)="onDetailsTouchStart($event)" (touchmove)="onDetailsTouchMove($event)"
     (touchend)="onDetailsTouchEnd($event)" (touchcancel)="onDetailsTouchCancel($event)">
     <div class="details-header">
-      <h3>{{ selectedDate() | date:'EEEE d MMMM yyyy' }}</h3>
+      <h3>{{ panelDay() | date:'EEEE d MMMM yyyy' }}</h3>
       <button type="button" aria-label="Fermer" (click)="closeDetails()">
         <mat-icon>close</mat-icon>
       </button>
@@ -251,7 +251,7 @@
         </div>
       }
 
-      @if (selectedDate(); as day) {
+      @if (panelDay(); as day) {
         <button type="button" class="add-on-day" (click)="openNewEvent(day)">
           <mat-icon>add</mat-icon>Ajouter un événement le {{ day | date:'EEEE d' }}
         </button>
@@ -288,8 +288,8 @@
   </ng-template>
 
   <!-- On a phone the header has no room for the button: it floats above the bottom bar. -->
-  @if (!isPopoverVisible() && !isDetailsOpen()) {
-    <button type="button" class="new-event-fab" aria-label="Nouvel événement" (click)="openNewEvent()">
+  @if (!isPopoverVisible() && (!isDetailsOpen() || inlineDay())) {
+    <button type="button" class="new-event-fab" aria-label="Nouvel événement" (click)="openNewEvent(panelDay() ?? undefined)">
       <mat-icon>add</mat-icon>
     </button>
   }

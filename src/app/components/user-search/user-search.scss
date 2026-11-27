@@ -307,3 +307,88 @@
         }
     }
 }
+
+// Phone: a compact large title, the search field and a round invite button on one line,
+// and friends three to a row.
+@media (max-width: 768px) {
+    .user-search-container {
+        padding: 12px 16px 24px;
+    }
+
+    .search-header {
+        gap: 10px;
+        margin-bottom: 12px;
+        padding: 0;
+
+        .title-group {
+            h1 {
+                font-size: 30px;
+                letter-spacing: -0.5px;
+                margin: 0;
+            }
+
+            .subtitle {
+                display: none;
+            }
+        }
+
+        .header-actions {
+            gap: 8px;
+
+            .search-bar-modern input {
+                height: 36px;
+                border: none;
+                border-radius: 10px;
+                padding: 0 36px;
+                background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+                box-shadow: none;
+                font-weight: 400;
+            }
+
+            .search-bar-modern mat-icon {
+                left: 10px;
+            }
+
+            .invite-btn {
+                width: 36px;
+                min-width: 36px;
+                height: 36px;
+                padding: 0;
+                border-radius: 50%;
+                box-shadow: none;
+
+                mat-icon {
+                    margin: 0;
+                }
+
+                span:not(.mat-mdc-button-persistent-ripple, .mdc-button__ripple, .mat-focus-indicator, .mat-mdc-button-touch-target) {
+                    display: none;
+                }
+            }
+        }
+    }
+
+    .tabs-segment-wrapper {
+        margin-bottom: 12px;
+    }
+
+    // An iOS segmented control: slim, 32px.
+    .tabs-segment {
+        padding: 2px;
+        border-radius: 10px;
+        gap: 2px;
+
+        button {
+            min-height: 28px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+    }
+
+    .users-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+}
+

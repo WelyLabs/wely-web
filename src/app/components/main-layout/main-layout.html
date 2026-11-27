@@ -76,8 +76,7 @@
     <!-- Mobile Bottom Navigation: not in a conversation, where it sat between the message
          input and the keyboard; the chat has its own back button. -->
     @if (isMobile() && !isChatPage()) {
-      <nav #bottomNav class="bottom-nav" [class.hidden]="navHidden()"
-        [style.margin-bottom.px]="navHidden() ? -navHeight() : 0">
+      <nav #bottomNav class="bottom-nav">
         @for (item of navItems; track item.route) {
           <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
             <mat-icon>{{ item.icon }}</mat-icon>

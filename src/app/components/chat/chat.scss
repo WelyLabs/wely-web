@@ -257,9 +257,71 @@
     }
 
     .chat-window-glass {
+        border: none;
         border-radius: 0;
         height: 100%;
         max-height: none;
+        box-shadow: none;
+        animation: none; // the page transition already moves it
+    }
+
+    // A compact bar, as in iOS Messages: the avatar keeps its round shape and the title the
+    // room left by four 36px buttons, which squeezed the group's logo into a sliver.
+    .chat-page-container .chat-header {
+        height: 56px;
+        padding: 0 4px;
+        gap: 2px;
+        background: var(--bg-card);
+        border-bottom: 0.5px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
+
+        .user-info {
+            gap: 10px;
+            margin-left: 2px;
+
+            .avatar-sm {
+                flex-shrink: 0;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                font-size: 14px;
+                box-shadow: none;
+
+                mat-icon {
+                    font-size: 20px;
+                    width: 20px;
+                    height: 20px;
+                }
+            }
+
+            .text-info {
+                .chat-title {
+                    font-size: 16px;
+                    font-weight: 600;
+                }
+
+                .status-text {
+                    font-size: 12px;
+                }
+            }
+        }
+
+        .back-btn,
+        .media-toggle,
+        .call-button,
+        .event-link {
+            --mat-icon-button-state-layer-size: 36px;
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            padding: 6px;
+            flex-shrink: 0;
+
+            mat-icon {
+                font-size: 22px;
+                width: 22px;
+                height: 22px;
+            }
+        }
     }
 }
 // An event's group links back to the event; the label folds away on a phone, the icon stays.

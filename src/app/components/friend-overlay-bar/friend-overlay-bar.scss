@@ -111,3 +111,30 @@
         }
     }
 }
+
+// On a phone the field and « Mon cercle » share one line.
+@media (max-width: 768px) {
+    .overlay-bar {
+        flex-wrap: nowrap;
+        gap: 8px;
+        margin: 0 0 6px;
+
+        &:has(.legend) {
+            flex-wrap: wrap;
+        }
+    }
+
+    .overlay-field {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .circle-toggle {
+        flex-shrink: 0;
+        height: 36px;
+        padding: 0 12px;
+        border: none;
+        background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+    }
+}

@@ -303,10 +303,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly hours = Array.from({ length: 24 }, (_, i) => i);
   readonly currentTimePosition = signal(0);
   /** The week (three days on a phone) by default: what a week holds is what people plan. */
-  readonly viewMode = signal<'month' | 'week' | 'day'>('week');
+  // A phone opens on the month with the day's events under it, as the iOS app does.
+  readonly viewMode = signal<'month' | 'week' | 'day'>(window.innerWidth <= 768 ? 'month' : 'week');
 
   readonly selectedDate = signal<Date | null>(null);
-  readonly selectedEvents = signal<CalendarEvent[]>([]);
+  readonly selectedEvents = computed(() => {
+    const day = this.panelDay();
+    return day ? this.getEventsForDay(day) : NO_EVENTS;
+  });
 
   private timeUpdateInterval?: ReturnType<typeof setInterval>;
 
@@ -701,6 +705,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   /** On a phone, « Semaine » is three days from the current date. */
   readonly onPhone = computed(() => this.compactRows());
   readonly weekLabel = computed(() => this.onPhone() ? '3 jours' : 'Semaine');
+  /** On a phone the month view lists a day's events under the grid instead of in a sheet. */
+  readonly inlineDay = computed(() => this.onPhone() && this.viewMode() === 'month');
+  /** The day the panel lists: the one tapped, else (phone month) today or the month's first. */
+  readonly panelDay = computed(() => this.selectedDate() ?? (this.inlineDay() ? this.defaultDay() : null));
 
   /** Turning a phone across the breakpoint changes how many days the week view holds. */
   private readonly regenerateOnResize = effect(() => {
@@ -851,6 +859,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private canDragDetails = false;
 
   onDetailsTouchStart(event: TouchEvent) {
+    // Under the month on a phone the panel is part of the page: nothing to drag away.
+    if (this.inlineDay()) {
+      this.isDragging = false;
+      this.canDragDetails = false;
+      return;
+    }
     this.touchStartY = event.touches[0].clientY;
     this.touchCurrentY = this.touchStartY;
     this.isDragging = false;
@@ -1221,7 +1235,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   selectDate(day: CalendarDay) {
     this.selectedDate.set(day.date);
-    this.selectedEvents.set(this.getEventsForDay(day.date));
     this.isDetailsOpen.set(true);
   }
 

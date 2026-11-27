@@ -259,3 +259,31 @@
         transform: rotate(360deg);
     }
 }
+// Phone: a tighter thread and a slim composer above the home indicator.
+@media (max-width: 768px) {
+    .messages-viewport {
+        padding: 16px 12px;
+        gap: 6px;
+    }
+
+    .chat-input-bar {
+        padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+
+        .input-glass-container {
+            padding: 4px 4px 4px 8px;
+            gap: 6px;
+            border-radius: 22px;
+            box-shadow: none;
+        }
+
+        .photo-btn,
+        .send-btn {
+            width: 36px;
+            height: 36px;
+        }
+
+        .photo-btn {
+            margin-left: 0;
+        }
+    }
+}

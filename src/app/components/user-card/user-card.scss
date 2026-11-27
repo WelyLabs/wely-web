@@ -72,6 +72,7 @@
 .avatar-container {
     position: relative;
     display: block;
+    text-decoration: none; // a link: the initials were underlined
     margin-bottom: 20px;
 
     .avatar-gradient {
@@ -225,24 +226,6 @@
     }
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .user-card-inner {
-        padding: 20px;
-        border-radius: 20px;
-    }
-
-    .avatar-container .avatar-gradient {
-        width: 72px;
-        height: 72px;
-        border-radius: 24px;
-
-        .initials {
-            font-size: 24px;
-        }
-    }
-}
-
 @keyframes slideUp {
     from {
         opacity: 0;
@@ -255,25 +238,140 @@
     }
 }
 
-// Responsive adjustments
+// Phone: a small tile, three to a row (the friends page). The name opens the profile, the
+// round button the conversation; the rest is in the card's menu or on the profile.
 @media (max-width: 768px) {
-    .user-card {
-        min-height: 180px;
+    .user-card-inner {
+        padding: 14px 6px 10px;
+        border: none;
+        border-radius: 16px;
+        box-shadow: var(--shadow-sm);
 
-        .card-content {
-            padding: 1rem;
-            gap: 0.5rem;
+        &::after {
+            display: none;
+        }
+    }
+
+    .card-options {
+        top: 2px;
+        right: 2px;
+
+        .options-btn {
+            --mat-icon-button-state-layer-size: 32px;
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+
+            mat-icon {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+            }
+        }
+    }
+
+    .avatar-container {
+        margin-bottom: 8px;
+
+        .avatar-gradient {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            box-shadow: none;
+
+            .initials {
+                font-size: 20px;
+            }
+        }
+    }
+
+    .user-details {
+        width: 100%;
+        min-width: 0;
+        margin-bottom: 0;
+
+        .name {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .met-at,
+    .closeness-pending {
+        display: none;
+    }
+
+    .closeness-badge {
+        margin-top: 2px;
+        padding: 1px 7px;
+        font-size: 10px;
+
+        mat-icon {
+            font-size: 11px;
+            width: 11px;
+            height: 11px;
+        }
+    }
+
+    .user-card-inner .closeness-proposal {
+        margin: 6px 0 0;
+        padding: 6px;
+        gap: 4px;
+        font-size: 11px;
+        line-height: 1.25;
+
+        .request-buttons {
+            flex-direction: row;
+            gap: 4px;
+            width: 100%;
         }
 
-        .avatar {
-            width: 70px;
-            height: 70px;
-            font-size: 1.5rem;
+        button {
+            flex: 1;
+            min-width: 0;
+            height: 28px;
+            padding: 0 4px;
+            font-size: 12px;
+            letter-spacing: 0;
+        }
+    }
+
+    .actions {
+        margin-top: 8px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    // Text folds away on the action buttons: their icons say it in a tile this narrow.
+    .user-card-inner .actions .msg-btn,
+    .user-card-inner .actions .add-btn,
+    .user-card-inner .actions .request-buttons button {
+        width: auto;
+        flex: none;
+        min-width: 0;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 16px;
+
+        mat-icon {
+            margin: 0;
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
         }
 
-        .user-info .user-name {
-            font-size: 1.1rem;
+        span:not(.mat-mdc-button-persistent-ripple, .mdc-button__ripple, .mat-focus-indicator, .mat-mdc-button-touch-target, .mdc-button__label) {
+            display: none;
         }
+    }
+
+    .actions .pending-badge {
+        font-size: 11px;
     }
 }
 .closeness-badge {

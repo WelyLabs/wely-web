@@ -157,3 +157,28 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+// Phone: Messages-sized bubbles rather than page-sized text.
+@media (max-width: 768px) {
+    .row {
+        gap: 6px;
+    }
+
+    .avatar {
+        width: 28px;
+        height: 28px;
+    }
+
+    .bubble {
+        padding: 7px 12px;
+
+        p {
+            font-size: 15px;
+            line-height: 1.35;
+        }
+    }
+
+    .author {
+        font-size: 12px;
+    }
+}

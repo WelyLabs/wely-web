@@ -60,6 +60,7 @@ $calendar-app-theme: mat.m2-define-light-theme((color: (primary: $calendar-app-p
 @include mat.input-theme($calendar-app-theme);
 @include mat.list-theme($calendar-app-theme);
 @include mat.menu-theme($calendar-app-theme);
+@include mat.select-theme($calendar-app-theme);
 @include mat.sidenav-theme($calendar-app-theme);
 @include mat.slider-theme($calendar-app-theme);
 @include mat.slide-toggle-theme($calendar-app-theme);
@@ -89,6 +90,7 @@ html[data-theme='dark'] {
   @include mat.input-color($calendar-app-dark-theme);
   @include mat.list-color($calendar-app-dark-theme);
   @include mat.menu-color($calendar-app-dark-theme);
+  @include mat.select-color($calendar-app-dark-theme);
   @include mat.sidenav-color($calendar-app-dark-theme);
   @include mat.slider-color($calendar-app-dark-theme);
   @include mat.slide-toggle-color($calendar-app-dark-theme);
@@ -98,6 +100,7 @@ html[data-theme='dark'] {
 
   --mat-dialog-container-color: var(--bg-card);
   --mat-menu-container-color: var(--bg-card);
+  --mat-select-panel-background-color: var(--bg-card);
   --mat-sidenav-container-background-color: var(--bg-card);
   --mat-sidenav-content-background-color: var(--bg-canvas);
   --mat-card-elevated-container-color: var(--bg-card);
@@ -472,3 +475,68 @@ mat-icon,
   border-radius: 16px;
   overflow: hidden;
 }
+
+@keyframes page-out {
+  to { opacity: 0; }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+// Desktop and reduced motion: the router's view transitions swap pages instantly, as before.
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+/* ── Phones ──────────────────────────────────────────────────────────────────────────────────
+ * Same names, rounded outlined Symbols instead of the 2014 filled Material Icons; a selected
+ * control fills its icon. Pages cross-fade with a short rise (View Transitions, router), and
+ * a pressed control gives way under the finger. */
+@media (max-width: 768px) {
+  .material-icons,
+  .mat-icon {
+    font-family: 'Material Symbols Rounded' !important;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'opsz' 24;
+  }
+
+  .active > .mat-icon,
+  .active > .material-icons,
+  .mat-icon.filled {
+    font-variation-settings: 'FILL' 1, 'wght' 500, 'opsz' 24;
+  }
+
+  // Material's spaced-out button labels (1.25px) read as dated at phone sizes.
+  .mat-mdc-button-base {
+    letter-spacing: normal !important;
+  }
+
+  button:not(:disabled):active,
+  [role='button']:active {
+    // scale, not transform: it composes with a transform that positions the control.
+    transition: scale 0.12s ease-out;
+    scale: 0.97;
+  }
+
+  ::view-transition-old(root) {
+    animation: 0.18s ease-in both page-out;
+  }
+
+  ::view-transition-new(root) {
+    animation: 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) both page-in;
+  }
+
+  // The tab bar stays put while the page changes above it.
+  ::view-transition-group(bottom-nav) {
+    animation: none;
+  }
+}
+
